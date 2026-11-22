@@ -1,0 +1,1085 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>hermes-hands brand direction</title>
+<link rel="icon" href="brand/mark.svg" type="image/svg+xml">
+<style>
+
+/* hermes-hands brand direction board.
+ *
+ * A draft for the owner to steer, not a page of the site. One file,
+ * no script, nothing loaded from another origin. Class names: one
+ * `__` between block and element, hyphens for the rest.
+ */
+
+/* ---- Tokens --------------------------------------------------------- */
+
+:root {
+  --blue-electric: #0000f2;
+  --blue-deep: #0000c2;
+  --navy: #05053d;
+  --navy-code: #00003a;
+  --ink: #06066b;
+  --ink-muted: #3a3a9c;
+  --paper: #f2f2f2;
+  --paper-line: #c9c9dc;
+  --pale: #f2f2f2;
+  --pale-blue: #c9ceff;
+  --soft-blue: #aab2ff;
+  --signal: #ffe600;
+  --stop: #ff5a4d;
+  --stop-text: #c4271a;
+
+  --font-display: "Oswald", "Avenir Next Condensed", "Arial Narrow",
+    "Roboto Condensed", sans-serif;
+  --font-body: system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --font-plate: "Iowan Old Style", "Palatino Linotype", Palatino,
+    Georgia, serif;
+
+  --size-label: 0.75rem;
+  --size-small: 0.875rem;
+  --size-body: 1.0625rem;
+  --size-h3: 1.75rem;
+  --size-h2: clamp(2.25rem, 6vw, 3.5rem);
+  --size-h1: clamp(2.5rem, 7.2vw, 5.25rem);
+
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 1rem;
+  --space-4: 1.5rem;
+  --space-5: 2.5rem;
+  --space-6: 4rem;
+
+  --gutter: 1rem;
+  --column: 70rem;
+  --track: 0.1em;
+}
+
+@font-face {
+  font-family: "Oswald";
+  src: url("fonts/oswald-latin-wght-normal.woff2") format("woff2");
+  font-weight: 200 700;
+  font-display: swap;
+}
+
+/* ---- Base ----------------------------------------------------------- */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--size-body);
+  line-height: 1.6;
+}
+
+img,
+svg {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+
+p {
+  margin: 0 0 var(--space-3);
+  max-width: 40rem;
+}
+
+h1,
+h2,
+h3 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-weight: 300;
+  letter-spacing: -0.02em;
+  line-height: 1.08;
+}
+
+code {
+  font-family: var(--font-mono);
+  font-size: 0.9em;
+}
+
+.label {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--size-label);
+  font-weight: 500;
+  letter-spacing: var(--track);
+  line-height: 1.3;
+  text-transform: uppercase;
+}
+
+.label-mono {
+  font-family: var(--font-mono);
+  font-weight: 400;
+  letter-spacing: 0.04em;
+}
+
+/* ---- Bands ---------------------------------------------------------- */
+
+.band {
+  padding: var(--space-6) 0;
+}
+
+.band-blue {
+  background: var(--blue-electric);
+  color: var(--pale);
+}
+
+.band-navy {
+  background: var(--navy);
+  color: var(--pale);
+}
+
+.band-rule {
+  border-top: 1px solid var(--paper-line);
+}
+
+.band__column {
+  max-width: var(--column);
+  margin: 0 auto;
+  padding: 0 var(--gutter);
+}
+
+.band__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-2) var(--space-4);
+  margin-bottom: var(--space-5);
+}
+
+.band__numeral {
+  font-family: var(--font-plate);
+  font-size: var(--size-h3);
+  font-style: italic;
+  color: var(--blue-electric);
+}
+
+.band-navy .band__numeral {
+  color: var(--signal);
+}
+
+.band__title {
+  font-size: var(--size-h2);
+}
+
+.band__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(17rem, 1fr));
+  gap: var(--space-5);
+}
+
+/* ---- Hero ----------------------------------------------------------- */
+
+.hero__top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-bottom: var(--space-6);
+}
+
+.hero__lockup {
+  width: 15rem;
+}
+
+.hero__split {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr);
+  gap: var(--space-5);
+  align-items: end;
+}
+
+.hero__title {
+  font-size: var(--size-h1);
+  margin-bottom: var(--space-4);
+}
+
+.hero__lead {
+  color: var(--pale-blue);
+}
+
+.hero__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-top: var(--space-4);
+}
+
+/* ---- Chips ---------------------------------------------------------- */
+
+.chip {
+  display: inline-block;
+  padding: 0.3rem 0.6rem;
+  border: 1px solid currentColor;
+  font-family: var(--font-display);
+  font-size: var(--size-label);
+  font-weight: 500;
+  letter-spacing: var(--track);
+  line-height: 1.2;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.chip-pass {
+  background: var(--blue-deep);
+  border-color: var(--blue-deep);
+  color: var(--pale);
+}
+
+.chip-open {
+  background: var(--signal);
+  border-color: var(--signal);
+  color: var(--ink);
+}
+
+.chip-stop {
+  background: var(--stop);
+  border-color: var(--stop);
+  color: var(--ink);
+}
+
+/* ---- Plates --------------------------------------------------------- */
+
+.plates {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-2);
+  margin: 0;
+}
+
+.plate {
+  margin: 0;
+}
+
+.plate__art {
+  width: 100%;
+  height: auto;
+  border: 1px solid var(--pale-blue);
+}
+
+.plate__caption {
+  margin-top: var(--space-2);
+  font-family: var(--font-plate);
+  font-size: var(--size-small);
+  font-style: italic;
+  line-height: 1.35;
+}
+
+.plate__number {
+  display: block;
+  font-family: var(--font-display);
+  font-size: var(--size-label);
+  font-style: normal;
+  font-weight: 500;
+  letter-spacing: var(--track);
+  text-transform: uppercase;
+}
+
+/* ---- Mark sheet ----------------------------------------------------- */
+
+.sheet {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+  gap: var(--space-3);
+}
+
+.sheet__cell {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border: 1px solid var(--paper-line);
+}
+
+.sheet__cell-blue {
+  background: var(--blue-electric);
+  border-color: var(--blue-electric);
+  color: var(--pale);
+}
+
+.sheet__cell-navy {
+  background: var(--navy);
+  border-color: var(--navy);
+  color: var(--pale);
+}
+
+.sheet__cell-wide {
+  grid-column: 1 / -1;
+}
+
+.sheet__note {
+  flex-basis: 100%;
+}
+
+.sheet__word {
+  width: min(100%, 29rem);
+}
+
+.sheet__lockup {
+  width: min(100%, 24rem);
+}
+
+/* ---- Swatches ------------------------------------------------------- */
+
+.swatches {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(9.5rem, 1fr));
+  gap: var(--space-2);
+  margin: 0 0 var(--space-5);
+  padding: 0;
+  list-style: none;
+}
+
+.swatches__item {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  min-height: 7.5rem;
+  padding: var(--space-3);
+  border: 1px solid var(--paper-line);
+}
+
+.swatches__name {
+  font-family: var(--font-display);
+  font-size: var(--size-label);
+  font-weight: 500;
+  letter-spacing: var(--track);
+  text-transform: uppercase;
+}
+
+.swatches__hex {
+  font-family: var(--font-mono);
+  font-size: var(--size-small);
+}
+
+/* ---- Tables --------------------------------------------------------- */
+
+.table-wrap {
+  overflow-x: auto;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--size-small);
+}
+
+.table th,
+.table td {
+  padding: 0.6rem 1rem 0.6rem 0;
+  border-bottom: 1px solid var(--paper-line);
+  text-align: left;
+  vertical-align: top;
+}
+
+.table th {
+  font-family: var(--font-display);
+  font-size: var(--size-label);
+  font-weight: 500;
+  letter-spacing: var(--track);
+  text-transform: uppercase;
+}
+
+.table-wide {
+  min-width: 34rem;
+}
+
+/* ---- Type specimens ------------------------------------------------- */
+
+.specimen {
+  padding: var(--space-3) 0;
+  border-top: 1px solid var(--paper-line);
+}
+
+.specimen__display {
+  font-family: var(--font-display);
+  font-size: var(--size-h1);
+  font-weight: 300;
+  letter-spacing: -0.02em;
+  line-height: 1.05;
+}
+
+.specimen__label {
+  font-family: var(--font-display);
+  font-size: 0.875rem;
+  font-weight: 500;
+  letter-spacing: var(--track);
+  text-transform: uppercase;
+}
+
+.specimen__mono {
+  font-family: var(--font-mono);
+  font-size: var(--size-small);
+}
+
+.specimen__plate {
+  font-family: var(--font-plate);
+  font-size: 1.25rem;
+  font-style: italic;
+}
+
+/* ---- Pieces --------------------------------------------------------- */
+
+.nav {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-4);
+  padding: var(--space-3);
+  background: var(--blue-electric);
+  color: var(--pale);
+}
+
+.nav__mark {
+  width: 2rem;
+  height: 2rem;
+}
+
+.nav__link {
+  color: inherit;
+  font-family: var(--font-display);
+  font-size: var(--size-small);
+  font-weight: 500;
+  letter-spacing: var(--track);
+  text-decoration: none;
+  text-transform: uppercase;
+}
+
+.nav__link-button {
+  margin-left: auto;
+  padding: 0.5rem 0.9rem;
+  background: var(--pale);
+  color: var(--blue-deep);
+}
+
+.code {
+  background: var(--navy-code);
+  color: var(--pale);
+}
+
+.code__bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.4rem 0.4rem 0.4rem 1rem;
+  border-bottom: 1px solid var(--blue-deep);
+  color: var(--soft-blue);
+}
+
+.code__copy {
+  padding: 0.3rem 0.6rem;
+  border: 1px solid var(--soft-blue);
+  background: none;
+  color: var(--pale);
+  font-family: var(--font-display);
+  font-size: var(--size-label);
+  font-weight: 500;
+  letter-spacing: var(--track);
+  text-transform: uppercase;
+}
+
+.code__body {
+  margin: 0;
+  padding: 1rem;
+  overflow-x: auto;
+  font-family: var(--font-mono);
+  font-size: var(--size-small);
+  line-height: 1.6;
+}
+
+.callout {
+  padding: var(--space-3);
+  border-left: 0.5rem solid var(--blue-electric);
+  background: #e4e5fa;
+}
+
+.callout-open {
+  border-left-color: var(--signal);
+  background: #fbf6c4;
+}
+
+.callout-stop {
+  border-left-color: var(--stop);
+  background: #fbe1de;
+}
+
+.callout__label {
+  margin-bottom: var(--space-1);
+}
+
+.callout__text {
+  margin: 0;
+  font-size: var(--size-small);
+}
+
+.stack {
+  display: grid;
+  gap: var(--space-3);
+  align-content: start;
+}
+
+/* ---- Banner mock ---------------------------------------------------- */
+
+.banner {
+  position: relative;
+  aspect-ratio: 2 / 1;
+  overflow: hidden;
+  background: var(--blue-electric);
+  container-type: inline-size;
+}
+
+.banner__head {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 50%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0.55;
+}
+
+.banner__hand {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 50%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.banner__wire {
+  position: absolute;
+  top: 50%;
+  left: 30%;
+  width: 34%;
+  border-top: 0.5cqw solid var(--signal);
+}
+
+.banner__lockup {
+  position: absolute;
+  left: 4%;
+  bottom: 7%;
+  width: 34%;
+}
+
+.banner__tag {
+  position: absolute;
+  top: 7%;
+  right: 4%;
+  color: var(--pale);
+  font-size: 1.5cqw;
+}
+
+/* ---- Small screens -------------------------------------------------- */
+
+@media (max-width: 46rem) {
+  .band {
+    padding: var(--space-5) 0;
+  }
+
+  .hero__top {
+    margin-bottom: var(--space-5);
+  }
+
+  .hero__split {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+</style>
+</head>
+<body>
+
+<header class="band band-blue">
+  <div class="band__column">
+
+    <div class="hero__top">
+      <img
+        class="hero__lockup"
+        src="brand/lockup.svg"
+        alt="hermes-hands"
+        width="78"
+        height="16"
+      >
+      <p class="label">Brand direction · draft 1 · for Niko</p>
+    </div>
+
+    <div class="hero__split">
+      <div>
+        <h1 class="hero__title">
+          The brain stays on the host. The hands work on your machine.
+        </h1>
+        <p class="hero__lead">
+          A community plugin for the Hermes agent. It is not made or
+          endorsed by Nous Research.
+        </p>
+        <p class="hero__chips">
+          <span class="chip">v0.1.0</span>
+          <span class="chip">Phases 0 to 4 pass on a test rig</span>
+          <span class="chip chip-open">Not run on a real laptop</span>
+          <span class="chip chip-open">Not accepted</span>
+        </p>
+      </div>
+
+      <div class="plates">
+        <figure class="plate">
+          <img
+            class="plate__art"
+            src="brand/plate-head.png"
+            alt="A bearded marble head, drawn in broken blue lines."
+            width="1120"
+            height="1120"
+          >
+          <figcaption class="plate__caption">
+            <span class="plate__number">Plate I · The brain</span>
+            Marble head from a herm. Roman, 1st to 2nd century.
+          </figcaption>
+        </figure>
+        <figure class="plate">
+          <img
+            class="plate__art"
+            src="brand/plate-hand.png"
+            alt="A marble right hand, drawn in broken blue lines."
+            width="1120"
+            height="1120"
+          >
+          <figcaption class="plate__caption">
+            <span class="plate__number">Plate II · The hands</span>
+            Marble right hand and wrist. Roman, 1st or 2nd century.
+          </figcaption>
+        </figure>
+      </div>
+    </div>
+
+  </div>
+</header>
+
+<main>
+
+<section class="band">
+  <div class="band__column">
+    <div class="band__head">
+      <span class="band__numeral">I.</span>
+      <h2 class="band__title">Glitched marble</h2>
+    </div>
+    <div class="band__grid">
+      <div>
+        <p class="label">Borrowed from the Hermes site</p>
+        <p>
+          The electric blue field. Oswald Light for headlines, the same
+          open-license face Hermes uses. Small tracked capitals for
+          labels. Classical art screened into blue.
+        </p>
+      </div>
+      <div>
+        <p class="label">Ours alone</p>
+        <p>
+          A pixel hand with one slice knocked sideways. One signal
+          yellow, kept for what is not yet tested. Two plates cut from
+          public-domain marbles: a head that stays put, and a hand
+          that is somewhere else.
+        </p>
+      </div>
+      <div>
+        <p class="label">Kept clear of</p>
+        <p>
+          The Hermes wing, the Nous marks, and the word "official".
+          Every page says community plugin. The catalog reserves the
+          official tier for Nous, so the page should never hint at it.
+        </p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="band band-rule">
+  <div class="band__column">
+    <div class="band__head">
+      <span class="band__numeral">II.</span>
+      <h2 class="band__title">Mark</h2>
+    </div>
+
+    <div class="sheet">
+      <div class="sheet__cell sheet__cell-blue">
+        <img src="brand/mark.svg" alt="" width="16" height="16">
+        <img src="brand/mark.svg" alt="" width="32" height="32">
+        <img src="brand/mark.svg" alt="" width="64" height="64">
+        <img src="brand/mark.svg" alt="" width="128" height="128">
+        <p class="label sheet__note">Full colour · 16, 32, 64, 128</p>
+      </div>
+      <div class="sheet__cell">
+        <img src="brand/mark.svg" alt="" width="16" height="16">
+        <img src="brand/mark.svg" alt="" width="32" height="32">
+        <img src="brand/mark.svg" alt="" width="64" height="64">
+        <img src="brand/mark.svg" alt="" width="128" height="128">
+        <p class="label sheet__note">Full colour on paper</p>
+      </div>
+      <div class="sheet__cell sheet__cell-navy">
+        <img src="brand/mark.svg" alt="" width="16" height="16">
+        <img src="brand/mark.svg" alt="" width="32" height="32">
+        <img src="brand/mark.svg" alt="" width="64" height="64">
+        <img src="brand/mark.svg" alt="" width="128" height="128">
+        <p class="label sheet__note">Full colour on navy</p>
+      </div>
+      <div class="sheet__cell">
+        <img src="brand/mark-blue.svg" alt="" width="16" height="16">
+        <img src="brand/mark-blue.svg" alt="" width="32" height="32">
+        <img src="brand/mark-blue.svg" alt="" width="64" height="64">
+        <img src="brand/mark-blue.svg" alt="" width="128" height="128">
+        <p class="label sheet__note">One colour on light</p>
+      </div>
+      <div class="sheet__cell sheet__cell-blue">
+        <img src="brand/mark-pale.svg" alt="" width="16" height="16">
+        <img src="brand/mark-pale.svg" alt="" width="32" height="32">
+        <img src="brand/mark-pale.svg" alt="" width="64" height="64">
+        <img src="brand/mark-pale.svg" alt="" width="128" height="128">
+        <p class="label sheet__note">One colour on blue</p>
+      </div>
+      <div class="sheet__cell sheet__cell-navy">
+        <img src="brand/mark-pale.svg" alt="" width="16" height="16">
+        <img src="brand/mark-pale.svg" alt="" width="32" height="32">
+        <img src="brand/mark-pale.svg" alt="" width="64" height="64">
+        <img src="brand/mark-pale.svg" alt="" width="128" height="128">
+        <p class="label sheet__note">One colour on navy</p>
+      </div>
+
+      <div class="sheet__cell sheet__cell-blue sheet__cell-wide">
+        <img
+          class="sheet__word"
+          src="brand/wordmark.svg"
+          alt="hermes-hands"
+          width="58"
+          height="9"
+        >
+        <p class="label sheet__note">
+          Wordmark · the hyphen is the link, so it takes the signal
+        </p>
+      </div>
+      <div class="sheet__cell">
+        <img
+          class="sheet__lockup"
+          src="brand/lockup-blue.svg"
+          alt="hermes-hands"
+          width="78"
+          height="16"
+        >
+        <p class="label sheet__note">Lockup on light</p>
+      </div>
+      <div class="sheet__cell sheet__cell-navy">
+        <img
+          class="sheet__lockup"
+          src="brand/lockup.svg"
+          alt="hermes-hands"
+          width="78"
+          height="16"
+        >
+        <p class="label sheet__note">Lockup on dark</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="band band-rule">
+  <div class="band__column">
+    <div class="band__head">
+      <span class="band__numeral">III.</span>
+      <h2 class="band__title">Colour</h2>
+    </div>
+
+    <ul class="swatches">
+      <li
+        class="swatches__item"
+        style="background: #0000f2; color: #f2f2f2"
+      >
+        <span class="swatches__name">Electric</span>
+        <span class="swatches__hex">#0000f2</span>
+      </li>
+      <li
+        class="swatches__item"
+        style="background: #0000c2; color: #f2f2f2"
+      >
+        <span class="swatches__name">Deep</span>
+        <span class="swatches__hex">#0000c2</span>
+      </li>
+      <li
+        class="swatches__item"
+        style="background: #05053d; color: #f2f2f2"
+      >
+        <span class="swatches__name">Navy</span>
+        <span class="swatches__hex">#05053d</span>
+      </li>
+      <li
+        class="swatches__item"
+        style="background: #06066b; color: #f2f2f2"
+      >
+        <span class="swatches__name">Ink</span>
+        <span class="swatches__hex">#06066b</span>
+      </li>
+      <li class="swatches__item">
+        <span class="swatches__name">Paper</span>
+        <span class="swatches__hex">#f2f2f2</span>
+      </li>
+      <li
+        class="swatches__item"
+        style="background: #c9ceff"
+      >
+        <span class="swatches__name">Pale blue</span>
+        <span class="swatches__hex">#c9ceff</span>
+      </li>
+      <li
+        class="swatches__item"
+        style="background: #ffe600"
+      >
+        <span class="swatches__name">Signal</span>
+        <span class="swatches__hex">#ffe600</span>
+      </li>
+      <li
+        class="swatches__item"
+        style="background: #ff5a4d"
+      >
+        <span class="swatches__name">Stop</span>
+        <span class="swatches__hex">#ff5a4d</span>
+      </li>
+    </ul>
+
+    <div class="table-wrap" tabindex="0" role="region"
+      aria-label="Contrast of each text pair">
+      <table class="table table-wide">
+        <thead>
+          <tr>
+            <th>Text</th>
+            <th>On</th>
+            <th>Contrast</th>
+            <th>Used for</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Ink <code>#06066b</code></td>
+            <td>Paper</td>
+            <td>15.1 to 1</td>
+            <td>Body text, light theme</td>
+          </tr>
+          <tr>
+            <td>Electric <code>#0000f2</code></td>
+            <td>Paper</td>
+            <td>8.2 to 1</td>
+            <td>Links, light theme</td>
+          </tr>
+          <tr>
+            <td>Pale <code>#f2f2f2</code></td>
+            <td>Electric</td>
+            <td>8.2 to 1</td>
+            <td>Hero and header, both themes</td>
+          </tr>
+          <tr>
+            <td>Pale <code>#f2f2f2</code></td>
+            <td>Navy</td>
+            <td>17.1 to 1</td>
+            <td>Body text, dark theme</td>
+          </tr>
+          <tr>
+            <td>Soft blue <code>#aab2ff</code></td>
+            <td>Navy</td>
+            <td>9.6 to 1</td>
+            <td>Links, dark theme</td>
+          </tr>
+          <tr>
+            <td>Ink <code>#06066b</code></td>
+            <td>Signal</td>
+            <td>13.3 to 1</td>
+            <td>"Not tested" and "not run" chips</td>
+          </tr>
+          <tr>
+            <td>Ink <code>#06066b</code></td>
+            <td>Stop</td>
+            <td>5.5 to 1</td>
+            <td>Limit chips</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<section class="band band-rule">
+  <div class="band__column">
+    <div class="band__head">
+      <span class="band__numeral">IV.</span>
+      <h2 class="band__title">Type</h2>
+    </div>
+
+    <div class="specimen">
+      <p class="label label-mono">Display · Oswald Light 300</p>
+      <p class="specimen__display">One agent, two machines</p>
+    </div>
+    <div class="specimen">
+      <p class="label label-mono">Labels · Oswald Medium 500, tracked</p>
+      <p class="specimen__label">
+        Install · Use · Limits · What is tested
+      </p>
+    </div>
+    <div class="specimen">
+      <p class="label label-mono">Body · the system sans</p>
+      <p>
+        A session picks its target once, from the folder it was opened
+        in. A session never moves to another machine by itself.
+      </p>
+    </div>
+    <div class="specimen">
+      <p class="label label-mono">Code · the system mono</p>
+      <p class="specimen__mono">hermes config set terminal.backend hands</p>
+    </div>
+    <div class="specimen">
+      <p class="label label-mono">Plate captions · the system serif</p>
+      <p class="specimen__plate">
+        Plate II. Marble right hand and wrist.
+      </p>
+    </div>
+    <p>
+      One font file is self-hosted: Oswald, Latin, weights 200 to 700,
+      28 KB, SIL Open Font License. Everything else is a system font
+      and costs nothing.
+    </p>
+  </div>
+</section>
+
+<section class="band band-navy">
+  <div class="band__column">
+    <div class="band__head">
+      <span class="band__numeral">V.</span>
+      <h2 class="band__title">Pieces</h2>
+    </div>
+
+    <div class="band__grid">
+      <div class="stack">
+        <div class="nav">
+          <img class="nav__mark" src="brand/mark-pale.svg" alt="">
+          <a class="nav__link" href="#">Use</a>
+          <a class="nav__link" href="#">Limits</a>
+          <a class="nav__link" href="#">Tested</a>
+          <a class="nav__link nav__link-button" href="#">Install</a>
+        </div>
+
+        <div class="code">
+          <div class="code__bar">
+            <span class="label label-mono">On the host</span>
+            <button class="code__copy" type="button">Copy</button>
+          </div>
+<pre class="code__body">hermes plugins enable hermes-hands
+hermes hands status</pre>
+        </div>
+
+        <p>
+          <span class="chip chip-pass">Pass</span>
+          <span class="chip chip-open">Not run</span>
+          <span class="chip chip-stop">Limit</span>
+          <span class="chip">v0.1.0</span>
+        </p>
+      </div>
+
+      <div class="stack" style="color: var(--ink)">
+        <div class="callout">
+          <p class="label callout__label">Note</p>
+          <p class="callout__text">
+            A profile loads plugins only from its own plugins folder.
+          </p>
+        </div>
+        <div class="callout callout-open">
+          <p class="label callout__label">Not tested</p>
+          <p class="callout__text">
+            The desktop plugin inside the real Hermes Desktop app.
+          </p>
+        </div>
+        <div class="callout callout-stop">
+          <p class="label callout__label">Limit</p>
+          <p class="callout__text">
+            No sandbox. An SSH target can do anything its user can.
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="band">
+  <div class="band__column">
+    <div class="band__head">
+      <span class="band__numeral">VI.</span>
+      <h2 class="band__title">Marketplace</h2>
+    </div>
+
+    <div class="band__grid">
+      <div class="banner" aria-label="Sketch of the catalog banner">
+        <img class="banner__head" src="brand/plate-head.png" alt="">
+        <img class="banner__hand" src="brand/plate-hand.png" alt="">
+        <div class="banner__wire"></div>
+        <img class="banner__lockup" src="brand/lockup.svg" alt="">
+        <p class="label banner__tag">Community plugin</p>
+      </div>
+
+      <div class="table-wrap" tabindex="0" role="region"
+        aria-label="What the catalog asks for">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Asset</th>
+              <th>The catalog's rule</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>image</code></td>
+              <td>
+                One banner, 2 to 1, such as 1200 by 600. The listing
+                page crops it and lays the title over its left side.
+              </td>
+            </tr>
+            <tr>
+              <td><code>screenshots</code></td>
+              <td>Up to six. None can be honest until Phase 5 runs.</td>
+            </tr>
+            <tr>
+              <td>Hosting</td>
+              <td>
+                Both must be raw GitHub URLs pinned to the commit the
+                entry pins.
+              </td>
+            </tr>
+            <tr>
+              <td>README</td>
+              <td>
+                Shown on the listing as Markdown. Raw HTML is dropped,
+                so the README can use no HTML tags.
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</section>
+
+</main>
+
+</body>
+</html>
