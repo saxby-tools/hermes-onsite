@@ -164,6 +164,9 @@ def build_probe_command(spec: TargetSpec) -> list[str]:
     if spec.key:
         command += ["-i", spec.key]
 
+    if spec.known_hosts:
+        command += ["-o", f"UserKnownHostsFile={spec.known_hosts}"]
+
     command += [f"{spec.user}@{spec.host}", PROBE_COMMAND]
 
     return command
