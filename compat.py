@@ -22,6 +22,8 @@ from agent.terminal_env_provider import TerminalEnvironmentProvider
 from gateway.session_context import get_session_env
 from hermes_cli.config import load_config_readonly
 from hermes_cli.plugin_session import session_cwd
+from hermes_cli.plugin_session import session_key
+from hermes_cli.plugin_session import session_surface
 from hermes_constants import get_hermes_home
 from tools.environments.base import EnvironmentConnectionError
 
@@ -51,6 +53,8 @@ __all__ = [
     "anchor_file_tools",
     "current_session_cwd",
     "current_session_id",
+    "current_session_key",
+    "current_surface",
     "data_dir",
     "drop_current_environment",
     "environment_key",
@@ -92,6 +96,25 @@ def current_session_id() -> str:
         return ""
 
 
+def current_session_key() -> str:
+    try:
+        return session_key() or ""
+    except Exception:
+        logger.debug("no session key is readable", exc_info=True)
+        return ""
+
+
+def current_surface() -> str:
+    """`cli`, `tui`, `desktop`, `acp` or a chat platform. Empty when
+    there is no session."""
+
+    try:
+        return session_surface() or ""
+    except Exception:
+        logger.debug("no session surface is readable", exc_info=True)
+        return ""
+
+
 def environment_key() -> str:
     """The key Hermes caches the calling session's environment under."""
 
@@ -100,12 +123,37 @@ def environment_key() -> str:
     return _resolve_container_task_id(None)
 
 
-def drop_current_environment() -> bool:
+def forget_session_folder(*ids: str) -> None:
+    """Drop the folder Hermes recorded for a session.
+
+    The record is a path on the machine the session was using. After
+    a switch it would be handed to the new machine, where it most
+    likely does not exist.
+    """
+
+    from tools.approval import get_current_session_key
+    from tools.terminal_tool import clear_session_cwd
+
+    known = {
+        get_current_session_key(default=""),
+        current_session_key(),
+        current_session_id(),
+        *ids,
+    }
+
+    for name in known:
+        if name:
+            clear_session_cwd(name)
+
+
+def drop_current_environment(*ids: str) -> bool:
     """Discard the calling session's environment so the next tool call
     builds a new one. True when one was live."""
 
     from tools.terminal_tool_lifecycle import cleanup_vm
     from tools.terminal_tool_lifecycle import get_active_env
+
+    forget_session_folder(*ids)
 
     key = environment_key()
 
