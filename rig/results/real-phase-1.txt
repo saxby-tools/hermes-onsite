@@ -1,0 +1,107 @@
+# Phase 1: backend and routing
+
+== Phase 1.1: a session in a laptop folder runs there
+  --- terminal: pwd + 2 commands [completed, 1.25s]
+  | terminal result
+  | - **output:** <laptop-rig>/sample
+  | <this-user>
+  | <laptop>
+  | - **exit_code:** 0
+  | - **cwd:** <laptop-rig>/sample
+  PASS  pwd is the laptop path
+  PASS  whoami is the laptop user
+  PASS  the machine name is the laptop's
+
+== Phase 1.2: PATH from the interactive shell
+  PASS  PATH has every folder the interactive shell adds
+        the interactive shell adds 10 folders; 10 of them are in the session
+
+== Phase 1.3: file tools act on the laptop's files
+  --- write_file: rig-note.txt [completed, 0.29s]
+  | ✅ write_file completed for `rig-note.txt`
+  | Files: `<laptop-rig>/sample/rig-note.txt`
+  --- read_file: rig-note.txt [completed, 0.09s]
+  | Read rig-note.txt — 2 total lines
+  | 
+  | ```
+  | 1|alpha
+  | 2|bravo
+  | ```
+  --- search_files: bravo [completed, 0.22s]
+  | Search results
+  | Found 2 matches; showing 2.
+  | 
+  | - ./rig-note.txt:2
+  |   bravo
+  | - ./notes.txt:2
+  |   bravo
+  --- terminal: cat rig-note.txt + 1 command [completed, 0.10s]
+  | terminal result
+  | - **output:** alpha
+  | bravo
+  | <laptop>
+  | - **exit_code:** 0
+  --- approval prompt: Approve edit: <laptop-home>/rig-note.txt
+  | options: Allow once / Deny
+  | answered: Allow once
+  PASS  write, read, search and cat all completed
+        statuses: ['completed', 'completed', 'completed', 'completed']
+  PASS  the file was written in the session folder on the laptop
+  PASS  nothing was written on the host
+  PASS  read_file returned the laptop's content
+  PASS  search_files found the new file
+  patch runs through the plain CLI:
+  --- hermes -z script:patch
+  | Done.
+  PASS  patch edited the file on the laptop
+        content: 'alpha\ncharlie\n'
+
+== Phase 1.4: a session in a Mac path runs on the Mac
+  --- terminal: pwd + 2 commands [completed, 0.20s]
+  | terminal result
+  | - **output:** <repo>/.rig/mac-work
+  | <this-user>
+  | <this-host>
+  | - **exit_code:** 0
+  | - **cwd:** <repo>/.rig/mac-work
+  PASS  pwd is the host folder
+  PASS  whoami is the host user
+  PASS  the machine name is the host's
+
+== Phase 1.5: a denied approval stops the command
+  --- terminal: mkdir -p hands-rig-victim + 1 command [completed, 1.11s]
+  | terminal result
+  | - **exit_code:** 0
+  | - **cwd:** <laptop-rig>/sample
+  --- terminal: rm -rf hands-rig-victim [failed, 0.02s]
+  | terminal failed: BLOCKED: Command denied by user. The user has NOT consented to this action. Do NOT retry this command, do NOT rephrase it, and do NOT attempt the same outcome via a different command. Stop the current workflow and wait for the user to respond before taking any further destructive or irreversible action.
+  --- terminal: test -e hands-rig-victim/keep + 2 commands [completed, 0.06s]
+  | terminal result
+  | - **output:** SURVIVED
+  | - **exit_code:** 0
+  --- approval prompt: recursive delete: rm -rf hands-rig-victim
+  | options: Allow once / Allow for session / Allow always / Deny / Deny always
+  | answered: Deny
+  PASS  Hermes' built-in prompt fired for the gated command
+        prompts: 1
+  PASS  the denied command did not run
+  PASS  the folder is still on the laptop
+
+== Phase 1.6: an allowed approval runs the command
+  --- terminal: mkdir -p hands-rig-victim + 1 command [completed, 1.04s]
+  | terminal result
+  | - **exit_code:** 0
+  | - **cwd:** <laptop-rig>/sample
+  --- terminal: rm -rf hands-rig-victim [completed, 0.07s]
+  | terminal result
+  | - **exit_code:** 0
+  | - **approval:** Command required approval (recursive delete) and was approved by the user.
+  --- terminal: test -e hands-rig-victim/keep + 2 commands [completed, 0.07s]
+  | terminal result
+  | - **output:** GONE
+  | - **exit_code:** 0
+  --- approval prompt: recursive delete: rm -rf hands-rig-victim
+  | options: Allow once / Allow for session / Allow always / Deny / Deny always
+  | answered: Allow once
+  PASS  the prompt fired again in a new session
+  PASS  the command ran
