@@ -1,0 +1,129 @@
+# Phase 3: CLI surface
+
+== Phase 3.1: hermes hands status
+  --- in a laptop folder
+  | Folder    <repo>/.rig/work/sample
+  | Target    laptop (<laptop-user>@127.0.0.1)
+  | State     connected (166 ms)
+  | Start in  <laptop-rig>/sample
+  | Why       the session folder is in its path map
+  | 
+  | Targets
+  |    laptop  ssh    up (169 ms)  <laptop-user>@127.0.0.1
+  |  * mac     local  up
+  | 
+  | * is the default target.
+  PASS  a laptop folder shows the laptop target and that it is up
+  PASS  it shows the folder the session would start in
+  PASS  it exits 0 when the target is up
+  PASS  a Mac folder shows the local target
+  --- with the laptop stopped
+  | Folder    <repo>/.rig/work/sample
+  | Target    laptop (<laptop-user>@127.0.0.1)
+  | State     NOT REACHABLE (ssh: connect to host 127.0.0.1 port 2223: Connection refused)
+  | Start in  <laptop-rig>/sample
+  | Why       the session folder is in its path map
+  | 
+  | Targets
+  |    laptop  ssh    DOWN (ssh: connect to host 127.0.0.1 port 2223: Connection refused)
+  |  * mac     local  up
+  | 
+  | * is the default target.
+  PASS  a stopped target is shown as not reachable
+  PASS  it exits 1 when the target is down
+
+== Phase 3.2: hermes hands init
+  --- without --apply
+  | [DRY RUN] settings for config.yaml:
+  | 
+  | plugins:
+  |   entries:
+  |     hermes-hands:
+  |       settings:
+  |         default: mac
+  |         targets:
+  |           laptop:
+  |             kind: ssh
+  |             user: <laptop-user>
+  |             host: 127.0.0.1
+  |             port: 2223
+  |             prefixes:
+  |               - <laptop-home>/
+  |             path_map:
+  |               <repo>/.rig/work: <laptop-rig>
+  |             key: ~/.ssh/id_ed25519
+  |             known_hosts: <repo>/.rig/keys/known_hosts
+  |           mac:
+  |             kind: local
+  | 
+  | [DRY RUN] nothing was written. Add --apply to write it.
+  PASS  without --apply it is a dry run
+  PASS  the dry run left config.yaml untouched
+  PASS  a malformed flag is refused with a reason
+        --ssh expects NAME=VALUE, got `laptop`
+  PASS  with --apply it writes and says so
+  PASS  the written settings load and route as before
+
+== Phase 3.3: /hands shows and switches the target
+  --- /hands
+  | Hands:   laptop (<laptop-user>@127.0.0.1)
+  | State:   connected (193 ms)
+  | Folder:  <laptop-rig>/sample
+  | Why:     this session started there
+  | Targets: laptop, mac (default)
+  | Switch with /hands <target>. Go back to the rules with /hands auto.
+  PASS  /hands names the target, its state and the folder
+  --- /hands mac
+  | This session now runs on mac (this machine).
+  | The next tool call starts in <repo>/.rig/work/sample.
+  | The agent was not told. Say so in your next message if it matters, since paths differ between machines.
+  PASS  /hands mac moves the session
+  --- terminal: pwd + 2 commands [completed, 0.30s]
+  | terminal result
+  | - **output:** <repo>/.rig/work/sample
+  | <this-user>
+  | <this-host>
+  | - **exit_code:** 0
+  | - **cwd:** <repo>/.rig/work/sample
+  PASS  the next tool call runs on the Mac, in the session folder
+  PASS  /hands auto goes back to the folder rules
+  --- terminal: pwd + 2 commands [completed, 1.37s]
+  | terminal result
+  | - **output:** <laptop-rig>/sample
+  | <this-user>
+  | <laptop>
+  | - **exit_code:** 0
+  | - **cwd:** <laptop-rig>/sample
+  PASS  the next tool call runs on the laptop again
+  PASS  an unknown target is refused with the choices
+        `nowhere` is not a target. Targets: laptop, mac.
+
+== Phase 3.4: propose_command and /run
+  --- propose_command: echo proposed-ran > proposed.txt [completed, 0.00s]
+  | Proposed command #1 is saved. It has NOT run.
+  | Show the user the block below as it is, then stop and wait.
+  | 
+  | Proposed command #1
+  | 
+  |     $ echo proposed-ran > proposed.txt
+  | 
+  | Why: Leaves a marker file so the test can see it ran.
+  | Run it with /run 1
+  PASS  propose_command prints a numbered block
+  PASS  proposing does not run the command
+  --- /run 1
+  | Asked the agent to run #1 through the terminal tool. Hermes' approval prompt still applies.
+  PASS  /run 1 hands the command to the agent
+  PASS  the agent ran it through the terminal tool on the laptop
+  PASS  /run with an unknown number says what exists
+        Script finished.There is no proposed command #9. Known: #1.
+
+== Phase 3.5: the classic CLI on a real terminal
+  PASS  /hands works in the cli client
+  PASS  Hermes' own approval prompt appears in the cli client
+  PASS  denying it in the cli client stops the command
+
+== Phase 3.6: the TUI on a real terminal
+  PASS  /hands works in the tui client
+  PASS  Hermes' own approval prompt appears in the tui client
+  PASS  denying it in the tui client stops the command
