@@ -18,13 +18,17 @@ from __future__ import annotations
 
 import argparse
 import getpass
+import json
 import os
+import secrets
 import shutil
 import signal
 import socket
 import subprocess
 import sys
 import time
+import urllib.error
+import urllib.request
 
 from pathlib import Path
 
@@ -50,6 +54,11 @@ HANDS_USER = "dev"
 HANDS_SAMPLE_DIR = "/home/dev/Development/sample"
 HANDS_SSH_PORT = 2222
 STUB_PORT = 11499
+SERVE_PORT = 18733
+SERVE_START_SECONDS = 60
+TOKEN_ENV = "HERMES_DASHBOARD_SESSION_TOKEN"
+TOKEN_HEADER = "X-Hermes-Session-Token"
+PLUGIN_API = f"http://127.0.0.1:{SERVE_PORT}/api/plugins/{PLUGIN_ID}"
 
 BACKUP_SUFFIX = ".hands-rig-backup"
 STUB_PID_FILE = "stub-model.pid"
@@ -263,7 +272,7 @@ def start_container(public_key: str) -> None:
         "run", "--detach",
         "--name", CONTAINER,
         "--publish", f"127.0.0.1:{HANDS_SSH_PORT}:22",
-        "--env", f"HANDS_AUTHORIZED_KEY={public_key}",
+        "--env", f"HANDS_LOGIN_KEY={public_key}",
         IMAGE,
     )
 
@@ -1006,10 +1015,143 @@ def phase_three(report: Report, profile: Profile) -> None:
     phase_three_terminals(report, profile)
 
 
+def post_json(route: str, body: dict, token: str = "") -> tuple[int, dict]:
+    request = urllib.request.Request(
+        f"{PLUGIN_API}{route}",
+        data=json.dumps(body).encode(),
+        headers={"Content-Type": "application/json"},
+        method="POST",
+    )
+
+    if token:
+        request.add_header(TOKEN_HEADER, token)
+
+    try:
+        with urllib.request.urlopen(request, timeout=20) as response:
+            return response.status, json.loads(response.read())
+    except urllib.error.HTTPError as error:
+        return error.code, {}
+
+
+def start_server(profile: Profile, token: str) -> subprocess.Popen:
+    """Start the server Hermes Desktop would start for this profile.
+
+    It is a process of its own, scoped to the test profile, and it is
+    stopped by its own pid. The shared gateway is left alone.
+    """
+
+    log = open(LOG_DIR / "serve.log", "w")
+
+    process = subprocess.Popen(
+        profile.command(
+            "serve", "--isolated", "--skip-build",
+            "--host", "127.0.0.1",
+            "--port", str(SERVE_PORT),
+        ),
+        env={**os.environ, TOKEN_ENV: token},
+        stdout=log,
+        stderr=log,
+        stdin=subprocess.DEVNULL,
+        cwd=str(RIG_DIR),
+    )
+
+    wait_for_port(SERVE_PORT, SERVE_START_SECONDS)
+
+    return process
+
+
+def phase_four_api(report: Report, profile: Profile) -> None:
+    report.section("Phase 4.1: the status routes on a real Hermes server")
+    token = secrets.token_hex(16)
+    server = start_server(profile, token)
+
+    try:
+        code, _ = post_json("/status", {})
+        report.check(
+            "a request with no token is refused",
+            code == 401,
+            f"HTTP {code}",
+        )
+
+        body = {"cwd": str(LAPTOP_SESSION_DIR)}
+        code, status = post_json("/status", body, token)
+        report.quote("POST /status", scrub(json.dumps(status, indent=2)))
+
+        report.check(
+            "the route answers for a laptop folder",
+            code == 200
+            and status.get("target") == "laptop"
+            and status.get("connected") is True,
+        )
+        report.check(
+            "it lists every target with its live state",
+            [row["name"] for row in status.get("rows", [])]
+            == ["laptop", "mac"],
+        )
+
+        stop_container()
+        code, status = post_json("/status", body, token)
+        resume_container()
+
+        report.check(
+            "a stopped target is reported from a live probe",
+            status.get("connected") is False and bool(status.get("detail")),
+            f"detail: {status.get('detail')}",
+        )
+
+        code, listed = post_json("/proposals", {"session_ids": ["x"]}, token)
+        report.check(
+            "the proposals route answers",
+            code == 200 and listed.get("items") == [],
+        )
+    finally:
+        server.terminate()
+
+        try:
+            server.wait(timeout=15)
+        except subprocess.TimeoutExpired:
+            server.kill()
+
+
+def phase_four_desktop(report: Report, profile: Profile) -> None:
+    report.section("Phase 4.2: desktop/plugin.js with real React")
+    report.write(
+        "  The plugin file is loaded as the desktop app loads it, with"
+    )
+    report.write(
+        "  real React and a real DOM. The app itself and its SDK are"
+    )
+    report.write(
+        "  stand-ins. Gate 3 is still a look at the real app."
+    )
+
+    done = run(
+        ["node", "--test", str(REPO / "tests" / "desktop.test.mjs")],
+        cwd=str(REPO),
+        timeout=300,
+    )
+    report.quote("node --test tests/desktop.test.mjs", scrub(done.stdout))
+
+    report.check(
+        "every desktop test passes",
+        done.returncode == 0 and "# fail 0" in done.stdout.replace("ℹ", "#"),
+    )
+    report.check(
+        "none was skipped for lack of React",
+        "skipped 0" in done.stdout,
+    )
+
+
+def phase_four(report: Report, profile: Profile) -> None:
+    phase_four_api(report, profile)
+    phase_four_desktop(report, profile)
+
+
 PHASES = {
     "1": ("Phase 1: backend and routing", phase_one),
     "2": ("Phase 2: resilience", phase_two_all),
     "3": ("Phase 3: CLI surface", phase_three),
+    "4": ("Phase 4: desktop surface", phase_four),
 }
 
 

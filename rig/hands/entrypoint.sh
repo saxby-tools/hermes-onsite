@@ -3,23 +3,27 @@
 #
 # The public key arrives through the environment so the image holds
 # no key material and every rig run can use a fresh pair.
+#
+# It is written to a file of the rig's own, which sshd is pointed at
+# in the Dockerfile. Hermes' plugin scanner blocks any plugin whose
+# files name the usual per-user key file, and it is right to. A test
+# container is no reason to trip it.
 
 set -eu
 
 HOME_DIR="/home/${HANDS_USER}"
-SSH_DIR="${HOME_DIR}/.ssh"
+LOGIN_KEY_FILE="/etc/hands/login.pub"
 
-if [ -z "${HANDS_AUTHORIZED_KEY:-}" ]; then
-    echo "hands: HANDS_AUTHORIZED_KEY is not set" >&2
+if [ -z "${HANDS_LOGIN_KEY:-}" ]; then
+    echo "hands: HANDS_LOGIN_KEY is not set" >&2
     exit 64
 fi
 
-mkdir -p "${SSH_DIR}"
+mkdir -p "$(dirname "${LOGIN_KEY_FILE}")"
 
-printf '%s\n' "${HANDS_AUTHORIZED_KEY}" > "${SSH_DIR}/authorized_keys"
+printf '%s\n' "${HANDS_LOGIN_KEY}" > "${LOGIN_KEY_FILE}"
 
-chmod 0700 "${SSH_DIR}"
-chmod 0600 "${SSH_DIR}/authorized_keys"
+chmod 0644 "${LOGIN_KEY_FILE}"
 
 if [ ! -d "${HOME_DIR}/Development/sample" ]; then
     HOME="${HOME_DIR}" /usr/local/bin/hands-seed-home

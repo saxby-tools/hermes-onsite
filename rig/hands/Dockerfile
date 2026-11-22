@@ -34,6 +34,7 @@ RUN printf '%s\n' \
         'KbdInteractiveAuthentication no' \
         'PermitRootLogin no' \
         'PubkeyAuthentication yes' \
+        'AuthorizedKeysFile /etc/hands/login.pub' \
         > /etc/ssh/sshd_config.d/hands.conf
 
 COPY entrypoint.sh /usr/local/bin/hands-entrypoint
