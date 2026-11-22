@@ -1,0 +1,25 @@
+<svg
+  xmlns="http://www.w3.org/2000/svg"
+  viewBox="0 0 16 16"
+  shape-rendering="crispEdges"
+  role="img"
+>
+  <title>hermes-hands</title>
+  <!--
+    The hermes-hands mark: an open hand on a 16 by 16 grid, with two rows
+    knocked two squares to the right. The hands work somewhere other than
+    where the rest sits. Drawn by hand; every edge is on the grid, so it is
+    sharp at 16 pixels and at any whole multiple. Full colour, on its own
+    blue tile, for any background.
+  -->
+  <rect width="16" height="16" fill="#0000f2" />
+  <path
+    fill="#f2f2f2"
+    d="M7 1h2v7h-2z M4 2h2v6h-2z M10 2h2v6h-2z M13 4h2v4h-2z M1 7h2v4h-2z M4
+      8h11v3h-11z M3 10h1v1h-1z M4 13h11v1h-11z M5 14h9v1h-9z"
+  />
+  <path
+    fill="#ffe600"
+    d="M4 11h12v1h-12z M5 12h11v1h-11z"
+  />
+</svg>
