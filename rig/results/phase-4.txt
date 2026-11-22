@@ -11,7 +11,7 @@
   |   "label": "laptop (dev@127.0.0.1)",
   |   "connected": true,
   |   "detail": "",
-  |   "latency_ms": 59,
+  |   "latency_ms": 54,
   |   "cwd": "/home/dev/Development/sample",
   |   "folder_known": true,
   |   "reason": "path_map",
@@ -29,7 +29,7 @@
   |       "label": "laptop (dev@127.0.0.1)",
   |       "connected": true,
   |       "detail": "",
-  |       "latency_ms": 51,
+  |       "latency_ms": 46,
   |       "default": false
   |     },
   |     {
@@ -54,18 +54,18 @@
   real React and a real DOM. The app itself and its SDK are
   stand-ins. Gate 3 is still a look at the real app.
   --- node --test tests/desktop.test.mjs
-  | ✔ the file imports only what the desktop loader allows (0.704209ms)
-  | ✔ it registers a chip, a pane and a run card (196.02025ms)
-  | ✔ it asks the host with a POST body, not a query string (5.574625ms)
-  | ✔ the chip changes state when the target goes down and comes back (19.084042ms)
-  | ✔ the chip says so when the host has no plugin (8.199916ms)
-  | ✔ clicking the chip opens the pane (10.02425ms)
-  | ✔ the pane lists proposed commands and Run sends /run N (10.169084ms)
-  | ✔ Copy puts the exact command on the clipboard (1612.287542ms)
-  | ✔ the run card runs in the chat it was drawn in (18.145042ms)
-  | ✔ the run card works on an app that sends no session id (11.524ms)
-  | ✔ the run card ignores attributes that are not a plain number (8.852708ms)
-  | ✔ a failed send tells the user what to type instead (9.800334ms)
+  | ✔ the file imports only what the desktop loader allows (0.705041ms)
+  | ✔ it registers a chip, a pane and a run card (341.164792ms)
+  | ✔ it asks the host with a POST body, not a query string (5.256791ms)
+  | ✔ the chip changes state when the target goes down and comes back (19.714542ms)
+  | ✔ the chip says so when the host has no plugin (8.314166ms)
+  | ✔ clicking the chip opens the pane (9.557833ms)
+  | ✔ the pane lists proposed commands and Run sends /run N (8.573875ms)
+  | ✔ Copy puts the exact command on the clipboard (1612.454ms)
+  | ✔ the run card runs in the chat it was drawn in (17.38325ms)
+  | ✔ the run card works on an app that sends no session id (10.886ms)
+  | ✔ the run card ignores attributes that are not a plain number (9.046542ms)
+  | ✔ a failed send tells the user what to type instead (8.504917ms)
   | ℹ tests 12
   | ℹ suites 0
   | ℹ pass 12
@@ -73,6 +73,6 @@
   | ℹ cancelled 0
   | ℹ skipped 0
   | ℹ todo 0
-  | ℹ duration_ms 1993.832625
+  | ℹ duration_ms 2136.034292
   PASS  every desktop test passes
   PASS  none was skipped for lack of React
