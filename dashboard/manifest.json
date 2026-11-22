@@ -1,0 +1,12 @@
+{
+  "name": "hermes-hands",
+  "label": "Hands",
+  "description": "Status and proposed commands for hermes-hands.",
+  "version": "0.1.0",
+  "tab": {
+    "path": "/hermes-hands",
+    "hidden": true
+  },
+  "entry": "dist/index.js",
+  "api": "plugin_api.py"
+}
