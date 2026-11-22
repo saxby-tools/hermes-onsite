@@ -3,7 +3,7 @@ label: Hands
 kind: backend
 version: 0.1.0
 author: saxby-tools
-license: AGPL-3.0-only
+license: AGPL-3.0-or-later
 homepage: https://github.com/saxby-tools/hermes-hands
 description: >
   Makes a remote Hermes agent act on the machine its user is sitting
