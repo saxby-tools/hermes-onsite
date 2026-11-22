@@ -1,0 +1,16 @@
+{
+  "about": "Phase 1: does patch edit a file on the target?",
+  "steps": [
+    {
+      "tool": "patch",
+      "args": {
+        "path": "rig-note.txt",
+        "old_string": "bravo",
+        "new_string": "charlie"
+      }
+    },
+    {
+      "text": "Done."
+    }
+  ]
+}
