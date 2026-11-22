@@ -1,0 +1,111 @@
+"""Settings must load whole or fail loudly with every problem."""
+
+from __future__ import annotations
+
+import pytest
+
+from hermes_hands import config
+
+
+GOOD = {
+    "default": "mac",
+    "targets": {
+        "laptop": {
+            "kind": "ssh",
+            "host": "laptop.example",
+            "user": "dev",
+            "prefixes": ["/home/dev/"],
+            "path_map": {"/Users/dev/Development": "/home/dev/Development"},
+        },
+        "mac": {"kind": "local"},
+    },
+}
+
+
+def test_a_good_block_loads():
+    parsed = config.parse_config(GOOD)
+
+    assert parsed.default == "mac"
+    assert list(parsed.targets) == ["laptop", "mac"]
+
+    laptop = parsed.target("laptop")
+
+    assert laptop.kind == config.KIND_SSH
+    assert laptop.prefixes == ("/home/dev",)
+    assert laptop.path_map == (
+        ("/Users/dev/Development", "/home/dev/Development"),
+    )
+    assert laptop.port == config.DEFAULT_SSH_PORT
+    assert laptop.inhibit_sleep is True
+    assert laptop.label == "laptop (dev@laptop.example)"
+
+
+def test_no_settings_fails_with_the_fix():
+    with pytest.raises(config.ConfigError) as caught:
+        config.parse_config(None)
+
+    assert "hermes hands init" in str(caught.value)
+
+
+def test_missing_targets_is_named():
+    with pytest.raises(config.ConfigError) as caught:
+        config.parse_config({"default": "mac"})
+
+    assert any("targets" in item for item in caught.value.problems)
+
+
+def test_every_problem_is_reported_at_once():
+    broken = {
+        "default": "nowhere",
+        "targets": {
+            "laptop": {"kind": "ssh", "prefixes": ["relative/path"]},
+            "Bad Name": {"kind": "local"},
+            "odd": {"kind": "carrier-pigeon"},
+            "auto": {"kind": "local"},
+        },
+    }
+
+    with pytest.raises(config.ConfigError) as caught:
+        config.parse_config(broken)
+
+    text = "\n".join(caught.value.problems)
+
+    assert "`laptop.host` is required" in text
+    assert "`laptop.user` is required" in text
+    assert "not an absolute path" in text
+    assert "Bad Name" in text
+    assert "`odd.kind`" in text
+    assert "reserved" in text
+    assert "`nowhere`" in text
+
+
+def test_unknown_keys_are_refused():
+    block = {
+        "default": "mac",
+        "targets": {"mac": {"kind": "local", "hots": "typo"}},
+    }
+
+    with pytest.raises(config.ConfigError) as caught:
+        config.parse_config(block)
+
+    assert "`mac.hots` is not a known setting" in caught.value.problems
+
+
+@pytest.mark.parametrize("port", [0, 70000, "22", True])
+def test_bad_ports_are_refused(port):
+    block = {
+        "default": "box",
+        "targets": {
+            "box": {"kind": "ssh", "host": "h", "user": "u", "port": port},
+        },
+    }
+
+    with pytest.raises(config.ConfigError):
+        config.parse_config(block)
+
+
+def test_settings_round_trip():
+    parsed = config.parse_config(GOOD)
+    written = config.config_to_settings(parsed)
+
+    assert config.parse_config(written) == parsed
