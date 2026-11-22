@@ -1,0 +1,136 @@
+<%#
+  The "how a tool call travels" drawing, in a blue frame. It wraps
+  the text drawing the Markdown holds, which GitHub shows and which
+  stays here as the text version:
+
+    <!-- hands:diagram {"caption": "..."} -->
+    (a fenced text drawing)
+    <!-- /hands:diagram -->
+
+  The drawing itself is fixed. If the parts or the path change, change
+  the SVG below and the text drawing together.
+-%>
+<figure class="diagram">
+  <div class="diagram__frame">
+    <svg
+      class="diagram__art"
+      viewBox="0 0 720 300"
+      role="img"
+      aria-labelledby="diagram-title diagram-desc"
+    >
+      <title id="diagram-title">Two machines and five parts</title>
+      <desc id="diagram-desc">
+        Chat goes from the machine you sit at to the always-on host.
+        On the host, the agent loop passes each tool call through the
+        approval gate to the hands backend. The backend sends it back
+        over SSH to your shell and files, as you.
+      </desc>
+
+      <defs>
+        <marker
+          id="diagram-arrow"
+          viewBox="0 0 10 10"
+          refX="9"
+          refY="5"
+          markerWidth="7"
+          markerHeight="7"
+          orient="auto-start-reverse"
+        >
+          <path class="diagram__arrow" d="M0 0 L10 5 L0 10 z" />
+        </marker>
+        <marker
+          id="diagram-arrow-hot"
+          viewBox="0 0 10 10"
+          refX="9"
+          refY="5"
+          markerWidth="5"
+          markerHeight="5"
+          orient="auto-start-reverse"
+        >
+          <path class="diagram__arrow-hot" d="M0 0 L10 5 L0 10 z" />
+        </marker>
+      </defs>
+
+      <rect class="diagram__machine" x="12" y="28" width="270"
+        height="258" />
+      <rect class="diagram__machine" x="438" y="28" width="270"
+        height="258" />
+
+      <text class="diagram__machine-name" x="28" y="54">
+        The machine you sit at
+      </text>
+      <text class="diagram__machine-name" x="454" y="54">
+        The always-on host
+      </text>
+
+      <rect class="diagram__part" x="36" y="76" width="222"
+        height="52" />
+      <text class="diagram__part-name" x="147" y="99">
+        Hermes client
+      </text>
+      <text class="diagram__part-note" x="147" y="116">
+        CLI, TUI, Desktop or an editor
+      </text>
+
+      <rect class="diagram__part diagram__part-hot" x="36" y="204"
+        width="222" height="58" />
+      <text class="diagram__part-name diagram__part-name-hot" x="147"
+        y="229">
+        Your shell and files
+      </text>
+      <text class="diagram__part-note diagram__part-note-hot" x="147"
+        y="246">
+        as you, in your project folder
+      </text>
+
+      <rect class="diagram__part" x="462" y="76" width="222"
+        height="44" />
+      <text class="diagram__part-name" x="573" y="103">
+        Agent loop, memory, skills
+      </text>
+
+      <rect class="diagram__part" x="462" y="140" width="222"
+        height="44" />
+      <text class="diagram__part-name" x="573" y="160">
+        Approval gate
+      </text>
+      <text class="diagram__part-note" x="573" y="175">
+        stock Hermes
+      </text>
+
+      <rect class="diagram__part diagram__part-hot" x="462" y="204"
+        width="222" height="58" />
+      <text class="diagram__part-name diagram__part-name-hot" x="573"
+        y="229">
+        hands backend
+      </text>
+      <text class="diagram__part-note diagram__part-note-hot" x="573"
+        y="246">
+        picks one target per session
+      </text>
+
+      <path class="diagram__wire" d="M258 102 H462"
+        marker-end="url(#diagram-arrow)" />
+      <text class="diagram__wire-label" x="360" y="94">chat</text>
+
+      <path class="diagram__wire" d="M573 120 V140"
+        marker-end="url(#diagram-arrow)" />
+      <path class="diagram__wire" d="M573 184 V204"
+        marker-end="url(#diagram-arrow)" />
+
+      <path class="diagram__wire diagram__wire-hot" d="M462 233 H262"
+        marker-end="url(#diagram-arrow-hot)" />
+      <text class="diagram__wire-label diagram__wire-label-hot"
+        x="360" y="223">
+        SSH, as you
+      </text>
+    </svg>
+  </div>
+<% if (options.caption) { -%>
+  <figcaption class="diagram__caption"><%= options.caption %></figcaption>
+<% } -%>
+  <details class="diagram__text">
+    <summary>The same drawing as text</summary>
+<%- html %>
+  </details>
+</figure>
