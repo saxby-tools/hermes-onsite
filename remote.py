@@ -23,10 +23,11 @@ from .config import PATH_MODE_INTERACTIVE
 from .config import TargetSpec
 
 
-# Two missed keepalives two seconds apart: a dead peer is noticed in
-# about four seconds instead of at the command's own timeout.
-KEEPALIVE_INTERVAL = 2
-KEEPALIVE_COUNT = 2
+# Three missed keepalives one second apart: a dead peer is noticed in
+# about four seconds instead of at the command's own timeout. The
+# acceptance bar is five.
+KEEPALIVE_INTERVAL = 1
+KEEPALIVE_COUNT = 3
 
 INHIBIT_NONE = "none"
 INHIBIT_BLOCK = "block"
