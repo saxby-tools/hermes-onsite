@@ -1,0 +1,6 @@
+.rig/
+__pycache__/
+*.pyc
+.pytest_cache/
+.venv/
+.DS_Store
