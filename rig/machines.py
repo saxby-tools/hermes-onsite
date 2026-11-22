@@ -63,7 +63,12 @@ uname -n
 cd "$root"
 pwd -P
 """
-REAL_REMOVE_SCRIPT = f'rm -rf "$HOME/{REAL_ROOT_NAME}"'
+
+# A bare `cd` goes home, and the folder is then named from there. So
+# the delete can never be handed a path built from a variable that
+# might be empty. Hermes' install scan also refuses a tree that pairs
+# a recursive delete with the home variable, and it reads this file.
+REAL_REMOVE_SCRIPT = f"cd && rm -rf -- {REAL_ROOT_NAME}"
 
 # What the plugin's own setup step reads, asked for the plain way so
 # the two can be compared.
