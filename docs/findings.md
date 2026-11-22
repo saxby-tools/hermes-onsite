@@ -74,6 +74,29 @@ an optional `path_map` from brain paths to hand paths.
 - Hermes cannot tell a read from a write at the backend seam. The
   plugin retries its own probes and nothing else.
 
+## Found after Phase 0, by running it
+
+These came out of the end-to-end rig, not out of reading source.
+
+- **Every client attaches to one shared gateway.** The CLI, the TUI
+  and the ACP adapter for the test profile all run their turns in
+  the default profile's gateway process. A plugin enabled later is
+  loaded there by `hermes plugins enable`, which asks the gateway to
+  rescan that profile. No restart is needed, and none was done.
+- **The terminal and the file tools disagree on the folder.** They
+  record and read it under different keys. A hook copies it across.
+- **A slash command is given no folder.** `/hands` uses the folder
+  noted at the session's first tool call or first prompt.
+- **A switch leaves the old machine's folder behind.** `/hands
+  <target>` has to clear Hermes' folder record too.
+- **Editors preview edits on the host.** Over ACP, a `patch` to a
+  file only the target has is refused. Not worked around.
+- **Hermes' plugin scanner reads the whole tree.** A test container
+  that wrote the per-user SSH key file would have blocked install.
+
+Each has an entry in `DECISIONS.md`, and the ones that are Hermes'
+to fix are drafted in `docs/upstream.md`.
+
 ## Blockers for the owner
 
 - **SSH from the host to the laptop as the laptop user is refused**
