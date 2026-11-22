@@ -1,0 +1,78 @@
+# Phase 4: desktop surface
+
+== Phase 4.1: the status routes on a real Hermes server
+  PASS  a request with no token is refused
+        HTTP 401
+  --- POST /status
+  | {
+  |   "ok": true,
+  |   "target": "laptop",
+  |   "kind": "ssh",
+  |   "label": "laptop (dev@127.0.0.1)",
+  |   "connected": true,
+  |   "detail": "",
+  |   "latency_ms": 59,
+  |   "cwd": "/home/dev/Development/sample",
+  |   "folder_known": true,
+  |   "reason": "path_map",
+  |   "pinned": false,
+  |   "default": "mac",
+  |   "targets": [
+  |     "laptop",
+  |     "mac"
+  |   ],
+  |   "api_version": 1,
+  |   "rows": [
+  |     {
+  |       "name": "laptop",
+  |       "kind": "ssh",
+  |       "label": "laptop (dev@127.0.0.1)",
+  |       "connected": true,
+  |       "detail": "",
+  |       "latency_ms": 51,
+  |       "default": false
+  |     },
+  |     {
+  |       "name": "mac",
+  |       "kind": "local",
+  |       "label": "mac (this machine)",
+  |       "connected": true,
+  |       "detail": "",
+  |       "latency_ms": 0,
+  |       "default": true
+  |     }
+  |   ]
+  | }
+  PASS  the route answers for a laptop folder
+  PASS  it lists every target with its live state
+  PASS  a stopped target is reported from a live probe
+        detail: ssh: connect to host 127.0.0.1 port 2222: Connection refused
+  PASS  the proposals route answers
+
+== Phase 4.2: desktop/plugin.js with real React
+  The plugin file is loaded as the desktop app loads it, with
+  real React and a real DOM. The app itself and its SDK are
+  stand-ins. Gate 3 is still a look at the real app.
+  --- node --test tests/desktop.test.mjs
+  | ✔ the file imports only what the desktop loader allows (0.704209ms)
+  | ✔ it registers a chip, a pane and a run card (196.02025ms)
+  | ✔ it asks the host with a POST body, not a query string (5.574625ms)
+  | ✔ the chip changes state when the target goes down and comes back (19.084042ms)
+  | ✔ the chip says so when the host has no plugin (8.199916ms)
+  | ✔ clicking the chip opens the pane (10.02425ms)
+  | ✔ the pane lists proposed commands and Run sends /run N (10.169084ms)
+  | ✔ Copy puts the exact command on the clipboard (1612.287542ms)
+  | ✔ the run card runs in the chat it was drawn in (18.145042ms)
+  | ✔ the run card works on an app that sends no session id (11.524ms)
+  | ✔ the run card ignores attributes that are not a plain number (8.852708ms)
+  | ✔ a failed send tells the user what to type instead (9.800334ms)
+  | ℹ tests 12
+  | ℹ suites 0
+  | ℹ pass 12
+  | ℹ fail 0
+  | ℹ cancelled 0
+  | ℹ skipped 0
+  | ℹ todo 0
+  | ℹ duration_ms 1993.832625
+  PASS  every desktop test passes
+  PASS  none was skipped for lack of React
