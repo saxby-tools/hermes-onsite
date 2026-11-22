@@ -25,7 +25,8 @@ an optional `path_map` from brain paths to hand paths.
 | Thing | Recorded |
 | --- | --- |
 | Hermes on the host | v0.23.2, commit `ae2a81ccc0`. The brief said 0.23.3. |
-| Desktop app on the laptop | Not read. See Blockers. |
+| Hermes on the laptop | 0.23.2, read Nov. 22 once SSH worked. |
+| Desktop app on the laptop | 0.23.2, the same. |
 | `requires_hermes` | `>=0.23.2,<0.24` |
 
 ## The verify-first list
@@ -97,10 +98,39 @@ These came out of the end-to-end rig, not out of reading source.
 Each has an entry in `DECISIONS.md`, and the ones that are Hermes'
 to fix are drafted in `docs/upstream.md`.
 
+## Found on the real laptop
+
+Nov. 22, after the owner fixed SSH. `rig/run.py --real` ran every
+check against the laptop: Arch Linux, a zsh login shell, reached over
+a Tailscale link. All 76 pass. The plugin's code did not change. The
+rig's did.
+
+- **A stock Arch install has no `hostname` program.** The rig's
+  scripts called it. They now call `uname -n`. The plugin never did.
+- **The PATH gap is real.** The laptop's interactive shell adds 10
+  folders that a plain SSH shell does not have. All 10 reach the
+  session.
+- **systemd gives an SSH login a delay lock, not a blocking one.**
+  The blocking lock is refused: it "requires interactive
+  authentication". The plugin fell back to the delay lock, as built.
+  A delay lock holds sleep off for `InhibitDelayMaxSec`, which is 5
+  seconds on this laptop. A long write can still be cut by a closing
+  lid. The lock is gone once the command ends.
+- **The numbers held over a real link.** A probe takes 155 to 305
+  ms. A refused connection is reported in 0.03 seconds, a frozen
+  link in 3.1, and a link that freezes just before a call in 7.0.
+  That last one still misses the five-second bar.
+- **The owner's own SSH setup is enough.** With no `key` and no
+  `known_hosts` in the settings, the test profile reached the laptop
+  through the `Host` block in the owner's SSH config. One command
+  from a real model, started in the host's mount of the shared
+  folder, ran in the laptop's copy of it as the laptop's user.
+
+What this run does not show: the outages were faked by a relay on
+the host, so no laptop really slept. And no person sat at a client.
+
 ## Blockers for the owner
 
-- **SSH from the host to the laptop as the laptop user is refused**
-  with the two keys tried. Nothing else was tried. Phase 5 needs it.
-- **The rig runs on the host, not on the laptop**, for the same
-  reason. The hands container runs under Docker on the host.
-- **The desktop app version on the laptop is unread.**
+- **None for the build.** SSH to the laptop works as of Nov. 22.
+- **Gates 2 and 3 need a person.** The test profile is set up for
+  them. See `DECISIONS.md` entry 41.
