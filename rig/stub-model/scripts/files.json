@@ -15,7 +15,7 @@
     },
     {
       "tool": "terminal",
-      "args": {"command": "cat rig-note.txt; hostname"}
+      "args": {"command": "cat rig-note.txt; uname -n"}
     },
     {
       "text": "Done."

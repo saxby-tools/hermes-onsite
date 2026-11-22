@@ -2,14 +2,16 @@
 
 The rig is three parts:
 
-- a `hands` container with sshd, playing the user's laptop,
+- the hands: a container with sshd playing the user's laptop, or
+  with `--real USER@HOST` a real machine,
 - a stub model that replays scripted tool calls,
 - a Hermes test profile, driven over the Agent Client Protocol.
 
-This script changes state: it builds a container, and it swaps the
-test profile's config for the length of the run. So it defaults to a
-dry run. Pass `--apply` to run for real. The profile's own config is
-put back at the end, byte for byte, even when a test fails.
+This script changes state: it builds a container or writes a scratch
+folder on the real machine, and it swaps the test profile's config
+for the length of the run. So it defaults to a dry run. Pass
+`--apply` to run for real. The profile's own config is put back at
+the end, byte for byte, even when a test fails.
 
 Standard library only.
 """
@@ -37,6 +39,11 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import acp  # noqa: E402  (the path line above has to come first)
 import term  # noqa: E402
 
+from machines import ContainerHands  # noqa: E402
+from machines import RealHands  # noqa: E402
+from shell import run  # noqa: E402
+from shell import wait_for_port  # noqa: E402
+
 
 REPO = Path(__file__).resolve().parent.parent
 RIG_DIR = REPO / ".rig"
@@ -48,11 +55,16 @@ LOG_DIR = RIG_DIR / "logs"
 RESULTS_DIR = REPO / "rig" / "results"
 
 PLUGIN_ID = "hermes-hands"
-IMAGE = "hermes-hands-rig/hands:dev"
-CONTAINER = "hermes-hands-rig-hands"
-HANDS_USER = "dev"
-HANDS_SAMPLE_DIR = "/home/dev/Development/sample"
-HANDS_SSH_PORT = 2222
+HOST_NODE = os.uname().nodename
+
+# The folder the gated command removes. The name is the rig's own,
+# so a wrong working folder on a real machine could not hit anything.
+VICTIM = "hands-rig-victim"
+
+INHIBIT_WHO = "hermes-hands"
+INHIBIT_COUNT_COMMAND = (
+    f"systemd-inhibit --list --no-pager | grep -c {INHIBIT_WHO} || true"
+)
 STUB_PORT = 11499
 SERVE_PORT = 18733
 SERVE_START_SECONDS = 60
@@ -122,31 +134,32 @@ plugins:
         targets:
           laptop:
             kind: ssh
-            host: 127.0.0.1
+            host: {ssh_host}
             port: {ssh_port}
             user: {user}
             key: {key}
             known_hosts: {known_hosts}
             prefixes:
-              - /home/{user}/
+              - {home}/
             path_map:
-              {work}: /home/{user}/Development
+              {work}: {root}
           mac:
             kind: local
 """
 
 PLAN = (
-    "build the hands container image",
-    "start the hands container with a fresh key pair",
     "start the stub model",
     "back up the test profile's config.yaml",
-    "write a rig config.yaml that points at the stub and the container",
+    "write a rig config.yaml that points at the stub and the hands",
     "link this checkout into the profile's plugins folder",
     "ask the running gateway to load the plugin",
     "run the acceptance tests and save their output",
     "unload the plugin and put the profile's config.yaml back",
-    "stop the stub model and remove the container",
+    "stop the stub model and clean up the hands machine",
 )
+
+# Machine names and paths a run adds to the ones `scrub` hides.
+SCRUB_PAIRS: list[tuple[str, str]] = []
 
 
 class Report:
@@ -195,36 +208,15 @@ def scrub(text: str) -> str:
         for line in text.split("\n")
     ]
 
-    return "\n".join(lines)
+    text = "\n".join(lines)
 
+    # A run's own names go last. A real laptop's user may have the
+    # same name as this host's, and the lines above come first.
+    for needle, shown in SCRUB_PAIRS:
+        if needle:
+            text = text.replace(needle, shown)
 
-def run(command: list[str], **kwargs) -> subprocess.CompletedProcess:
-    return subprocess.run(
-        command,
-        capture_output=True,
-        text=True,
-        stdin=subprocess.DEVNULL,
-        **kwargs,
-    )
-
-
-def must(command: list[str], **kwargs) -> str:
-    done = run(command, **kwargs)
-
-    if done.returncode != 0:
-        joined = " ".join(command)
-
-        raise RuntimeError(f"`{joined}` failed:\n{done.stdout}{done.stderr}")
-
-    return done.stdout
-
-
-def docker(*args: str) -> str:
-    return must(["docker", *args])
-
-
-def hands_exec(command: str) -> str:
-    return docker("exec", "--user", HANDS_USER, CONTAINER, "sh", "-c", command)
+    return text
 
 
 def make_dirs() -> None:
@@ -232,73 +224,6 @@ def make_dirs() -> None:
         folder.mkdir(parents=True, exist_ok=True)
 
     RESULTS_DIR.mkdir(parents=True, exist_ok=True)
-
-
-def make_keys() -> str:
-    key = KEYS_DIR / "id"
-
-    # A fresh pair and an empty known_hosts for each run. The
-    # container gets new host keys each time it is created.
-    for stale in (key, KEYS_DIR / "id.pub", KEYS_DIR / "known_hosts"):
-        stale.unlink(missing_ok=True)
-
-    must([
-        "ssh-keygen", "-q", "-t", "ed25519", "-N", "",
-        "-C", "hermes-hands-rig", "-f", str(key),
-    ])
-
-    return (KEYS_DIR / "id.pub").read_text().strip()
-
-
-def wait_for_port(port: int, seconds: float) -> None:
-    deadline = time.monotonic() + seconds
-
-    while time.monotonic() < deadline:
-        try:
-            with socket.create_connection(("127.0.0.1", port), timeout=1):
-                return
-        except OSError:
-            time.sleep(0.2)
-
-    raise RuntimeError(f"nothing is listening on port {port}")
-
-
-def start_container(public_key: str) -> None:
-    docker("build", "--quiet", "--tag", IMAGE, str(REPO / "rig" / "hands"))
-
-    run(["docker", "rm", "--force", CONTAINER])
-
-    docker(
-        "run", "--detach",
-        "--name", CONTAINER,
-        "--publish", f"127.0.0.1:{HANDS_SSH_PORT}:22",
-        "--env", f"HANDS_LOGIN_KEY={public_key}",
-        IMAGE,
-    )
-
-    wait_for_port(HANDS_SSH_PORT, 20)
-
-    # sshd accepts the port a moment before the home is seeded.
-    time.sleep(1)
-
-
-def stop_container() -> None:
-    docker("stop", "--time", "1", CONTAINER)
-
-
-def resume_container() -> None:
-    docker("start", CONTAINER)
-    wait_for_port(HANDS_SSH_PORT, 20)
-
-
-def freeze_container() -> None:
-    # A paused container keeps its port open and answers nothing,
-    # which is how a sleeping laptop looks from the network.
-    docker("pause", CONTAINER)
-
-
-def thaw_container() -> None:
-    docker("unpause", CONTAINER)
 
 
 def start_stub() -> subprocess.Popen:
@@ -320,14 +245,17 @@ def start_stub() -> subprocess.Popen:
     return process
 
 
-def render_config() -> str:
+def render_config(hands) -> str:
     return CONFIG_TEMPLATE.format(
         stub_port=STUB_PORT,
         plugin=PLUGIN_ID,
-        ssh_port=HANDS_SSH_PORT,
-        user=HANDS_USER,
-        key=KEYS_DIR / "id",
-        known_hosts=KEYS_DIR / "known_hosts",
+        ssh_host=hands.ssh_host,
+        ssh_port=hands.ssh_port,
+        user=hands.user,
+        key=hands.key,
+        known_hosts=hands.known_hosts,
+        home=hands.home,
+        root=hands.root,
         work=WORK_DIR,
     )
 
@@ -364,13 +292,13 @@ class Profile:
         shutil.copy2(self.backup, self.config)
         self.backup.unlink()
 
-    def install(self) -> None:
+    def install(self, config_text: str) -> None:
         # A backup left by a crashed run is the real config. It is
         # put back before anything else is saved over it.
         self.restore()
 
         shutil.copy2(self.config, self.backup)
-        self.config.write_text(render_config())
+        self.config.write_text(config_text)
 
         self.link.parent.mkdir(parents=True, exist_ok=True)
 
@@ -422,14 +350,25 @@ def show_turn(report: Report, turn: acp.Turn) -> None:
 
     for permission in turn.permissions:
         options = " / ".join(permission["options"])
-        report.write(f"  --- approval prompt: {permission['title']}")
+        title = scrub(permission["title"])
+        report.write(f"  --- approval prompt: {title}")
         report.write(f"  | options: {options}")
         report.write(f"  | answered: {permission['answer']}")
 
 
-def phase_one(report: Report, profile: Profile) -> None:
-    container_host = hands_exec("hostname").strip()
+def require_rig_folder(hands, text: str) -> None:
+    """Stop a phase before it writes anywhere but the rig's folder."""
 
+    if hands.sample_dir in text:
+        return
+
+    raise RuntimeError(
+        "the session is not in the rig's folder on the hands machine. "
+        "Stopping before anything is written there."
+    )
+
+
+def phase_one(report: Report, profile: Profile, hands) -> None:
     report.section("Phase 1.1: a session in a laptop folder runs there")
     client = profile.session(LAPTOP_SESSION_DIR, "laptop")
 
@@ -438,24 +377,29 @@ def phase_one(report: Report, profile: Profile) -> None:
         show_turn(report, turn)
         text = turn.tool_text()
 
-        report.check("pwd is the laptop path", HANDS_SAMPLE_DIR in text)
-        report.check("whoami is the laptop user", f"\n{HANDS_USER}\n" in text)
-        report.check("hostname is the laptop", container_host in text)
+        report.check("pwd is the laptop path", hands.sample_dir in text)
+        report.check("whoami is the laptop user", f"\n{hands.user}\n" in text)
+        report.check("the machine name is the laptop's", hands.node in text)
+
+        require_rig_folder(hands, text)
 
         report.section("Phase 1.2: PATH from the interactive shell")
         turn = client.prompt("script:path")
-        show_turn(report, turn)
-        report.check(
-            "a tool that only .zshrc adds to PATH is found",
-            "handstool ok" in turn.tool_text(),
-        )
+
+        # A real machine's PATH says what is installed there. It is
+        # checked and counted, not saved.
+        if hands.quote_path:
+            show_turn(report, turn)
+
+        passed, detail = hands.path_verdict(turn.tool_text())
+        report.check(hands.path_claim, passed, detail)
 
         report.section("Phase 1.3: file tools act on the laptop's files")
         turn = client.prompt("script:files")
         show_turn(report, turn)
 
         finished = [tool.status for tool in turn.tools]
-        note = f"{HANDS_SAMPLE_DIR}/rig-note.txt"
+        note = f"{hands.sample_dir}/rig-note.txt"
         on_host = LAPTOP_SESSION_DIR / "rig-note.txt"
 
         report.check(
@@ -465,7 +409,7 @@ def phase_one(report: Report, profile: Profile) -> None:
         )
         report.check(
             "the file was written in the session folder on the laptop",
-            hands_exec(f"cat {note}") == "alpha\nbravo\n",
+            hands.exec(f"cat {note}") == "alpha\nbravo\n",
         )
         report.check(
             "nothing was written on the host",
@@ -490,8 +434,8 @@ def phase_one(report: Report, profile: Profile) -> None:
 
         report.check(
             "patch edited the file on the laptop",
-            hands_exec(f"cat {note}") == "alpha\ncharlie\n",
-            f"content: {hands_exec(f'cat {note}')!r}",
+            hands.exec(f"cat {note}") == "alpha\ncharlie\n",
+            f"content: {hands.exec(f'cat {note}')!r}",
         )
     finally:
         client.close()
@@ -509,7 +453,7 @@ def phase_one(report: Report, profile: Profile) -> None:
             str(MAC_SESSION_DIR.resolve()) in text,
         )
         report.check("whoami is the host user", getpass.getuser() in text)
-        report.check("hostname is not the laptop", container_host not in text)
+        report.check("the machine name is the host's", HOST_NODE in text)
     finally:
         client.close()
 
@@ -529,9 +473,11 @@ def phase_one(report: Report, profile: Profile) -> None:
             "the denied command did not run",
             "SURVIVED" in turn.tools[-1].text,
         )
+        kept = hands.exec(f"ls {hands.sample_dir}/{VICTIM}").strip()
+
         report.check(
             "the folder is still on the laptop",
-            hands_exec(f"ls {HANDS_SAMPLE_DIR}/victim").strip() == "keep",
+            kept == "keep",
         )
     finally:
         client.close()
@@ -552,7 +498,7 @@ def phase_one(report: Report, profile: Profile) -> None:
         client.close()
 
 
-def phase_two(report: Report, profile: Profile) -> None:
+def phase_two(report: Report, profile: Profile, hands) -> None:
     report.section("Phase 2.1: the target stops under a live session")
     client = profile.session(LAPTOP_SESSION_DIR, "resilience")
 
@@ -560,10 +506,10 @@ def phase_two(report: Report, profile: Profile) -> None:
         turn = client.prompt("script:where")
         report.check(
             "the session works before the outage",
-            HANDS_SAMPLE_DIR in turn.tool_text(),
+            hands.sample_dir in turn.tool_text(),
         )
 
-        stop_container()
+        hands.stop()
 
         turn = client.prompt("script:where")
         show_turn(report, turn)
@@ -597,7 +543,7 @@ def phase_two(report: Report, profile: Profile) -> None:
             "laptop" in second.text,
         )
 
-        resume_container()
+        hands.resume()
         report.write(f"  waiting {RECOVERY_WAIT_SECONDS}s for the cooldown")
         time.sleep(RECOVERY_WAIT_SECONDS)
 
@@ -606,13 +552,13 @@ def phase_two(report: Report, profile: Profile) -> None:
 
         report.check(
             "service resumes with no restart once the target is back",
-            HANDS_SAMPLE_DIR in turn.tool_text(),
+            hands.sample_dir in turn.tool_text(),
         )
     finally:
         client.close()
 
     report.section("Phase 2.2: a new session while the target is down")
-    stop_container()
+    hands.stop()
     client = profile.session(LAPTOP_SESSION_DIR, "down-at-start")
 
     try:
@@ -631,14 +577,15 @@ def phase_two(report: Report, profile: Profile) -> None:
         )
         report.check(
             "the session did not fail over to another machine",
-            getpass.getuser() not in first.text,
+            HOST_NODE not in first.text
+            and str(LAPTOP_SESSION_DIR.resolve()) not in first.text,
         )
     finally:
         client.close()
-        resume_container()
+        hands.resume()
 
 
-def phase_two_frozen(report: Report, profile: Profile) -> None:
+def phase_two_frozen(report: Report, profile: Profile, hands) -> None:
     report.section("Phase 2.3: the target freezes, as a sleeping laptop")
     client = profile.session(LAPTOP_SESSION_DIR, "frozen")
 
@@ -646,10 +593,10 @@ def phase_two_frozen(report: Report, profile: Profile) -> None:
         turn = client.prompt("script:where")
         report.check(
             "the session works before the freeze",
-            HANDS_SAMPLE_DIR in turn.tool_text(),
+            hands.sample_dir in turn.tool_text(),
         )
 
-        freeze_container()
+        hands.freeze()
         report.write(f"  idle for {IDLE_WAIT_SECONDS}s, then a tool call")
         time.sleep(IDLE_WAIT_SECONDS)
 
@@ -680,7 +627,7 @@ def phase_two_frozen(report: Report, profile: Profile) -> None:
             f"took {second.seconds:.2f}s",
         )
 
-        thaw_container()
+        hands.thaw()
         report.write(f"  waiting {RECOVERY_WAIT_SECONDS}s for the cooldown")
         time.sleep(RECOVERY_WAIT_SECONDS)
 
@@ -689,14 +636,14 @@ def phase_two_frozen(report: Report, profile: Profile) -> None:
 
         report.check(
             "service resumes with no restart once the target wakes",
-            HANDS_SAMPLE_DIR in turn.tool_text(),
+            hands.sample_dir in turn.tool_text(),
         )
     finally:
         client.close()
-        run(["docker", "unpause", CONTAINER])
+        hands.thaw()
 
 
-def phase_two_mid_flight(report: Report, profile: Profile) -> None:
+def phase_two_mid_flight(report: Report, profile: Profile, hands) -> None:
     report.section("Phase 2.4: the target freezes just before a call")
     client = profile.session(LAPTOP_SESSION_DIR, "mid-flight")
 
@@ -704,10 +651,10 @@ def phase_two_mid_flight(report: Report, profile: Profile) -> None:
         turn = client.prompt("script:where")
         report.check(
             "the session works before the freeze",
-            HANDS_SAMPLE_DIR in turn.tool_text(),
+            hands.sample_dir in turn.tool_text(),
         )
 
-        freeze_container()
+        hands.freeze()
 
         turn = client.prompt("script:where")
         show_turn(report, turn)
@@ -729,38 +676,38 @@ def phase_two_mid_flight(report: Report, profile: Profile) -> None:
         )
     finally:
         client.close()
-        run(["docker", "unpause", CONTAINER])
+        hands.thaw()
 
 
-def phase_two_all(report: Report, profile: Profile) -> None:
-    phase_two(report, profile)
+def phase_two_all(report: Report, profile: Profile, hands) -> None:
+    phase_two(report, profile, hands)
 
     # The breaker belongs to the target, not to a session. The outage
     # above left it open, so the next test waits out the cooldown.
     time.sleep(RECOVERY_WAIT_SECONDS)
 
-    phase_two_frozen(report, profile)
+    phase_two_frozen(report, profile, hands)
 
     time.sleep(RECOVERY_WAIT_SECONDS)
 
-    phase_two_mid_flight(report, profile)
+    phase_two_mid_flight(report, profile, hands)
 
 
-def init_flags() -> list[str]:
+def init_flags(hands) -> list[str]:
     """Flags that describe the rig's own targets, so applying them
     leaves the rig working."""
 
     return [
-        "--ssh", f"laptop={HANDS_USER}@127.0.0.1:{HANDS_SSH_PORT}",
+        "--ssh", f"laptop={hands.user}@{hands.ssh_host}:{hands.ssh_port}",
         "--local", "mac",
-        "--prefix", f"laptop=/home/{HANDS_USER}/",
-        "--map", f"laptop={WORK_DIR}=/home/{HANDS_USER}/Development",
-        "--key", f"laptop={KEYS_DIR / 'id'}",
-        "--known-hosts", f"laptop={KEYS_DIR / 'known_hosts'}",
+        "--prefix", f"laptop={hands.home}/",
+        "--map", f"laptop={WORK_DIR}={hands.root}",
+        "--key", f"laptop={hands.key}",
+        "--known-hosts", f"laptop={hands.known_hosts}",
     ]
 
 
-def phase_three_cli(report: Report, profile: Profile) -> None:
+def phase_three_cli(report: Report, profile: Profile, hands) -> None:
     report.section("Phase 3.1: hermes hands status")
     done = profile.cli(LAPTOP_SESSION_DIR, "hands", "status")
     report.quote("in a laptop folder", scrub(done.stdout))
@@ -771,7 +718,7 @@ def phase_three_cli(report: Report, profile: Profile) -> None:
     )
     report.check(
         "it shows the folder the session would start in",
-        f"Start in  {HANDS_SAMPLE_DIR}" in done.stdout,
+        f"Start in  {hands.sample_dir}" in done.stdout,
     )
     report.check("it exits 0 when the target is up", done.returncode == 0)
 
@@ -782,9 +729,9 @@ def phase_three_cli(report: Report, profile: Profile) -> None:
         "Target    mac" in done.stdout,
     )
 
-    stop_container()
+    hands.stop()
     done = profile.cli(LAPTOP_SESSION_DIR, "hands", "status")
-    resume_container()
+    hands.resume()
     report.quote("with the laptop stopped", scrub(done.stdout))
 
     report.check(
@@ -795,7 +742,7 @@ def phase_three_cli(report: Report, profile: Profile) -> None:
 
     report.section("Phase 3.2: hermes hands init")
     before = profile.config.read_bytes()
-    done = profile.cli(RIG_DIR, "hands", "init", *init_flags())
+    done = profile.cli(RIG_DIR, "hands", "init", *init_flags(hands))
     report.quote("without --apply", scrub(done.stdout))
 
     report.check(
@@ -815,7 +762,7 @@ def phase_three_cli(report: Report, profile: Profile) -> None:
         scrub(done.stdout.strip()),
     )
 
-    done = profile.cli(RIG_DIR, "hands", "init", *init_flags(), "--apply")
+    done = profile.cli(RIG_DIR, "hands", "init", *init_flags(hands), "--apply")
 
     report.check(
         "with --apply it writes and says so",
@@ -830,29 +777,28 @@ def phase_three_cli(report: Report, profile: Profile) -> None:
     )
 
 
-def wait_for_file(path: str, seconds: float) -> str:
+def wait_for_file(hands, path: str, seconds: float) -> str:
     deadline = time.monotonic() + seconds
 
     while time.monotonic() < deadline:
-        done = run([
-            "docker", "exec", "--user", HANDS_USER, CONTAINER,
-            "cat", path,
-        ])
+        content = hands.read(path)
 
-        if done.returncode == 0:
-            return done.stdout
+        if content is not None:
+            return content
 
         time.sleep(0.5)
 
     return ""
 
 
-def phase_three_slash(report: Report, profile: Profile) -> None:
+def phase_three_slash(report: Report, profile: Profile, hands) -> None:
     report.section("Phase 3.3: /hands shows and switches the target")
     client = profile.session(LAPTOP_SESSION_DIR, "slash")
 
     try:
-        client.prompt("script:where")
+        turn = client.prompt("script:where")
+        require_rig_folder(hands, turn.tool_text())
+
         turn = client.prompt("/hands")
         report.quote("/hands", scrub(turn.message))
 
@@ -860,7 +806,7 @@ def phase_three_slash(report: Report, profile: Profile) -> None:
             "/hands names the target, its state and the folder",
             "Hands:   laptop" in turn.message
             and "connected" in turn.message
-            and HANDS_SAMPLE_DIR in turn.message,
+            and hands.sample_dir in turn.message,
         )
 
         turn = client.prompt("/hands mac")
@@ -887,7 +833,7 @@ def phase_three_slash(report: Report, profile: Profile) -> None:
         show_turn(report, turn)
         report.check(
             "the next tool call runs on the laptop again",
-            HANDS_SAMPLE_DIR in turn.tool_text(),
+            hands.sample_dir in turn.tool_text(),
         )
 
         turn = client.prompt("/hands nowhere")
@@ -898,8 +844,8 @@ def phase_three_slash(report: Report, profile: Profile) -> None:
         )
 
         report.section("Phase 3.4: propose_command and /run")
-        marker = f"{HANDS_SAMPLE_DIR}/proposed.txt"
-        hands_exec(f"rm -f {marker}")
+        marker = f"{hands.sample_dir}/proposed.txt"
+        hands.exec(f"rm -f {marker}")
 
         turn = client.prompt("script:propose")
         show_turn(report, turn)
@@ -911,9 +857,7 @@ def phase_three_slash(report: Report, profile: Profile) -> None:
         )
         report.check(
             "proposing does not run the command",
-            run([
-                "docker", "exec", CONTAINER, "test", "-e", marker,
-            ]).returncode != 0,
+            not hands.has(marker),
         )
 
         turn = client.prompt("/run 1")
@@ -924,7 +868,7 @@ def phase_three_slash(report: Report, profile: Profile) -> None:
         )
         report.check(
             "the agent ran it through the terminal tool on the laptop",
-            wait_for_file(marker, RUN_WAIT_SECONDS) == "proposed-ran\n",
+            wait_for_file(hands, marker, RUN_WAIT_SECONDS) == "proposed-ran\n",
         )
 
         turn = client.prompt("/run 9")
@@ -937,7 +881,12 @@ def phase_three_slash(report: Report, profile: Profile) -> None:
         client.close()
 
 
-def terminal_checks(report: Report, profile: Profile, flag: str) -> None:
+def terminal_checks(
+    report: Report,
+    profile: Profile,
+    hands,
+    flag: str,
+) -> None:
     name = flag.lstrip("-")
     screen = profile.terminal(LAPTOP_SESSION_DIR, flag, f"{name}-hands")
 
@@ -952,14 +901,14 @@ def terminal_checks(report: Report, profile: Profile, flag: str) -> None:
 
         report.check(
             f"/hands works in the {name} client",
-            "laptop(dev@127.0.0.1)" in term.squash(seen),
+            f"laptop({hands.user}@{hands.ssh_host})" in term.squash(seen),
         )
     except term.TermError as error:
         report.check(f"/hands works in the {name} client", False, str(error))
     finally:
         screen.close()
 
-    hands_exec(f"rm -rf {HANDS_SAMPLE_DIR}/victim")
+    hands.exec(f"rm -rf {hands.sample_dir}/{VICTIM}")
     screen = profile.terminal(LAPTOP_SESSION_DIR, flag, f"{name}-approval")
 
     try:
@@ -975,7 +924,8 @@ def terminal_checks(report: Report, profile: Profile, flag: str) -> None:
 
         report.check(
             f"Hermes' own approval prompt appears in the {name} client",
-            "Deny" in seen and "rm -rf victim" in seen,
+            "Deny" in seen
+            and term.squash(f"rm -rf {VICTIM}") in term.squash(seen),
         )
 
         screen.type(APPROVAL_DENY_KEY)
@@ -983,9 +933,11 @@ def terminal_checks(report: Report, profile: Profile, flag: str) -> None:
         screen.type("\r")
         screen.expect("Done.", TERMINAL_TURN_SECONDS, since=start)
 
+        kept = hands.exec(f"ls {hands.sample_dir}/{VICTIM}").strip()
+
         report.check(
             f"denying it in the {name} client stops the command",
-            hands_exec(f"ls {HANDS_SAMPLE_DIR}/victim").strip() == "keep",
+            kept == "keep",
         )
     except (term.TermError, RuntimeError) as error:
         report.check(
@@ -997,22 +949,22 @@ def terminal_checks(report: Report, profile: Profile, flag: str) -> None:
         screen.close()
 
 
-def phase_three_terminals(report: Report, profile: Profile) -> None:
+def phase_three_terminals(report: Report, profile: Profile, hands) -> None:
     report.section("Phase 3.5: the classic CLI on a real terminal")
-    terminal_checks(report, profile, "--cli")
+    terminal_checks(report, profile, hands, "--cli")
 
     report.section("Phase 3.6: the TUI on a real terminal")
-    terminal_checks(report, profile, "--tui")
+    terminal_checks(report, profile, hands, "--tui")
 
 
-def phase_three(report: Report, profile: Profile) -> None:
-    phase_three_cli(report, profile)
+def phase_three(report: Report, profile: Profile, hands) -> None:
+    phase_three_cli(report, profile, hands)
 
     # Stopping the container above opened the breaker.
     time.sleep(RECOVERY_WAIT_SECONDS)
 
-    phase_three_slash(report, profile)
-    phase_three_terminals(report, profile)
+    phase_three_slash(report, profile, hands)
+    phase_three_terminals(report, profile, hands)
 
 
 def post_json(route: str, body: dict, token: str = "") -> tuple[int, dict]:
@@ -1060,7 +1012,7 @@ def start_server(profile: Profile, token: str) -> subprocess.Popen:
     return process
 
 
-def phase_four_api(report: Report, profile: Profile) -> None:
+def phase_four_api(report: Report, profile: Profile, hands) -> None:
     report.section("Phase 4.1: the status routes on a real Hermes server")
     token = secrets.token_hex(16)
     server = start_server(profile, token)
@@ -1089,9 +1041,9 @@ def phase_four_api(report: Report, profile: Profile) -> None:
             == ["laptop", "mac"],
         )
 
-        stop_container()
+        hands.stop()
         code, status = post_json("/status", body, token)
-        resume_container()
+        hands.resume()
 
         report.check(
             "a stopped target is reported from a live probe",
@@ -1113,7 +1065,7 @@ def phase_four_api(report: Report, profile: Profile) -> None:
             server.kill()
 
 
-def phase_four_desktop(report: Report, profile: Profile) -> None:
+def phase_four_desktop(report: Report, profile: Profile, hands) -> None:
     report.section("Phase 4.2: desktop/plugin.js with real React")
     report.write(
         "  The plugin file is loaded as the desktop app loads it, with"
@@ -1142,9 +1094,49 @@ def phase_four_desktop(report: Report, profile: Profile) -> None:
     )
 
 
-def phase_four(report: Report, profile: Profile) -> None:
-    phase_four_api(report, profile)
-    phase_four_desktop(report, profile)
+def phase_four(report: Report, profile: Profile, hands) -> None:
+    phase_four_api(report, profile, hands)
+    phase_four_desktop(report, profile, hands)
+
+
+def phase_sleep(report: Report, profile: Profile, hands) -> None:
+    report.section("Sleep: a lock is held while a command runs")
+
+    if not hands.has_systemd:
+        report.write(f"  skipped: {hands.label} has no systemd.")
+        return
+
+    client = profile.session(LAPTOP_SESSION_DIR, "sleep")
+
+    try:
+        turn = client.prompt("script:inhibit")
+        show_turn(report, turn)
+
+        held = [
+            line for line in turn.tool_text().splitlines()
+            if INHIBIT_WHO in line
+        ]
+        row = held[0] if held else ""
+
+        report.check(
+            "the running command holds a hermes-hands sleep lock",
+            bool(held),
+        )
+        report.check(
+            "the lock is one the target allows a remote login to take",
+            "delay" in row or "block" in row,
+            "mode: " + ("block" if "block" in row else "delay"),
+        )
+    finally:
+        client.close()
+
+    left = hands.exec(INHIBIT_COUNT_COMMAND).strip()
+
+    report.check(
+        "no lock is left once the command ends",
+        left == "0",
+        f"locks listed afterward: {left}",
+    )
 
 
 PHASES = {
@@ -1152,15 +1144,21 @@ PHASES = {
     "2": ("Phase 2: resilience", phase_two_all),
     "3": ("Phase 3: CLI surface", phase_three),
     "4": ("Phase 4: desktop surface", phase_four),
+    "sleep": ("Sleep inhibitor on a systemd target", phase_sleep),
 }
 
 
-def save_results(name: str, report: Report, start: int) -> None:
-    path = RESULTS_DIR / f"phase-{name}.txt"
+def save_results(prefix: str, name: str, report: Report, start: int) -> None:
+    path = RESULTS_DIR / f"{prefix}phase-{name}.txt"
     path.write_text("\n".join(report.lines[start:]).strip() + "\n")
 
 
-def run_phases(names: list[str], report: Report, profile: Profile) -> None:
+def run_phases(
+    names: list[str],
+    report: Report,
+    profile: Profile,
+    hands,
+) -> None:
     for name in names:
         title, function = PHASES[name]
         start = len(report.lines)
@@ -1169,11 +1167,11 @@ def run_phases(names: list[str], report: Report, profile: Profile) -> None:
         report.write(f"# {title}")
 
         try:
-            function(report, profile)
+            function(report, profile, hands)
         except Exception as error:
             report.check("the phase ran to its end", False, repr(error))
 
-        save_results(name, report, start)
+        save_results(hands.results_prefix, name, report, start)
 
 
 def parse_args() -> argparse.Namespace:
@@ -1190,6 +1188,13 @@ def parse_args() -> argparse.Namespace:
         choices=sorted(PHASES),
         help="a phase to run. Repeat for more. Default: all.",
     )
+    parser.add_argument(
+        "--real",
+        metavar="USER@HOST",
+        help="use a real machine as the hands, not the container. It "
+             "must take your SSH key with no prompt. The rig writes "
+             "only under ~/.cache/hermes-hands-rig there.",
+    )
     parser.add_argument("--hermes", default=DEFAULT_HERMES)
     parser.add_argument("--profile", default=DEFAULT_PROFILE)
     parser.add_argument(
@@ -1200,13 +1205,15 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--keep",
         action="store_true",
-        help="leave the container and stub running afterward.",
+        help="leave the container and stub running afterward. "
+             "Not with --real.",
     )
     parser.add_argument(
         "--setup-only",
         action="store_true",
         help="build the rig, leave it up, and run no tests. For "
-             "trying things by hand. Undo with --teardown-only.",
+             "trying things by hand. Undo with --teardown-only. "
+             "Not with --real.",
     )
     parser.add_argument(
         "--teardown-only",
@@ -1231,10 +1238,23 @@ def find_profile_home(args: argparse.Namespace) -> Path:
     return Path(root) / "profiles" / args.profile
 
 
-def print_plan(home: Path) -> None:
-    print(f"{MODE_DRY} test profile: {home}")
+def pick_hands(args: argparse.Namespace):
+    if not args.real:
+        return ContainerHands(REPO / "rig" / "hands", KEYS_DIR)
 
-    for step in PLAN:
+    # The relay that fakes an outage lives in this process. It cannot
+    # be left running once the script ends.
+    if args.keep or args.setup_only:
+        raise SystemExit("--keep and --setup-only do not work with --real.")
+
+    return RealHands(args.real, KEYS_DIR)
+
+
+def print_plan(home: Path, hands) -> None:
+    print(f"{MODE_DRY} test profile: {home}")
+    print(f"{MODE_DRY} hands: {hands.label}")
+
+    for step in (*hands.plan(), *PLAN):
         print(f"{MODE_DRY} would {step}")
 
     print(f"{MODE_DRY} nothing was changed. Pass --apply to run.")
@@ -1254,50 +1274,53 @@ def stop_stub() -> None:
     pid_file.unlink()
 
 
-def teardown(profile: Profile) -> None:
+def teardown(profile: Profile, hands) -> None:
     profile.uninstall()
     stop_stub()
-    run(["docker", "rm", "--force", CONTAINER])
+    hands.remove()
 
 
 def main() -> int:
     args = parse_args()
     home = find_profile_home(args)
+    hands = pick_hands(args)
 
     if not args.apply:
-        print_plan(home)
+        print_plan(home, hands)
         return 0
 
     if not (home / "config.yaml").is_file():
         raise SystemExit(f"{home} has no config.yaml. Is it a profile?")
 
     print(f"{MODE_LIVE} test profile: {home}")
+    print(f"{MODE_LIVE} hands: {hands.label}")
 
     profile = Profile(args.hermes, args.profile, home)
     report = Report()
     stub = None
 
     if args.teardown_only:
-        teardown(profile)
+        teardown(profile, hands)
         print(f"{MODE_LIVE} the rig is down and the config is back.")
         return 0
 
     make_dirs()
 
     if args.setup_only:
-        start_container(make_keys())
+        hands.start()
         stub = start_stub()
         (RIG_DIR / STUB_PID_FILE).write_text(str(stub.pid))
-        profile.install()
+        profile.install(render_config(hands))
         print(f"{MODE_LIVE} the rig is up. Undo with --teardown-only.")
         return 0
 
     try:
-        start_container(make_keys())
+        hands.start()
+        SCRUB_PAIRS.extend(hands.scrub_pairs())
         stub = start_stub()
-        profile.install()
+        profile.install(render_config(hands))
 
-        run_phases(args.phase or sorted(PHASES), report, profile)
+        run_phases(args.phase or sorted(PHASES), report, profile, hands)
     finally:
         profile.uninstall()
 
@@ -1305,7 +1328,7 @@ def main() -> int:
             stub.terminate()
 
         if not args.keep:
-            run(["docker", "rm", "--force", CONTAINER])
+            hands.remove()
 
     print()
     print(f"{MODE_LIVE} failures: {report.failures}")

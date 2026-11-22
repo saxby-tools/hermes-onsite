@@ -1,0 +1,14 @@
+{
+  "about": "Sleep: does a running command hold a sleep lock?",
+  "steps": [
+    {
+      "tool": "terminal",
+      "args": {
+        "command": "systemd-inhibit --list --no-pager | grep hermes-hands"
+      }
+    },
+    {
+      "text": "Done."
+    }
+  ]
+}

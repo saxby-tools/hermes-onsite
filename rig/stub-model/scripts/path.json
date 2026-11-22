@@ -1,9 +1,11 @@
 {
-  "about": "Phase 1: is a tool that only .zshrc puts on PATH found?",
+  "about": "Phase 1: does the session have the interactive shell's PATH?",
   "steps": [
     {
       "tool": "terminal",
-      "args": {"command": "command -v handstool && handstool"}
+      "args": {
+        "command": "echo \"PATH=$PATH\"; handstool 2>/dev/null; true"
+      }
     },
     {
       "text": "Done."

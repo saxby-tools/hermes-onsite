@@ -3,7 +3,7 @@
   "steps": [
     {
       "tool": "terminal",
-      "args": {"command": "pwd; whoami; hostname"}
+      "args": {"command": "pwd; whoami; uname -n"}
     },
     {
       "text": "Done."
