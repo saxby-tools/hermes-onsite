@@ -46,6 +46,11 @@ Written Nov. 22, 2026, against Hermes v0.23.2.
 - **Why.** A signature says the key's owner stands behind the commit.
   These were made while the owner was away. It also keeps the owner's
   private address out of a public history.
+- **Known slip.** A bug in the build's own commit script left the
+  owner's git name and address on every commit for most of the
+  build. It was caught by a check before anything was pushed. The
+  unpushed branch was rewritten to the identity above. The file
+  trees before and after are identical.
 - **Reverse.** Rebase and re-sign: `git rebase --exec 'git commit
   --amend --no-edit --reset-author -S' main`.
 
