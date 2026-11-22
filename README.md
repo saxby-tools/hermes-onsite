@@ -257,6 +257,10 @@ is in [rig/results/](rig/results/). The laptop's files start with
 One real-model command has also run from the host's copy of a shared
 folder and landed on the laptop, as the laptop's user.
 
+Hermes' own check, `hermes plugins validate`, passes on a clean copy
+of the tree. It warns that the plugin imports private Hermes modules,
+which [Limits](#limits) covers.
+
 <!-- hands:notice {"kind": "untested"} -->
 
 Not yet tested by anyone:
