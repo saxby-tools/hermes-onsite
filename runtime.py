@@ -25,6 +25,7 @@ from .config import TargetSpec
 from .config import is_absolute
 from .config import parse_config
 from .health import Gate
+from .pins import Folders
 from .pins import Pins
 from .pins import SOURCE_OVERRIDE
 from .pins import SOURCE_ROUTE
@@ -36,6 +37,7 @@ from .store import JsonStore
 logger = logging.getLogger(__name__)
 
 PINS_FILE = "pins.json"
+FOLDERS_FILE = "folders.json"
 PROPOSALS_FILE = "proposals.json"
 
 CLEAR_OVERRIDE = "auto"
@@ -74,11 +76,13 @@ class Runtime:
         self._gates_lock = threading.Lock()
 
         pins_path = None if data_dir is None else data_dir / PINS_FILE
+        folders_path = None if data_dir is None else data_dir / FOLDERS_FILE
         proposals_path = (
             None if data_dir is None else data_dir / PROPOSALS_FILE
         )
 
         self.pins = Pins(JsonStore(pins_path))
+        self.folders = Folders(JsonStore(folders_path))
         self.proposals = Proposals(JsonStore(proposals_path))
 
     def load_config(self) -> HandsConfig:
@@ -157,7 +161,11 @@ class Runtime:
         if not folder and is_absolute(cwd):
             folder = cwd
 
-        route = self.plan(task_id, folder, config, self._session.session_id())
+        session_id = self._session.session_id()
+
+        self.folders.note(folder, task_id, session_id)
+
+        route = self.plan(task_id, folder, config, session_id)
         spec = config.target(route.target)
 
         logger.info(
@@ -173,6 +181,7 @@ class Runtime:
             self.gate_for(spec),
             route.cwd,
             timeout,
+            folder,
         )
 
     def switch(
@@ -219,7 +228,7 @@ class Runtime:
             return {"ok": False, "error": str(error)}
 
         pin = self.find_pin(key, session_id)
-        folder = cwd
+        folder = cwd or self.folders.find(key, session_id)
 
         if not folder and pin is not None:
             folder = pin.cwd
@@ -246,6 +255,7 @@ class Runtime:
             "detail": probe.detail,
             "latency_ms": probe.elapsed_ms,
             "cwd": route.cwd,
+            "folder_known": bool(folder),
             "reason": route.reason,
             "pinned": pin is not None,
             "default": config.default,
