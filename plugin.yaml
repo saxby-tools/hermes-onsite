@@ -1,0 +1,22 @@
+name: hermes-hands
+label: Hands
+kind: backend
+version: 0.1.0
+author: saxby-tools
+license: AGPL-3.0-only
+homepage: https://github.com/saxby-tools/hermes-hands
+description: >
+  Makes a remote Hermes agent act on the machine its user is sitting
+  at. The agent's loop, memory and skills stay on the host. Shell
+  commands and file edits run on a named target, picked per session
+  from the session's folder: this machine, or another one over SSH,
+  as that user. Hermes' own approval prompts stay on. Select it with
+  `terminal.backend: hands` and name your targets with
+  `hermes hands init`.
+# The plugin reuses Hermes' local and SSH environments, which are not
+# public plugin API. The upper bound keeps it from loading on a
+# Hermes it was never run against.
+requires_hermes: ">=0.23.2,<0.24"
+provides_tools: []
+provides_hooks:
+  - pre_tool_call
