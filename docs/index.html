@@ -1,0 +1,506 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>hermes-hands</title>
+<meta
+  name="description"
+  content="A Hermes plugin that lets a remote agent act on the machine
+you are sitting at, with Hermes' own approval prompts kept on."
+>
+<link rel="stylesheet" href="site.css">
+</head>
+<body>
+
+<header class="hero">
+  <div class="page__column">
+    <p class="hero__kicker">A plugin for the Hermes agent</p>
+    <h1 class="hero__title">hermes-hands</h1>
+    <p class="hero__lead">
+      The agent thinks on your always&#8209;on host.
+      It works on the machine you are sitting at, as you.
+    </p>
+    <p class="hero__status">
+      <span class="pill pill-warn">v0.1.0 · not yet accepted</span>
+      <span class="hero__status-note">
+        Phases 0 to 4 pass on a test rig.
+        A run from a real laptop has not happened.
+      </span>
+    </p>
+    <nav class="hero__links" aria-label="Project links">
+      <a href="https://github.com/saxby-tools/hermes-hands">Source</a>
+      <a href="#install">Install</a>
+      <a href="#tested">What is tested</a>
+      <a href="#limits">Limits</a>
+    </nav>
+  </div>
+</header>
+
+<main>
+
+<section class="section" id="idea">
+  <div class="page__column">
+    <h2 class="section__title">Brain here, hands there</h2>
+    <div class="section__split">
+      <div>
+        <p>
+          A capable agent wants an always-on machine: one loop, one
+          memory, one set of skills. Your work is on a laptop that
+          sleeps, moves and has your files on it.
+        </p>
+        <p>
+          Running a second agent on the laptop splits the memory in
+          two. Mounting the laptop's disk on the host moves the files
+          but not the shell, the tools or the user.
+        </p>
+      </div>
+      <div>
+        <p>
+          hermes-hands keeps one agent and moves only the last step.
+          The loop, memory and skills stay on the host. Each shell
+          command and file edit runs on a machine you name, over SSH,
+          as your own user.
+        </p>
+        <p>
+          Hermes is not patched. The clients, the loop and the
+          approval prompts are stock. The plugin is one terminal
+          backend.
+        </p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section section-tint" id="how">
+  <div class="page__column">
+    <h2 class="section__title">How a tool call travels</h2>
+
+    <figure class="diagram">
+      <svg
+        class="diagram__art"
+        viewBox="0 0 720 300"
+        role="img"
+        aria-labelledby="diagram-title diagram-desc"
+      >
+        <title id="diagram-title">Two machines and six parts</title>
+        <desc id="diagram-desc">
+          Chat goes from the machine you sit at to the host. On the
+          host, the agent loop passes each tool call through the
+          approval gate to the hands backend. The backend sends it
+          back over SSH to your machine, or runs it on the host.
+        </desc>
+
+        <defs>
+          <marker
+            id="arrow"
+            viewBox="0 0 10 10"
+            refX="9"
+            refY="5"
+            markerWidth="7"
+            markerHeight="7"
+            orient="auto-start-reverse"
+          >
+            <path class="diagram__arrow-head" d="M0 0 L10 5 L0 10 z" />
+          </marker>
+        </defs>
+
+        <rect class="diagram__machine" x="12" y="28" width="270"
+          height="258" rx="10" />
+        <rect class="diagram__machine" x="438" y="28" width="270"
+          height="258" rx="10" />
+
+        <text class="diagram__machine-name" x="28" y="54">
+          The machine you sit at
+        </text>
+        <text class="diagram__machine-name" x="454" y="54">
+          The always-on host
+        </text>
+
+        <rect class="diagram__part" x="36" y="76" width="222"
+          height="52" rx="6" />
+        <text class="diagram__part-name" x="147" y="99">
+          Hermes client
+        </text>
+        <text class="diagram__part-note" x="147" y="116">
+          CLI, TUI, Desktop or an editor
+        </text>
+
+        <rect class="diagram__part diagram__part-hot" x="36" y="204"
+          width="222" height="58" rx="6" />
+        <text class="diagram__part-name" x="147" y="229">
+          Your shell and files
+        </text>
+        <text class="diagram__part-note" x="147" y="246">
+          as you, in your project folder
+        </text>
+
+        <rect class="diagram__part" x="462" y="76" width="222"
+          height="44" rx="6" />
+        <text class="diagram__part-name" x="573" y="103">
+          Agent loop, memory, skills
+        </text>
+
+        <rect class="diagram__part" x="462" y="140" width="222"
+          height="44" rx="6" />
+        <text class="diagram__part-name" x="573" y="160">
+          Approval gate
+        </text>
+        <text class="diagram__part-note" x="573" y="175">
+          stock Hermes
+        </text>
+
+        <rect class="diagram__part diagram__part-hot" x="462" y="204"
+          width="222" height="58" rx="6" />
+        <text class="diagram__part-name" x="573" y="229">
+          hands backend
+        </text>
+        <text class="diagram__part-note" x="573" y="246">
+          picks one target per session
+        </text>
+
+        <path class="diagram__wire" d="M258 102 H462"
+          marker-end="url(#arrow)" />
+        <text class="diagram__wire-label" x="360" y="94">chat</text>
+
+        <path class="diagram__wire" d="M573 120 V140"
+          marker-end="url(#arrow)" />
+        <path class="diagram__wire" d="M573 184 V204"
+          marker-end="url(#arrow)" />
+
+        <path class="diagram__wire diagram__wire-hot"
+          d="M462 233 H258" marker-end="url(#arrow)" />
+        <text class="diagram__wire-label" x="360" y="225">
+          SSH, as you
+        </text>
+      </svg>
+      <figcaption class="diagram__caption">
+        Chat goes to the host. Tool calls come back after the approval
+        gate. Sessions opened anywhere else run on the host itself.
+      </figcaption>
+    </figure>
+
+    <div class="rules">
+      <h3 class="rules__title">A session picks its machine once</h3>
+      <ol class="rules__list">
+        <li>
+          A target set with <code>/hands &lt;target&gt;</code> wins
+          for that session.
+        </li>
+        <li>
+          Otherwise the longest matching folder wins.
+        </li>
+        <li>
+          Otherwise the default target is used.
+        </li>
+      </ol>
+      <p class="rules__note">
+        A session never moves to another machine by itself. If its
+        machine is down, tool calls fail and say which machine.
+      </p>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="see">
+  <div class="page__column">
+    <h2 class="section__title">What you see</h2>
+    <div class="cards">
+      <article class="card">
+        <div class="card__text">
+        <h3 class="card__title">Where tools run</h3>
+        <p>
+          <code>/hands</code> names the machine, whether it answers
+          right now, and the folder. Hermes Desktop shows the same in
+          a chip on the status bar.
+        </p>
+        </div>
+<pre class="card__screen">Hands:   laptop (you@laptop)
+State:   connected (41 ms)
+Folder:  /home/you/Development/app
+Why:     the session folder is in its path map</pre>
+      </article>
+
+      <article class="card">
+        <div class="card__text">
+        <h3 class="card__title">Approval prompts</h3>
+        <p>
+          Hermes' own prompt, unchanged, in every client. The plugin
+          adds no approval path of its own, so nothing can skip the
+          one Hermes has.
+        </p>
+        </div>
+<pre class="card__screen">⚠ approval required · recursive delete
+rm -rf build
+▸ 1. Allow once     3. Always allow
+  2. This session   4. Deny</pre>
+      </article>
+
+      <article class="card">
+        <div class="card__text">
+        <h3 class="card__title">Commands that are your call</h3>
+        <p>
+          The agent can propose a command without running it. You run
+          it with <code>/run 2</code>, or with a Run button in Desktop.
+          It then goes through the approval prompt like any other.
+        </p>
+        </div>
+<pre class="card__screen">Proposed command #2
+
+    $ make deploy
+
+Run it with /run 2</pre>
+      </article>
+    </div>
+  </div>
+</section>
+
+<section class="section section-tint" id="asleep">
+  <div class="page__column">
+    <h2 class="section__title">When the laptop is asleep</h2>
+    <p class="section__lead">
+      A sleeping laptop is not an error to hide. It means you are not
+      there. The agent is told plainly, and told not to work around it.
+    </p>
+    <ol class="timeline">
+      <li class="timeline__step">
+        <span class="timeline__when">about 3 s</span>
+        <span class="timeline__what">
+          The tool call fails with an error that names the machine.
+          The command was never sent.
+        </span>
+      </li>
+      <li class="timeline__step">
+        <span class="timeline__when">next 10 s</span>
+        <span class="timeline__what">
+          Further calls fail at once. No call waits out a timeout.
+        </span>
+      </li>
+      <li class="timeline__step">
+        <span class="timeline__when">after that</span>
+        <span class="timeline__what">
+          One call checks again. When the laptop is back, work
+          resumes with no restart.
+        </span>
+      </li>
+    </ol>
+    <p class="section__note">
+      A link lost while a command is running is reported as
+      <strong>no exit status</strong>. The command may have run. It is
+      never retried, because a retry could repeat a write.
+    </p>
+  </div>
+</section>
+
+<section class="section" id="tested">
+  <div class="page__column">
+    <h2 class="section__title">What is tested</h2>
+
+    <dl class="stats">
+      <div class="stats__item">
+        <dt class="stats__label">end-to-end checks</dt>
+        <dd class="stats__number">73</dd>
+      </div>
+      <div class="stats__item">
+        <dt class="stats__label">Python unit tests</dt>
+        <dd class="stats__number">121</dd>
+      </div>
+      <div class="stats__item">
+        <dt class="stats__label">desktop tests</dt>
+        <dd class="stats__number">12</dd>
+      </div>
+      <div class="stats__item">
+        <dt class="stats__label">runs on a real laptop</dt>
+        <dd class="stats__number stats__number-zero">0</dd>
+      </div>
+    </dl>
+
+    <div class="table__scroll">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Phase</th>
+          <th>What it shows</th>
+          <th>Checks</th>
+          <th>Result</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>1</td>
+          <td>
+            A session in a laptop folder runs there, as that user.
+            File tools edit the laptop's files. A denied approval
+            stops the command.
+          </td>
+          <td>18</td>
+          <td><a href="https://github.com/saxby-tools/hermes-hands/blob/build/v1/rig/results/phase-1.txt">Pass</a></td>
+        </tr>
+        <tr>
+          <td>2</td>
+          <td>
+            A stopped target, a frozen one, and one that comes back.
+          </td>
+          <td>20</td>
+          <td><a href="https://github.com/saxby-tools/hermes-hands/blob/build/v1/rig/results/phase-2.txt">Pass</a></td>
+        </tr>
+        <tr>
+          <td>3</td>
+          <td>
+            <code>/hands</code>, <code>/run</code> and
+            <code>hermes hands</code>, in the classic CLI and the TUI
+            on a real terminal.
+          </td>
+          <td>28</td>
+          <td><a href="https://github.com/saxby-tools/hermes-hands/blob/build/v1/rig/results/phase-3.txt">Pass</a></td>
+        </tr>
+        <tr>
+          <td>4</td>
+          <td>
+            The status routes on a real Hermes server, and the desktop
+            plugin's logic under real React.
+          </td>
+          <td>7</td>
+          <td><a href="https://github.com/saxby-tools/hermes-hands/blob/build/v1/rig/results/phase-4.txt">Pass</a></td>
+        </tr>
+        <tr>
+          <td>5</td>
+          <td>A real laptop, from real entry points.</td>
+          <td>0</td>
+          <td>Not run</td>
+        </tr>
+      </tbody>
+    </table>
+    </div>
+
+    <h3 class="section__subtitle">Not yet tested by anyone</h3>
+    <ul class="plain-list">
+      <li>
+        A real laptop over a real network. The build could not log in
+        to one.
+      </li>
+      <li>The desktop plugin inside the real Hermes Desktop app.</li>
+      <li>The sleep inhibitor on a machine that has systemd.</li>
+      <li>Installing from the Git URL with Hermes' plugin installer.</li>
+    </ul>
+  </div>
+</section>
+
+<section class="section section-tint" id="limits">
+  <div class="page__column">
+    <h2 class="section__title">Limits</h2>
+    <p class="section__lead">
+      Read these before pointing it at a machine you care about.
+    </p>
+    <dl class="limits">
+      <div class="limits__item">
+        <dt>No sandbox</dt>
+        <dd>
+          An SSH target can do anything its user can. Hermes' approval
+          prompts are the only gate. Keep them on.
+        </dd>
+      </div>
+      <div class="limits__item">
+        <dt>Private Hermes APIs</dt>
+        <dd>
+          It reuses Hermes' own local and SSH environments, which are
+          not public plugin API. It refuses to load on a Hermes it
+          has not been run against.
+        </dd>
+      </div>
+      <div class="limits__item">
+        <dt>Editors</dt>
+        <dd>
+          Hermes previews an edit by reading the file on the host. In
+          an editor, <code>patch</code> only works where the same path
+          exists on both machines.
+        </dd>
+      </div>
+      <div class="limits__item">
+        <dt>One slow case</dt>
+        <dd>
+          A machine that freezes in the few seconds before a call can
+          take about seven seconds to report, not three.
+        </dd>
+      </div>
+      <div class="limits__item">
+        <dt>After a switch</dt>
+        <dd>
+          The agent is not told that <code>/hands</code> moved the
+          session. Say so if it matters.
+        </dd>
+      </div>
+      <div class="limits__item">
+        <dt>Lost on remote targets</dt>
+        <dd>
+          Editor diagnostics, host-side search speedups, and
+          checkpoints for <code>/rollback</code>.
+        </dd>
+      </div>
+    </dl>
+    <p class="section__note">
+      The reason for each is in
+      <a href="https://github.com/saxby-tools/hermes-hands/blob/build/v1/DECISIONS.md">DECISIONS.md</a>.
+    </p>
+  </div>
+</section>
+
+<section class="section" id="install">
+  <div class="page__column">
+    <h2 class="section__title">Install</h2>
+    <p class="section__lead">
+      Needs Hermes v0.23.2 on the host and key-based SSH from the host
+      to your machine. No Python packages.
+    </p>
+
+    <ol class="steps">
+      <li class="steps__item">
+        <p>Put the plugin in the profile's plugins folder and turn it on.</p>
+<pre class="steps__code"><code>git clone https://github.com/saxby-tools/hermes-hands.git \
+  "$HERMES_HOME/plugins/hermes-hands"
+hermes plugins enable hermes-hands</code></pre>
+      </li>
+      <li class="steps__item">
+        <p>
+          Name your machines. This prints the settings.
+          Add <code>--apply</code> to write them.
+        </p>
+<pre class="steps__code"><code>hermes hands init \
+  --ssh laptop=you@laptop.example \
+  --local mac \
+  --prefix laptop=/home/you/</code></pre>
+      </li>
+      <li class="steps__item">
+        <p>Select the backend and check it.</p>
+<pre class="steps__code"><code>hermes config set terminal.backend hands
+hermes hands status</code></pre>
+      </li>
+    </ol>
+
+    <p class="section__note">
+      The
+      <a href="https://github.com/saxby-tools/hermes-hands/blob/build/v1/README.md">README</a>
+      covers every setting, the desktop half and the test rig.
+    </p>
+  </div>
+</section>
+
+</main>
+
+<footer class="footer">
+  <div class="page__column">
+    <p>
+      GNU Affero General Public License v3.
+      Built by Claude Code from a written brief. Every commit says so.
+    </p>
+    <p class="footer__links">
+      <a href="https://github.com/saxby-tools/hermes-hands/blob/build/v1/DECISIONS.md">Decisions</a>
+      <a href="findings.md">Phase 0 findings</a>
+      <a href="upstream.md">Upstream drafts</a>
+      <a href="https://github.com/NousResearch/hermes-agent">Hermes</a>
+    </p>
+  </div>
+</footer>
+
+</body>
+</html>
