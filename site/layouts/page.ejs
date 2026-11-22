@@ -1,0 +1,15 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title><%= title %> · <%= siteName %></title>
+<%- include("head.ejs") %>
+</head>
+<body class="layout-page">
+<%- include("top.ejs") -%>
+<main class="page prose" id="main">
+<%- content %>
+</main>
+<%- include("foot.ejs") -%>
+</body>
+</html>
