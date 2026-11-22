@@ -16,16 +16,41 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+# The runtime of the current load. The dashboard routes read it so
+# they share this process's circuit breakers. See
+# dashboard/plugin_api.py.
+RUNTIME = None
+
+
+def get_runtime():
+    """The runtime Hermes registered, or a new one when this copy of
+    the package was loaded by the dashboard alone."""
+
+    global RUNTIME
+
+    if RUNTIME is None:
+        from .runtime import build_runtime
+
+        RUNTIME = build_runtime()
+
+    return RUNTIME
+
 
 def register(ctx) -> None:
+    global RUNTIME
+
     from . import commands
+    from . import compat
     from . import hooks
     from . import prompt
     from . import tools
     from .provider import build_provider
     from .runtime import build_runtime
 
+    compat.bind(ctx)
+
     runtime = build_runtime()
+    RUNTIME = runtime
 
     # The provider is registered even when the settings are broken.
     # Otherwise `hermes hands init`, which fixes them, would not load.
