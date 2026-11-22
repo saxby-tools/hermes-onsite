@@ -3,6 +3,10 @@
 One hook, and it changes no tool call. It only makes sure the file
 tools resolve paths against the same folder, on the same machine, as
 the terminal tool. The reasons are in `compat.anchor_file_tools`.
+
+A session-open hook was tried, to learn a session's folder before
+its first message. Hermes fires that hook without the folder in
+scope, so it could not help and was removed.
 """
 
 from __future__ import annotations
