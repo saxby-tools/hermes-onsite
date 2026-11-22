@@ -1,0 +1,8 @@
+<ul class="marks">
+<% for (const mark of marks) { -%>
+  <li class="marks__item marks__item-<%= mark.ground %>">
+    <span class="marks__art"><%- mark.image %></span>
+    <span class="marks__use"><%- mark.use %></span>
+  </li>
+<% } -%>
+</ul>
