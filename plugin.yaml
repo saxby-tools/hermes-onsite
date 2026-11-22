@@ -17,6 +17,7 @@ description: >
 # public plugin API. The upper bound keeps it from loading on a
 # Hermes it was never run against.
 requires_hermes: ">=0.23.2,<0.24"
-provides_tools: []
+provides_tools:
+  - propose_command
 provides_hooks:
   - pre_tool_call

@@ -18,7 +18,10 @@ logger = logging.getLogger(__name__)
 
 
 def register(ctx) -> None:
+    from . import commands
     from . import hooks
+    from . import prompt
+    from . import tools
     from .provider import build_provider
     from .runtime import build_runtime
 
@@ -29,5 +32,8 @@ def register(ctx) -> None:
     ctx.register_terminal_environment_provider(build_provider(runtime))
 
     hooks.register(ctx)
+    commands.register(ctx, runtime)
+    tools.register(ctx, runtime)
+    prompt.register(ctx, runtime)
 
     runtime.log_config_problems()
