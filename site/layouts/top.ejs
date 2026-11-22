@@ -1,0 +1,34 @@
+<%#
+  The masthead, included by every layout: the lockup, the links to
+  the front page's main sections, and the theme button. The button is
+  hidden until the script is running, because it does nothing
+  without it. Its styles are under "Masthead" in site/static/hands.css.
+-%>
+<a class="skip" href="#main">Skip to the page</a>
+<header class="top">
+  <div class="top__inner">
+    <a class="top__home" href="<%= root %>">
+      <img
+        class="top__lockup"
+        src="<%= root %>docs/brand/lockup.svg"
+        alt="hermes-hands"
+        width="374"
+        height="64"
+      >
+    </a>
+    <nav class="top__nav" aria-label="Main">
+      <a class="top__link" href="<%= root %>#install">Install</a>
+      <a class="top__link" href="<%= root %>#use">Use</a>
+      <a class="top__link" href="<%= root %>#limits">Limits</a>
+      <a class="top__link" href="<%= root %>#what-is-tested">Tested</a>
+      <a class="top__link" href="<%= root %>DECISIONS.html">Decisions</a>
+    </nav>
+    <button class="top__theme" type="button" data-theme-toggle hidden>
+      Theme
+    </button>
+    <a
+      class="top__link top__link-button"
+      href="https://github.com/saxby-tools/hermes-hands"
+    >Source</a>
+  </div>
+</header>
