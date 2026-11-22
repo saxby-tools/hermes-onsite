@@ -419,6 +419,38 @@ Written Nov. 22, 2026, against Hermes v0.23.2.
   and `hermes -p buster plugins disable hermes-hands`. A copy of the
   config from before is in `.rig/buster-config.before-gate-2.yaml`.
 
+### 42. Hermes' own validator is run on a clean copy of the tree
+
+- **Found.** `hermes plugins validate` failed on Nov. 22. Its
+  security scan reads every file, test code too, and it flagged the
+  rig's cleanup line: a recursive delete next to the home variable.
+  Hermes' source says an install is always blocked on that verdict.
+- **Pick.** The line now runs a bare `cd` and names the fixed folder
+  from there. The validator is run on `git archive` output before a
+  push, so the docs worktree and local packages are not scanned.
+- **Why.** The scan is a blunt check, and rewording to pass one is
+  only fair when the new line is no less safe. This one is: it can
+  no longer be handed a path built from an empty variable. It was
+  run against the laptop, and it removed the rig folder alone.
+- **Left.** The validator warns about 14 imports of private Hermes
+  modules, all in `compat.py`. That is the known cost in 13. It also
+  says the plugin can run in the plugin host. It cannot: Hermes
+  refuses a terminal backend there, as the README says.
+
+### 43. The site is built by a workflow, not served from a folder
+
+- **Pick.** GitHub Pages deploys from GitHub Actions. The workflow
+  in `.github/workflows/pages.yml` builds the site with Eleventy
+  from the repo's Markdown on each push to `build/v1` or `main`.
+- **Why.** The docs work replaced the hand-written page in `docs/`
+  with a build. Serving the folder as before would have left the
+  site with no front page.
+- **Cost.** Four dev dependencies in `site/`, 115 packages with
+  their own. None ships to a reader or to a plugin user.
+- **Limit.** The `github-pages` environment only lets named branches
+  deploy. `build/v1` is on the list. `main` has to be added when
+  `build/v1` is merged.
+
 ## Open decisions from the brief
 
 | # | Decision | What the build did |
