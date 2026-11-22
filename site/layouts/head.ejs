@@ -1,0 +1,47 @@
+<%#
+  The head every layout shares: viewport, theme colours, share tags,
+  icons, and the site's one stylesheet and one script. Links to the
+  site's own files are relative, through `root`, so they work under
+  any base path. Share tags must be absolute, so they use `canonical`
+  and `siteUrl`. Nothing here loads from another origin.
+
+  The short script sets a saved theme before the page paints, so a
+  reader who picked one never sees the other flash by.
+-%>
+<meta name="viewport"
+  content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<meta name="theme-color" content="#0000f2">
+<meta name="description" content="<%= summary %>">
+<link rel="icon" href="<%= root %>favicon.ico" sizes="32x32">
+<link rel="icon" type="image/svg+xml" href="<%= root %>favicon.svg">
+<link rel="apple-touch-icon" href="<%= root %>apple-touch-icon.png">
+<link rel="manifest" href="<%= root %>site.webmanifest">
+<link rel="canonical" href="<%= canonical %>">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="<%= siteName %>">
+<meta property="og:title" content="<%= title %>">
+<meta property="og:description" content="<%= summary %>">
+<meta property="og:url" content="<%= canonical %>">
+<meta property="og:image" content="<%= siteUrl %>social.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt"
+  content="hermes-hands: the brain stays on the host, the hands work
+on your machine. A marble head and a marble hand, drawn in blue.">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="preload" as="font" type="font/woff2" crossorigin
+  href="<%= root %>fonts/oswald-latin-wght-normal.woff2">
+<link rel="stylesheet" href="<%= root %>hands.css">
+<script>
+  try {
+    const saved = localStorage.getItem("hands-theme");
+
+    if (saved) {
+      document.documentElement.dataset.theme = saved;
+    }
+  } catch {
+    // No storage: the page follows the system's theme.
+  }
+</script>
+<script src="<%= root %>hands.js" defer></script>
