@@ -47,6 +47,7 @@ KNOWN_TARGET_KEYS = frozenset({
     "user",
     "port",
     "key",
+    "known_hosts",
     "prefixes",
     "path_map",
     "path",
@@ -78,6 +79,7 @@ class TargetSpec:
     user: str = ""
     port: int = DEFAULT_SSH_PORT
     key: str = ""
+    known_hosts: str = ""
     prefixes: tuple[str, ...] = ()
     path_map: tuple[tuple[str, str], ...] = ()
     path_mode: str = PATH_MODE_INTERACTIVE
@@ -309,6 +311,12 @@ def read_target(name: str, raw: Any, problems: list[str]) -> TargetSpec | None:
         user=user,
         port=read_port(name, raw.get("port"), problems),
         key=read_text(name, "key", raw.get("key"), problems),
+        known_hosts=read_text(
+            name,
+            "known_hosts",
+            raw.get("known_hosts"),
+            problems,
+        ),
         prefixes=read_prefixes(name, raw.get("prefixes"), problems),
         path_map=read_path_map(name, raw.get("path_map"), problems),
         path_mode=read_path_mode(name, raw.get("path"), problems),
@@ -387,6 +395,9 @@ def target_to_settings(spec: TargetSpec) -> dict:
 
     if spec.key:
         block["key"] = spec.key
+
+    if spec.known_hosts:
+        block["known_hosts"] = spec.known_hosts
 
     if spec.prefixes:
         block["prefixes"] = list(spec.prefixes)
