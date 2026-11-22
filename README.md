@@ -13,8 +13,9 @@ of every risky command.
 It is a Hermes plugin. Hermes itself is not patched.
 
 **Status: v0.1.0, built in one pass and not yet accepted.** Phases 0
-to 4 of the build pass on a test rig. The last step, a run from a real
-laptop, has not happened. See [What is tested](#what-is-tested).
+to 4 of the build pass on a test rig, against a container and against
+a real laptop. The last step, a person using it from the real clients,
+has not happened. See [What is tested](#what-is-tested).
 
 Site: <https://saxby-tools.github.io/hermes-hands/>
 
@@ -150,9 +151,14 @@ interactive login shell on the target. A plain SSH shell skips
 as `node` would otherwise be missing.
 
 **`inhibit_sleep`** holds a sleep inhibitor on the target while a
-command runs, so a closing lid cannot cut a write in half. It uses
-`systemd-inhibit` or `caffeinate` when the target has one and allows
-it. It is never held between commands.
+command runs. It uses `systemd-inhibit` or `caffeinate` when the
+target has one and allows it. It is never held between commands.
+
+On a `systemd` laptop, expect less than the name promises. An SSH
+login is refused a blocking lock and gets a delay lock, which holds
+sleep off for five seconds by default (`InhibitDelayMaxSec` in
+`logind.conf`). That covers a short write. A long one can still be
+cut by a closing lid.
 
 ## Use
 
@@ -234,16 +240,25 @@ Read these before trusting it with real work.
 | 2 | A stopped, a frozen and a returning target | 20 | Pass |
 | 3 | `/hands`, `/run`, `hermes hands`, CLI and TUI | 28 | Pass |
 | 4 | Status routes, desktop plugin logic | 7 | Pass |
-| 5 | A real laptop, real entry points | 0 | Not run |
+| 5 | A person at the real clients | 0 | Not run |
 
-The output of each run is in [rig/results/](rig/results/).
+The same checks pass twice: against a container on the host, and
+against a real Linux laptop over a real network. The laptop run adds
+three checks of the sleep lock, for 76 in all. The output of each run
+is in [rig/results/](rig/results/). The laptop's files start with
+`real-`.
+
+One real-model command has also run from the host's copy of a shared
+folder and landed on the laptop, as the laptop's user.
 
 Not yet tested by anyone:
 
-- A real laptop over a real network. The build could not log in to
-  one.
+- A laptop that really sleeps or drops off the network. The rig
+  fakes both by cutting a relay in front of the laptop's SSH port.
+- A person approving a real command in the TUI, the desktop app and
+  an editor.
 - The desktop plugin inside the real Hermes Desktop app.
-- The sleep inhibitor on a machine that has `systemd`.
+- A macOS machine as an SSH target, and `caffeinate`.
 - `hermes plugins install` from the Git URL.
 
 ### Run the tests
@@ -269,6 +284,14 @@ python3 rig/run.py
 
 ```bash
 python3 rig/run.py --apply
+```
+
+To use a real machine as the hands, name it. It must take your SSH
+key with no prompt. The rig writes only under
+`~/.cache/hermes-hands-rig` there and removes it at the end:
+
+```bash
+python3 rig/run.py --apply --real you@laptop.example
 ```
 
 It swaps the test profile's `config.yaml` for the run and puts it
