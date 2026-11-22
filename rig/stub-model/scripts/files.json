@@ -1,0 +1,24 @@
+{
+  "about": "Phase 1: do the file tools act on the target's files?",
+  "steps": [
+    {
+      "tool": "write_file",
+      "args": {"path": "rig-note.txt", "content": "alpha\nbravo\n"}
+    },
+    {
+      "tool": "read_file",
+      "args": {"path": "rig-note.txt"}
+    },
+    {
+      "tool": "search_files",
+      "args": {"pattern": "bravo", "path": "."}
+    },
+    {
+      "tool": "terminal",
+      "args": {"command": "cat rig-note.txt; hostname"}
+    },
+    {
+      "text": "Done."
+    }
+  ]
+}
