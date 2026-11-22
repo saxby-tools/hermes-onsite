@@ -39,6 +39,9 @@ Written Nov. 22, 2026, against Hermes v0.23.2.
 - **Why.** `main` held only the license. A branch leaves the owner one
   clean diff to read and one fast-forward to accept.
 - **Reverse.** `git switch main && git merge --ff-only build/v1`.
+- **Since.** The owner said to merge on Nov. 22, before Gates 2
+  to 4. `main` was fast-forwarded to `build/v1` that day. The
+  README's status line still says the build is not accepted.
 
 ### 4. Commits are authored and committed as Claude Code, unsigned
 
@@ -448,8 +451,8 @@ Written Nov. 22, 2026, against Hermes v0.23.2.
 - **Cost.** Four dev dependencies in `site/`, 115 packages with
   their own. None ships to a reader or to a plugin user.
 - **Limit.** The `github-pages` environment only lets named branches
-  deploy. `build/v1` is on the list. `main` has to be added when
-  `build/v1` is merged.
+  deploy. `build/v1` and `main` are both on the list. `main` was
+  added on Nov. 22, just before the merge in 3.
 
 ## Open decisions from the brief
 
