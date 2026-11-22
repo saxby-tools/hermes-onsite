@@ -1,0 +1,15 @@
+<ul class="swatches">
+<% for (const swatch of swatches) { -%>
+  <li class="swatches__item">
+    <span class="swatches__pair">
+      <span style="background: <%= swatch.light %>"></span>
+      <span style="background: <%= swatch.dark %>"></span>
+    </span>
+    <code class="swatches__name"><%= swatch.token %></code>
+    <span class="swatches__hex">
+      <%= swatch.light %> · <%= swatch.dark %>
+    </span>
+  </li>
+<% } -%>
+</ul>
+<%- html %>
