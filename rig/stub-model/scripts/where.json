@@ -1,0 +1,12 @@
+{
+  "about": "Phase 1: who and where am I?",
+  "steps": [
+    {
+      "tool": "terminal",
+      "args": {"command": "pwd; whoami; hostname"}
+    },
+    {
+      "text": "Done."
+    }
+  ]
+}
