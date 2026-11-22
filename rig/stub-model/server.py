@@ -31,12 +31,21 @@ DEFAULT_PORT = 11499
 DEFAULT_SCRIPTS_DIR = Path(__file__).parent / "scripts"
 
 MODEL_ID = "stub"
+LOG_PREVIEW_CHARS = 160
 SCRIPT_PREFIX = "script:"
 SCRIPT_NAME_RE = re.compile(r"script:([a-z0-9][a-z0-9-]*)")
 
 # Hermes sends side requests with no tools (titles, summaries, memory
 # extraction). They get this fixed reply so they never consume a step.
 NO_TOOLS_REPLY = "ok"
+
+# `/run N` hands the agent a message that asks it to run a command
+# from a code fence. A real model would comply. The stub does the
+# same, so the round trip can be tested.
+RUN_REQUEST_RE = re.compile(
+    r"Run proposed command #\d+ now.*?```\n(.*?)\n```",
+    re.DOTALL,
+)
 NO_SCRIPT_REPLY = "No script named. Say `script:<name>`."
 SCRIPT_DONE_REPLY = "Script finished."
 
@@ -97,11 +106,37 @@ def load_script(scripts_dir: Path, name: str) -> list | None:
     return json.loads(path.read_text())["steps"]
 
 
+def find_run_request(messages: list) -> str | None:
+    index = find_last_user_index(messages)
+
+    if index < 0:
+        return None
+
+    match = RUN_REQUEST_RE.search(message_text(messages[index]))
+
+    if match is None:
+        return None
+
+    return match.group(1)
+
+
+def pick_run_step(command: str, messages: list) -> dict:
+    if count_tool_results(messages) > 0:
+        return {"text": SCRIPT_DONE_REPLY}
+
+    return {"tool": "terminal", "args": {"command": command}}
+
+
 def pick_step(scripts_dir: Path, body: dict) -> dict:
     messages = body.get("messages") or []
 
     if not body.get("tools"):
         return {"text": NO_TOOLS_REPLY}
+
+    command = find_run_request(messages)
+
+    if command is not None:
+        return pick_run_step(command, messages)
 
     name = find_script_name(messages)
 
@@ -276,6 +311,21 @@ class StubHandler(BaseHTTPRequestHandler):
 
         return json.loads(self.rfile.read(length))
 
+    def log_request_summary(self, body: dict, step: dict) -> None:
+        """One line per request, so a failed run can be read back."""
+
+        messages = body.get("messages") or []
+        index = find_last_user_index(messages)
+        asked = message_text(messages[index]) if index >= 0 else ""
+        chosen = step.get("tool") or "text"
+
+        self.log_message(
+            "tools=%s asked=%r -> %s",
+            bool(body.get("tools")),
+            asked[:LOG_PREVIEW_CHARS],
+            chosen,
+        )
+
     def do_GET(self):
         if self.path.rstrip("/").endswith("/models"):
             self.send_json(200, build_models())
@@ -290,6 +340,8 @@ class StubHandler(BaseHTTPRequestHandler):
 
         body = self.read_body()
         step = pick_step(self.scripts_dir, body)
+
+        self.log_request_summary(body, step)
 
         if body.get("stream"):
             self.send_stream(build_stream_chunks(step))
