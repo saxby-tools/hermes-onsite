@@ -83,6 +83,27 @@ def test_old_pins_are_dropped_on_the_next_write(tmp_path):
     assert kept.get("session:new").target == "mac"
 
 
+def test_a_folder_is_found_by_any_name_it_was_noted_under(tmp_path):
+    path = tmp_path / "folders.json"
+    kept = pins.Folders(store.JsonStore(path))
+
+    kept.note("/home/dev/app", "session:a", "id-1", "")
+
+    again = pins.Folders(store.JsonStore(path))
+
+    assert again.find("id-1") == "/home/dev/app"
+    assert again.find("", "session:a") == "/home/dev/app"
+    assert again.find("id-9") == ""
+
+
+def test_an_empty_folder_is_not_noted(tmp_path):
+    path = tmp_path / "folders.json"
+
+    pins.Folders(store.JsonStore(path)).note("", "id-1")
+
+    assert not path.exists()
+
+
 def test_proposals_count_up_per_session(tmp_path):
     kept = proposals.Proposals(store.JsonStore(tmp_path / "p.json"))
 
