@@ -366,6 +366,12 @@ code {
   text-wrap: balance;
 }
 
+/* A banner picture at the top of the README is for GitHub and the
+ * plugin catalog. Here the plates beside the text do that job. */
+.hero__text p:has(> img:only-child) {
+  display: none;
+}
+
 .hero__text a {
   color: inherit;
 }
