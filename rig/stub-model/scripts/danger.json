@@ -1,0 +1,20 @@
+{
+  "about": "Phase 1: does a gated command reach the approval prompt?",
+  "steps": [
+    {
+      "tool": "terminal",
+      "args": {"command": "mkdir -p victim && touch victim/keep"}
+    },
+    {
+      "tool": "terminal",
+      "args": {"command": "rm -rf victim"}
+    },
+    {
+      "tool": "terminal",
+      "args": {"command": "test -e victim/keep && echo SURVIVED || echo GONE"}
+    },
+    {
+      "text": "Done."
+    }
+  ]
+}
