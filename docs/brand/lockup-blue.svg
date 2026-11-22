@@ -1,0 +1,42 @@
+<svg
+  xmlns="http://www.w3.org/2000/svg"
+  viewBox="0 0 78 16"
+  shape-rendering="crispEdges"
+  role="img"
+>
+  <title>hermes-hands</title>
+  <!--
+    The hermes-hands lockup: the mark on its tile, a gap of four squares,
+    then the wordmark, its baseline two squares above the foot of the tile.
+    For light backgrounds.
+  -->
+  <rect width="16" height="16" fill="#0000f2" />
+  <path
+    fill="#f2f2f2"
+    d="M7 1h2v7h-2z M4 2h2v6h-2z M10 2h2v6h-2z M13 4h2v4h-2z M1 7h2v4h-2z M4
+      8h11v3h-11z M3 10h1v1h-1z M4 13h11v1h-11z M5 14h9v1h-9z"
+  />
+  <path
+    fill="#ffe600"
+    d="M4 11h12v1h-12z M5 12h11v1h-11z"
+  />
+  <g transform="translate(20 5)">
+    <path
+      fill="#0000c2"
+      d="M0 0h1v9h-1z M3 4h1v5h-1z M5 4h1v4h-1z M8 4h1v2h-1z M10 3h1v6h-1z M14
+        3h1v6h-1z M16 3h1v6h-1z M18 4h1v5h-1z M20 4h1v4h-1z M23 4h1v2h-1z M28
+        6h1v2h-1z M34 0h1v9h-1z M37 4h1v5h-1z M39 6h1v2h-1z M42 4h1v5h-1z M44
+        3h1v6h-1z M47 4h1v5h-1z M49 4h1v4h-1z M52 0h1v9h-1z M57 6h1v2h-1z M1
+        3h2v1h-2z M6 3h2v1h-2z M12 3h1v1h-1z M15 3h1v1h-1z M17 3h1v1h-1z M21
+        3h2v1h-2z M26 3h3v1h-3z M35 3h2v1h-2z M40 3h2v1h-2z M45 3h2v1h-2z M50
+        3h2v1h-2z M55 3h3v1h-3z M11 4h1v1h-1z M25 4h1v1h-1z M54 4h1v1h-1z M6
+        5h2v1h-2z M21 5h2v1h-2z M26 5h2v1h-2z M40 5h2v1h-2z M55 5h2v1h-2z M8
+        7h1v1h-1z M23 7h1v1h-1z M6 8h2v1h-2z M21 8h2v1h-2z M25 8h3v1h-3z M40
+        8h2v1h-2z M50 8h2v1h-2z M54 8h3v1h-3z"
+    />
+    <path
+      fill="#0000c2"
+      d="M30 5h3v1h-3z"
+    />
+  </g>
+</svg>
