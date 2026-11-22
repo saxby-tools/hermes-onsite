@@ -16,6 +16,8 @@ from ..health import Gate
 from ..health import TargetDown
 from ..health import last_line
 from ..routing import HOME
+from ..routing import has_prefix_for
+from ..routing import is_under
 from ..routing import map_path
 
 
@@ -47,11 +49,13 @@ class HandsSshEnvironment(SSHEnvironment):
         spec: TargetSpec,
         gate: Gate,
         start_cwd: str,
+        host_cwd: str,
         timeout: int,
         persistent: bool,
     ):
         self.hands_spec = spec
         self.hands_start_cwd = start_cwd
+        self.hands_host_cwd = host_cwd
 
         self._hands_gate = gate
         self._hands_path = ""
@@ -170,6 +174,21 @@ class HandsSshEnvironment(SSHEnvironment):
             stdin_data=stdin_data,
         )
 
+    def _hands_is_host_only(self, path: str) -> bool:
+        """True for the session's host folder when the target has no
+        folder that stands for it. Running there would fail at `cd`
+        on every call, so the target's own start folder is used."""
+
+        host = self.hands_host_cwd
+
+        if not host:
+            return False
+
+        if not is_under(path, normalize_path(host)):
+            return False
+
+        return not has_prefix_for(path, self.hands_spec)
+
     def _hands_cwd(self, cwd: str) -> str:
         """Turn the folder Hermes passes into one that exists here."""
 
@@ -182,14 +201,18 @@ class HandsSshEnvironment(SSHEnvironment):
         if not is_absolute(cwd):
             return cwd
 
-        # Desktop sends the folder the user picked, which is a path on
-        # the host.
-        mapped = map_path(normalize_path(cwd), self.hands_spec)
+        # Desktop and editors send the folder the user picked, which
+        # is a path on the host.
+        path = normalize_path(cwd)
+        mapped = map_path(path, self.hands_spec)
 
-        if mapped is None:
-            return cwd
+        if mapped is not None:
+            return mapped
 
-        return mapped
+        if self._hands_is_host_only(path):
+            return ""
+
+        return cwd
 
     def _hands_drop_masters(self) -> None:
         """Close shared connections that point at a dead peer, so the

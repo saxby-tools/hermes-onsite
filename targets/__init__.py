@@ -25,7 +25,13 @@ RETRY_HINT = (
 )
 
 
-def build_ssh(spec: TargetSpec, gate: Gate, cwd: str, timeout: int):
+def build_ssh(
+    spec: TargetSpec,
+    gate: Gate,
+    cwd: str,
+    timeout: int,
+    host_cwd: str,
+):
     _, persistent = terminal_persistence()
 
     # A live probe is cheaper than waiting for the connection itself
@@ -43,6 +49,7 @@ def build_ssh(spec: TargetSpec, gate: Gate, cwd: str, timeout: int):
             spec=spec,
             gate=gate,
             start_cwd=cwd,
+            host_cwd=host_cwd,
             timeout=timeout,
             persistent=persistent,
         )
@@ -55,7 +62,13 @@ def build_ssh(spec: TargetSpec, gate: Gate, cwd: str, timeout: int):
         ) from error
 
 
-def build_environment(spec: TargetSpec, gate: Gate, cwd: str, timeout: int):
+def build_environment(
+    spec: TargetSpec,
+    gate: Gate,
+    cwd: str,
+    timeout: int,
+    host_cwd: str = "",
+):
     if spec.kind == KIND_LOCAL:
         persistent, _ = terminal_persistence()
 
@@ -66,4 +79,4 @@ def build_environment(spec: TargetSpec, gate: Gate, cwd: str, timeout: int):
             persistent=persistent,
         )
 
-    return build_ssh(spec, gate, cwd, timeout)
+    return build_ssh(spec, gate, cwd, timeout, host_cwd)
