@@ -1,0 +1,9 @@
+<ul class="scale">
+<% for (const step of steps) { -%>
+  <li class="scale__step">
+    <span class="scale__bar" style="width: var(<%= step.token %>)"></span>
+    <code><%= step.token %></code>
+    <span class="scale__value"><%= step.value %></span>
+  </li>
+<% } -%>
+</ul>
