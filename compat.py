@@ -21,9 +21,6 @@ from typing import Any
 from agent.terminal_env_provider import TerminalEnvironmentProvider
 from gateway.session_context import get_session_env
 from hermes_cli.config import load_config_readonly
-from hermes_cli.plugin_session import session_cwd
-from hermes_cli.plugin_session import session_key
-from hermes_cli.plugin_session import session_surface
 from hermes_constants import get_hermes_home
 from tools.environments.base import EnvironmentConnectionError
 
@@ -39,6 +36,13 @@ logger = logging.getLogger(__name__)
 
 DATA_DIR_NAME = "plugin-data"
 SESSION_ID_VAR = "HERMES_SESSION_ID"
+SESSION_KEY_VAR = "HERMES_SESSION_KEY"
+
+# The plugin context of the current load. Session facts are read
+# through it, which is the documented way. It is None when only the
+# dashboard loaded the package, where there is no session to ask
+# about.
+_context = None
 
 # Hermes builds a throwaway environment under this id to describe the
 # backend in the system prompt.
@@ -51,6 +55,7 @@ __all__ = [
     "SSHEnvironment",
     "TerminalEnvironmentProvider",
     "anchor_file_tools",
+    "bind",
     "current_session_cwd",
     "current_session_id",
     "current_session_key",
@@ -61,6 +66,12 @@ __all__ = [
     "load_settings",
     "terminal_persistence",
 ]
+
+
+def bind(ctx) -> None:
+    global _context
+
+    _context = ctx
 
 
 def data_dir() -> Path:
@@ -79,8 +90,11 @@ def load_settings() -> Any:
 
 
 def current_session_cwd() -> str:
+    if _context is None:
+        return ""
+
     try:
-        return session_cwd() or ""
+        return _context.session_cwd() or ""
     except Exception:
         # Outside a session Hermes has no folder to report. Routing
         # then falls back to the default target.
@@ -98,7 +112,7 @@ def current_session_id() -> str:
 
 def current_session_key() -> str:
     try:
-        return session_key() or ""
+        return get_session_env(SESSION_KEY_VAR, "") or ""
     except Exception:
         logger.debug("no session key is readable", exc_info=True)
         return ""
@@ -108,8 +122,11 @@ def current_surface() -> str:
     """`cli`, `tui`, `desktop`, `acp` or a chat platform. Empty when
     there is no session."""
 
+    if _context is None:
+        return ""
+
     try:
-        return session_surface() or ""
+        return _context.session_surface() or ""
     except Exception:
         logger.debug("no session surface is readable", exc_info=True)
         return ""
