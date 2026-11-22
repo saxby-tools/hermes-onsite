@@ -1,0 +1,12 @@
+{
+  "about": "Phase 1: is a tool that only .zshrc puts on PATH found?",
+  "steps": [
+    {
+      "tool": "terminal",
+      "args": {"command": "command -v handstool && handstool"}
+    },
+    {
+      "text": "Done."
+    }
+  ]
+}
