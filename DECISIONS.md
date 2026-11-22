@@ -73,6 +73,14 @@ Written Nov. 22, 2026, against Hermes v0.23.2.
   newer than the brief. "Only" is the narrow reading of a bare
   license file. "Or later" is a grant the owner has to make.
 - **Reverse.** Change the one line in `plugin.yaml`.
+- **Owner's call, Nov. 22.** Niko asked for "the most FOSS license I
+  can have". Read as the strongest copyleft the project can carry:
+  `AGPL-3.0-or-later`. It closes the gap a plain GPL leaves for
+  software run as a service, and "or later" lets the project follow
+  a future version without asking every contributor. Hermes is MIT,
+  so nothing upstream stands in the way. If "most FOSS" meant fewest
+  strings instead, the answer is `0BSD` or `MIT` and the same one
+  line changes, plus the `LICENSE` file.
 
 ### 7. The branch was pushed and GitHub Pages turned on
 
