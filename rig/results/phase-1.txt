@@ -1,11 +1,11 @@
 # Phase 1: backend and routing
 
 == Phase 1.1: a session in a laptop folder runs there
-  --- terminal: pwd + 2 commands [completed, 0.12s]
+  --- terminal: pwd + 2 commands [completed, 0.14s]
   | terminal result
   | - **output:** /home/dev/Development/sample
   | dev
-  | 22e612b7c293
+  | 8e57d9592b8c
   | - **exit_code:** 0
   | - **cwd:** /home/dev/Development/sample
   PASS  pwd is the laptop path
@@ -13,7 +13,7 @@
   PASS  hostname is the laptop
 
 == Phase 1.2: PATH from the interactive shell
-  --- terminal: command -v handstool + 1 command [completed, 0.04s]
+  --- terminal: command -v handstool + 1 command [completed, 0.06s]
   | terminal result
   | - **output:** /home/dev/.local/tools/bin/handstool
   | handstool ok
@@ -21,17 +21,17 @@
   PASS  a tool that only .zshrc adds to PATH is found
 
 == Phase 1.3: file tools act on the laptop's files
-  --- write_file: rig-note.txt [completed, 0.24s]
+  --- write_file: rig-note.txt [completed, 0.16s]
   | ✅ write_file completed for `rig-note.txt`
   | Files: `/home/dev/Development/sample/rig-note.txt`
-  --- read_file: rig-note.txt [completed, 0.03s]
+  --- read_file: rig-note.txt [completed, 0.04s]
   | Read rig-note.txt — 2 total lines
   | 
   | ```
   | 1|alpha
   | 2|bravo
   | ```
-  --- search_files: bravo [completed, 0.10s]
+  --- search_files: bravo [completed, 0.12s]
   | Search results
   | Found 2 matches; showing 2.
   | 
@@ -43,7 +43,7 @@
   | terminal result
   | - **output:** alpha
   | bravo
-  | 22e612b7c293
+  | 8e57d9592b8c
   | - **exit_code:** 0
   --- approval prompt: Approve edit: /home/dev/rig-note.txt
   | options: Allow once / Deny
@@ -61,7 +61,7 @@
         content: 'alpha\ncharlie\n'
 
 == Phase 1.4: a session in a Mac path runs on the Mac
-  --- terminal: pwd + 2 commands [completed, 0.17s]
+  --- terminal: pwd + 2 commands [completed, 0.12s]
   | terminal result
   | - **output:** <repo>/.rig/mac-work
   | <this-user>
@@ -73,13 +73,13 @@
   PASS  hostname is not the laptop
 
 == Phase 1.5: a denied approval stops the command
-  --- terminal: mkdir -p victim + 1 command [completed, 0.08s]
+  --- terminal: mkdir -p victim + 1 command [completed, 0.16s]
   | terminal result
   | - **exit_code:** 0
   | - **cwd:** /home/dev/Development/sample
-  --- terminal: rm -rf victim [failed, 0.01s]
+  --- terminal: rm -rf victim [failed, 0.03s]
   | terminal failed: BLOCKED: Command denied by user. The user has NOT consented to this action. Do NOT retry this command, do NOT rephrase it, and do NOT attempt the same outcome via a different command. Stop the current workflow and wait for the user to respond before taking any further destructive or irreversible action.
-  --- terminal: test -e victim/keep + 2 commands [completed, 0.03s]
+  --- terminal: test -e victim/keep + 2 commands [completed, 0.10s]
   | terminal result
   | - **output:** SURVIVED
   | - **exit_code:** 0
@@ -92,15 +92,15 @@
   PASS  the folder is still on the laptop
 
 == Phase 1.6: an allowed approval runs the command
-  --- terminal: mkdir -p victim + 1 command [completed, 0.08s]
+  --- terminal: mkdir -p victim + 1 command [completed, 0.21s]
   | terminal result
   | - **exit_code:** 0
   | - **cwd:** /home/dev/Development/sample
-  --- terminal: rm -rf victim [completed, 0.04s]
+  --- terminal: rm -rf victim [completed, 0.07s]
   | terminal result
   | - **exit_code:** 0
   | - **approval:** Command required approval (recursive delete) and was approved by the user.
-  --- terminal: test -e victim/keep + 2 commands [completed, 0.03s]
+  --- terminal: test -e victim/keep + 2 commands [completed, 0.05s]
   | terminal result
   | - **output:** GONE
   | - **exit_code:** 0
