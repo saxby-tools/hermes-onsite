@@ -165,3 +165,56 @@ class Pins:
         return bool(self._store.update(
             lambda data: data.pop(key, None) is not None
         ))
+
+
+class Folders:
+    """Remember the host folder each session was opened in.
+
+    Hermes tells a tool call which folder its session is in, but it
+    does not tell a slash command. The folder is noted when a session
+    builds its prompt and when it builds its environment, so `/hands`
+    can answer for the right folder.
+    """
+
+    def __init__(
+        self,
+        store: JsonStore,
+        clock: Callable[[], float] = time.time,
+    ):
+        self._store = store
+        self._clock = clock
+
+    def note(self, folder: str, *ids: str) -> None:
+        names = [name for name in ids if name]
+
+        if not folder or not names:
+            return
+
+        now = self._clock()
+
+        def change(data: dict[str, Any]) -> None:
+            for key in list(data):
+                record = data[key]
+
+                if not isinstance(record, dict):
+                    del data[key]
+                    continue
+
+                if now - float(record.get("at") or 0.0) > MAX_AGE_SECONDS:
+                    del data[key]
+
+            for name in names:
+                data[name] = {"folder": folder, "at": now}
+
+        self._store.update(change)
+
+    def find(self, *ids: str) -> str:
+        data = self._store.read()
+
+        for name in ids:
+            record = data.get(name) if name else None
+
+            if isinstance(record, dict):
+                return str(record.get("folder") or "")
+
+        return ""
