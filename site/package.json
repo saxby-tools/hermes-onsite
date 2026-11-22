@@ -1,0 +1,21 @@
+{
+  "name": "hermes-hands-site",
+  "private": true,
+  "description": "Builds the hermes-hands site from the repo's Markdown.",
+  "license": "AGPL-3.0-or-later",
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "build": "./build.sh",
+    "serve": "./build.sh --serve --port=8771",
+    "test": "node --test"
+  },
+  "devDependencies": {
+    "@11ty/eleventy": "3.1.7",
+    "ejs": "7.0.2",
+    "markdown-it": "14.3.3",
+    "markdown-it-comment-blocks": "0.1.1"
+  }
+}

@@ -1,0 +1,5 @@
+# Installed by npm
+node_modules/
+
+# Built by Eleventy
+_site/
