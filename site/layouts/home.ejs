@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title><%= title %></title>
+<%- include("head.ejs") %>
+</head>
+<%
+  // The README renders flat. Everything before the first h2 is the
+  // hero; each h2 starts a section. The headings already carry the
+  // anchors GitHub gives them, so the same #links work in both
+  // places. The contents list is built from them, the one thing this
+  // page adds that the Markdown does not hold.
+  const [intro, ...parts] = content.split(/(?=<h2[\s>])/);
+  const sections = parts.map((part) => {
+    const heading = part.match(/<h2 id="([^"]*)">([\s\S]*?)<\/h2>/);
+
+    return {
+      id: heading[1],
+      title: heading[2],
+      body: part.replace(heading[0], "").trim(),
+    };
+  });
+-%>
+<body class="layout-home">
+<%- include("top.ejs") -%>
+<main id="main">
+
+  <header class="hero">
+    <div class="hero__inner">
+      <div class="hero__text prose">
+        <p class="label hero__kicker">
+          A community plugin for the Hermes agent
+        </p>
+<%- intro.trim() %>
+      </div>
+
+      <div class="plates">
+        <figure class="plate">
+          <img
+            class="plate__art"
+            src="<%= root %>docs/brand/plate-head.png"
+            alt="A bearded marble head, drawn in broken blue lines."
+            width="1120"
+            height="1120"
+          >
+          <figcaption class="plate__caption">
+            <span class="plate__number">Plate I · The brain</span>
+            Marble head from a herm. Roman, 1st to 2nd century.
+          </figcaption>
+        </figure>
+        <figure class="plate">
+          <img
+            class="plate__art"
+            src="<%= root %>docs/brand/plate-hand.png"
+            alt="A marble right hand, drawn in broken blue lines."
+            width="1120"
+            height="1120"
+          >
+          <figcaption class="plate__caption">
+            <span class="plate__number">Plate II · The hands</span>
+            Marble right hand and wrist. Roman, 1st or 2nd century.
+          </figcaption>
+        </figure>
+      </div>
+    </div>
+  </header>
+
+  <nav class="contents" aria-labelledby="contents-title">
+    <div class="contents__inner">
+      <h2 class="label contents__title" id="contents-title">
+        On this page
+      </h2>
+      <ul class="contents__list">
+<% for (const section of sections) { -%>
+        <li><a href="#<%= section.id %>"><%- section.title %></a></li>
+<% } -%>
+      </ul>
+    </div>
+  </nav>
+<% for (const section of sections) { -%>
+
+  <section class="section" aria-labelledby="<%= section.id %>">
+    <div class="section__inner prose">
+      <h2 class="section__title" id="<%= section.id %>">
+        <%- section.title %>
+      </h2>
+<%- section.body %>
+    </div>
+  </section>
+<% } -%>
+
+</main>
+<%- include("foot.ejs") -%>
+</body>
+</html>
