@@ -1,37 +1,37 @@
 # Phase 1: backend and routing
 
 == Phase 1.1: a session in a laptop folder runs there
-  --- terminal: pwd + 2 commands [completed, 0.16s]
+  --- terminal: pwd + 2 commands [completed, 0.21s]
   | terminal result
   | - **output:** /home/dev/Development/sample
   | dev
-  | 7c5632b13d15
+  | 43edeb7c4e6f
   | - **exit_code:** 0
   | - **cwd:** /home/dev/Development/sample
   PASS  pwd is the laptop path
   PASS  whoami is the laptop user
-  PASS  hostname is the laptop
+  PASS  the machine name is the laptop's
 
 == Phase 1.2: PATH from the interactive shell
-  --- terminal: command -v handstool + 1 command [completed, 0.04s]
+  --- terminal: echo "PATH=$PATH" + 1 command [completed, 0.05s]
   | terminal result
-  | - **output:** /home/dev/.local/tools/bin/handstool
+  | - **output:** PATH=/home/dev/.local/tools/bin:/usr/local/bin:/usr/bin:/bin:/usr/games
   | handstool ok
   | - **exit_code:** 0
   PASS  a tool that only .zshrc adds to PATH is found
 
 == Phase 1.3: file tools act on the laptop's files
-  --- write_file: rig-note.txt [completed, 0.13s]
+  --- write_file: rig-note.txt [completed, 0.18s]
   | ✅ write_file completed for `rig-note.txt`
   | Files: `/home/dev/Development/sample/rig-note.txt`
-  --- read_file: rig-note.txt [completed, 0.08s]
+  --- read_file: rig-note.txt [completed, 0.04s]
   | Read rig-note.txt — 2 total lines
   | 
   | ```
   | 1|alpha
   | 2|bravo
   | ```
-  --- search_files: bravo [completed, 0.09s]
+  --- search_files: bravo [completed, 0.08s]
   | Search results
   | Found 2 matches; showing 2.
   | 
@@ -39,11 +39,11 @@
   |   bravo
   | - ./rig-note.txt:2
   |   bravo
-  --- terminal: cat rig-note.txt + 1 command [completed, 0.08s]
+  --- terminal: cat rig-note.txt + 1 command [completed, 0.03s]
   | terminal result
   | - **output:** alpha
   | bravo
-  | 7c5632b13d15
+  | 43edeb7c4e6f
   | - **exit_code:** 0
   --- approval prompt: Approve edit: /home/dev/rig-note.txt
   | options: Allow once / Deny
@@ -61,7 +61,7 @@
         content: 'alpha\ncharlie\n'
 
 == Phase 1.4: a session in a Mac path runs on the Mac
-  --- terminal: pwd + 2 commands [completed, 0.27s]
+  --- terminal: pwd + 2 commands [completed, 0.20s]
   | terminal result
   | - **output:** <repo>/.rig/mac-work
   | <this-user>
@@ -70,20 +70,20 @@
   | - **cwd:** <repo>/.rig/mac-work
   PASS  pwd is the host folder
   PASS  whoami is the host user
-  PASS  hostname is not the laptop
+  PASS  the machine name is the host's
 
 == Phase 1.5: a denied approval stops the command
-  --- terminal: mkdir -p victim + 1 command [completed, 0.15s]
+  --- terminal: mkdir -p hands-rig-victim + 1 command [completed, 0.07s]
   | terminal result
   | - **exit_code:** 0
   | - **cwd:** /home/dev/Development/sample
-  --- terminal: rm -rf victim [failed, 0.01s]
+  --- terminal: rm -rf hands-rig-victim [failed, 0.03s]
   | terminal failed: BLOCKED: Command denied by user. The user has NOT consented to this action. Do NOT retry this command, do NOT rephrase it, and do NOT attempt the same outcome via a different command. Stop the current workflow and wait for the user to respond before taking any further destructive or irreversible action.
-  --- terminal: test -e victim/keep + 2 commands [completed, 0.05s]
+  --- terminal: test -e hands-rig-victim/keep + 2 commands [completed, 0.06s]
   | terminal result
   | - **output:** SURVIVED
   | - **exit_code:** 0
-  --- approval prompt: recursive delete: rm -rf victim
+  --- approval prompt: recursive delete: rm -rf hands-rig-victim
   | options: Allow once / Allow for session / Allow always / Deny / Deny always
   | answered: Deny
   PASS  Hermes' built-in prompt fired for the gated command
@@ -92,19 +92,19 @@
   PASS  the folder is still on the laptop
 
 == Phase 1.6: an allowed approval runs the command
-  --- terminal: mkdir -p victim + 1 command [completed, 0.10s]
+  --- terminal: mkdir -p hands-rig-victim + 1 command [completed, 0.10s]
   | terminal result
   | - **exit_code:** 0
   | - **cwd:** /home/dev/Development/sample
-  --- terminal: rm -rf victim [completed, 0.04s]
+  --- terminal: rm -rf hands-rig-victim [completed, 0.06s]
   | terminal result
   | - **exit_code:** 0
   | - **approval:** Command required approval (recursive delete) and was approved by the user.
-  --- terminal: test -e victim/keep + 2 commands [completed, 0.05s]
+  --- terminal: test -e hands-rig-victim/keep + 2 commands [completed, 0.04s]
   | terminal result
   | - **output:** GONE
   | - **exit_code:** 0
-  --- approval prompt: recursive delete: rm -rf victim
+  --- approval prompt: recursive delete: rm -rf hands-rig-victim
   | options: Allow once / Allow for session / Allow always / Deny / Deny always
   | answered: Allow once
   PASS  the prompt fired again in a new session
