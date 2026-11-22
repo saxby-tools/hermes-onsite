@@ -1,0 +1,15 @@
+{
+  "about": "Phase 3: does propose_command save a numbered command?",
+  "steps": [
+    {
+      "tool": "propose_command",
+      "args": {
+        "command": "echo proposed-ran > proposed.txt",
+        "why": "Leaves a marker file so the test can see it ran."
+      }
+    },
+    {
+      "text": "I proposed a command. Run it with /run 1."
+    }
+  ]
+}
