@@ -20,6 +20,9 @@ Written Nov. 22, 2026, against Hermes v0.23.2.
   throw away.
 - **Reverse.** If the answer is no-go, delete the `build/v1` branch.
   `main` was never touched.
+- **Since.** On Nov. 22 the owner read the summary, fixed SSH to the
+  laptop and said to finish the code. That is read as a go. It was
+  not a formal sign-off, and the owner can still say otherwise.
 
 ### 2. Gates 2, 3 and 4 were not passed
 
@@ -269,8 +272,12 @@ Written Nov. 22, 2026, against Hermes v0.23.2.
   only while a command runs.
 - **Why.** A remote login is often refused a blocking lock. Wrapping
   a command in a lock the target refuses would stop the command.
-- **Not tested.** The rig's container has no systemd. The wrapper
-  text is unit tested. The real laptop is the first real test.
+- **Tested Nov. 22** on the real laptop. systemd refused the
+  blocking lock and granted the delay lock. A delay lock lasts 5
+  seconds there, so it protects a short write and not a long one.
+  Raising `InhibitDelayMaxSec` or adding a polkit rule would change
+  that, and both are the owner's machine to change, not the
+  plugin's.
 
 ### 27. PATH is borrowed once per connection
 
@@ -337,6 +344,7 @@ Written Nov. 22, 2026, against Hermes v0.23.2.
 - **Pick.** Docker on the host.
 - **Why.** SSH from the host to the laptop as the laptop user was
   refused with the two keys tried. No more were tried.
+- **Since Nov. 22** the rig also runs against the laptop. See 40.
 
 ### 35. The brain is the Buster profile, not a container
 
@@ -374,11 +382,48 @@ Written Nov. 22, 2026, against Hermes v0.23.2.
   the per-user SSH key file. No flag overrides it. The rig tripped
   it, which would have blocked `hermes plugins install`.
 
+### 40. A real machine is tested through a relay
+
+- **Question.** The outage tests stop and pause the container. A
+  real laptop cannot be stopped from a test.
+- **Pick.** `rig/run.py --real USER@HOST` points the plugin at a TCP
+  relay on the host, which passes every byte to the laptop's SSH
+  port. Closing the relay is a machine that is off. Freezing it is a
+  machine that sleeps.
+- **Why.** It tests real SSH to a real machine over a real network
+  and changes nothing on that machine to fake a fault. Firewall
+  rules would need root. Suspending the owner's laptop from a test
+  is not a sane default.
+- **Cost.** The plugin sees `127.0.0.1`, so the owner's `Host` block
+  does not apply and the rig names the key that block uses. The
+  direct path is checked apart from the rig. See 41.
+- **Limit.** `--keep` and `--setup-only` are refused with `--real`.
+  The relay lives in the rig's own process.
+- **On the laptop.** The rig writes only under
+  `~/.cache/hermes-hands-rig` and removes it at the end.
+
+### 41. The test profile is left set up for Gate 2
+
+- **Pick.** After the laptop run, Buster keeps the plugin enabled,
+  `terminal.backend: hands`, a `laptop` target at the real laptop
+  and a `mac` target. The map sends the host's mount of the shared
+  folder to the laptop's own copy.
+- **Why.** Gate 2 is a person trying the real clients on Buster. It
+  cannot start until Buster points at the laptop.
+- **Checked.** `hermes hands status` shows the laptop connected, and
+  one real-model command ran there.
+- **Not done.** `desktop/plugin.js` was not copied to the laptop.
+  The desktop app there may be attached to a profile that is off
+  limits until Gate 4, and Gate 3 is the owner's to open.
+- **Reverse.** `hermes -p buster config set terminal.backend local`
+  and `hermes -p buster plugins disable hermes-hands`. A copy of the
+  config from before is in `.rig/buster-config.before-gate-2.yaml`.
+
 ## Open decisions from the brief
 
 | # | Decision | What the build did |
 | --- | --- | --- |
-| 1 | License and repo | Followed the repo. See 6 and 7. |
+| 1 | License and repo | AGPL-3.0-or-later, the owner's call. See 6. |
 | 2 | Approval mode | `manual` in the rig. Buster's own is `manual`. |
 | 3 | Upgrades | None. Built against Hermes v0.23.2 as installed. |
 | 4 | Run card fallback | Both the card and the pane ship. See 30. |
