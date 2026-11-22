@@ -1,0 +1,33 @@
+<%#
+  The footer, included by every layout. It says who made this and who
+  did not, names the license, and links the pages the masthead leaves
+  out, with the page's own Markdown on GitHub last.
+-%>
+<footer class="foot">
+  <div class="foot__inner">
+    <img
+      class="foot__mark"
+      src="<%= root %>docs/brand/mark.svg"
+      alt=""
+      width="48"
+      height="48"
+    >
+    <div class="foot__text">
+      <p>
+        hermes-hands is a community plugin. It is not made or endorsed
+        by Nous Research, and it is not part of Hermes.
+      </p>
+      <p>
+        Free software under AGPL-3.0-or-later. Built by Claude Code
+        from a brief. Every commit says so.
+      </p>
+    </div>
+    <nav class="foot__nav" aria-label="More pages">
+      <a href="<%= root %>docs/findings.html">Phase 0 findings</a>
+      <a href="<%= root %>docs/upstream.html">Upstream drafts</a>
+      <a href="<%= root %>docs/design.html">Design system</a>
+      <a href="https://github.com/NousResearch/hermes-agent">Hermes</a>
+      <a href="<%= source %>">This page in Markdown</a>
+    </nav>
+  </div>
+</footer>
