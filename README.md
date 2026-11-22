@@ -304,6 +304,18 @@ docs/                the site, the Phase 0 findings, upstream drafts
 
 ## License
 
-GNU Affero General Public License v3. See [LICENSE](LICENSE).
+Copyright (C) 2026 saxby-tools.
+
+hermes-hands is free software. You can redistribute it and modify it
+under the terms of the GNU Affero General Public License as published
+by the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version. See [LICENSE](LICENSE).
+
+It comes with no warranty.
+
+In short: you may use, study, change and share it. If you share a
+changed copy, or run one as a service for other people, you must
+offer them its source under the same license. Hermes itself is MIT
+licensed, which allows a plugin under these terms.
 
 Built by Claude Code from a brief. Every commit says so.
