@@ -1,0 +1,4 @@
+# Sleep inhibitor on a systemd target
+
+== Sleep: a lock is held while a command runs
+  skipped: the hands container has no systemd.
