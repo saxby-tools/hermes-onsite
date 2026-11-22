@@ -1,0 +1,8 @@
+<div class="specimens">
+<% for (const row of rows) { -%>
+  <div class="specimen">
+    <p class="specimen__name"><code>.<%= row.name %></code></p>
+    <p class="<%= row.name %>"><%- row.sample %></p>
+  </div>
+<% } -%>
+</div>
