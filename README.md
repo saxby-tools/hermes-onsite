@@ -1,5 +1,7 @@
 # hermes-hands
 
+![hermes-hands: a marble head and a marble hand, drawn in blue](docs/brand/banner.png)
+
 hermes-hands makes a remote
 [Hermes](https://github.com/NousResearch/hermes-agent) agent act on
 the machine you are sitting at.
@@ -21,6 +23,8 @@ Site: <https://saxby-tools.github.io/hermes-hands/>
 
 ## How it works
 
+<!-- hands:diagram {"caption": "Chat goes to the host. Tool calls come back past the gate."} -->
+
 ```text
   the machine you sit at                    the always-on host
   ----------------------                    ------------------
@@ -35,6 +39,8 @@ Site: <https://saxby-tools.github.io/hermes-hands/>
                                               target      target
                                                          (local)
 ```
+
+<!-- /hands:diagram -->
 
 One backend plugin routes each session's tool calls to a named
 target. The clients, the agent loop and the approval gate are stock
@@ -251,6 +257,8 @@ is in [rig/results/](rig/results/). The laptop's files start with
 One real-model command has also run from the host's copy of a shared
 folder and landed on the laptop, as the laptop's user.
 
+<!-- hands:notice {"kind": "untested"} -->
+
 Not yet tested by anyone:
 
 - A laptop that really sleeps or drops off the network. The rig
@@ -260,6 +268,8 @@ Not yet tested by anyone:
 - The desktop plugin inside the real Hermes Desktop app.
 - A macOS machine as an SSH target, and `caffeinate`.
 - `hermes plugins install` from the Git URL.
+
+<!-- /hands:notice -->
 
 ### Run the tests
 
@@ -322,7 +332,8 @@ dashboard/           the HTTP routes Hermes mounts
 desktop/plugin.js    status chip, commands pane, run card
 tests/               unit tests
 rig/                 the end-to-end rig and its saved results
-docs/                the site, the Phase 0 findings, upstream drafts
+docs/                the design page, brand files, findings, drafts
+site/                the site's build: Eleventy, layouts, styles
 ```
 
 ## License
