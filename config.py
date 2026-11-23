@@ -38,6 +38,11 @@ MAX_MIRROR_DEPTH = 6
 
 # `/hands auto` clears an override, so no target may take the name.
 RESERVED_TARGET_NAMES = ("auto",)
+
+# A machine that dials out is reached at a port on the host's own
+# loopback address. See `dialout`.
+LOOPBACK_HOSTS = ("127.0.0.1", "::1", "localhost")
+HOST_KEY_ALIAS_PREFIX = "hermes-hands-"
 TARGET_NAME_RE = re.compile(r"^[a-z][a-z0-9-]{0,31}$")
 
 SETTINGS_PATH = f"plugins.entries.{PLUGIN_ID}.settings"
@@ -93,6 +98,25 @@ class TargetSpec:
     connect_timeout: int = DEFAULT_CONNECT_TIMEOUT
     mirror: str = ""
     mirror_depth: int = DEFAULT_MIRROR_DEPTH
+
+    @property
+    def host_key_alias(self) -> str:
+        """The name this target's host key is filed under, if not its host.
+
+        Every machine that dials out shares the address 127.0.0.1, so
+        OpenSSH would file each key under an address and a port. A port
+        handed to a different machine would then look like the same
+        host with a changed key. Filing by target name keeps each key
+        with its machine.
+        """
+
+        if self.kind != KIND_SSH:
+            return ""
+
+        if self.host not in LOOPBACK_HOSTS:
+            return ""
+
+        return f"{HOST_KEY_ALIAS_PREFIX}{self.name}"
 
     @property
     def label(self) -> str:
