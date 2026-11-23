@@ -1,7 +1,7 @@
 # Screen control on a target
 
 == Screen: the target's screen can be found
-  --- hermes hands screen laptop
+  --- hermes onsite screen laptop
   | Screen of laptop (dev@127.0.0.1)
   |   System   Linux
   |   Desktop  x11
