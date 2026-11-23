@@ -356,6 +356,9 @@ code {
 }
 
 .top__link-button {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
   padding: var(--space-2) var(--space-3);
   background: var(--color-field-text);
   color: var(--color-field-deep);
@@ -365,6 +368,14 @@ code {
 
 .top__link-button:hover {
   transform: translateX(0.1875rem);
+}
+
+/* The icon in the Source button takes the button's text colour. */
+.top__icon {
+  flex: none;
+  width: 1rem;
+  height: 1rem;
+  fill: currentColor;
 }
 
 /* Three choices in one box, so it reads as a control and not as one
