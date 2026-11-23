@@ -14,6 +14,7 @@ from .config import OnsiteConfig
 from .config import KIND_LOCAL
 from .config import TargetSpec
 from .dialout import SERVICE_NAME
+from .moves import Move
 from .proposals import Proposal
 from .routing import REASON_DEFAULT
 from .routing import REASON_MIRROR
@@ -35,6 +36,10 @@ REASON_TEXT = {
     REASON_MIRROR: "the session folder is in its mirror",
     REASON_DEFAULT: "no folder rule matched, so the default was used",
 }
+
+# Hermes adds a move note to the user's own message. These words tell
+# the agent the user did not type it. The rig looks for them too.
+MOVE_NOTE_OPENING = "Note from the onsite plugin, not typed by the user"
 
 MAX_SKIPPED_SHOWN = 5
 SCREEN_PLUGIN = "onsite-screen"
@@ -129,10 +134,7 @@ def format_switch(
         detail = status.get("detail") or "no answer"
         lines.append(f"Warning: it is not reachable right now ({detail}).")
 
-    lines.append(
-        "The agent was not told. Say so in your next message if it "
-        "matters, since paths differ between machines."
-    )
+    lines.append("The agent is told with your next message.")
 
     return "\n".join(lines)
 
@@ -241,6 +243,39 @@ def describe_target(spec: TargetSpec) -> str:
         f"`{spec.name}`, a remote machine reached over SSH "
         f"({spec.host}), as user `{spec.user}`"
     )
+
+
+def format_move_note(move: Move, config: OnsiteConfig) -> str:
+    """What an agent reads, once, after `/onsite` moved its session.
+
+    Hermes adds this to the user's next message, so it opens by saying
+    who wrote it. It is one paragraph: the agent's instructions still
+    name the old machine, and this has to read as the newer word.
+    """
+
+    spec = config.target(move.after)
+    start = "its home folder" if move.cwd == "~" else f"`{move.cwd}`"
+
+    lead = f"The user moved this session to `{move.after}` with `/onsite`."
+
+    if move.cleared:
+        lead = (
+            f"The user sent this session back to `{move.after}`, the "
+            "machine its folder picks, with `/onsite auto`."
+        )
+
+    return " ".join([
+        f"[{MOVE_NOTE_OPENING}.",
+        lead,
+        "Your `terminal`, `read_file`, `write_file`, `patch` and "
+        f"`search_files` tools now run on {describe_target(spec)}.",
+        f"They start in {start}.",
+        f"Until now they ran on `{move.before}`.",
+        "This replaces what your instructions say about the machine.",
+        "Paths, files and command output from earlier in this chat "
+        f"belong to `{move.before}` and may not exist on "
+        f"`{move.after}`.]",
+    ])
 
 
 def format_prompt_section(route: Route, config: OnsiteConfig) -> str:

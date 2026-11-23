@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from onsite import config
 from onsite import messages
+from onsite import moves
 from onsite import proposals
 from onsite import routing
 
@@ -85,8 +86,38 @@ def test_a_switch_says_where_the_next_call_starts():
 
     assert "now runs on laptop (dev@laptop.example)" in text
     assert "starts in ~" in text
-    assert "The agent was not told" in text
+    assert "The agent is told with your next message" in text
     assert "Warning" not in text
+
+
+def test_a_move_note_says_who_wrote_it_and_where_tools_run_now():
+    move = moves.Move("mac", "laptop", "/home/dev/app")
+    text = messages.format_move_note(move, PARSED)
+
+    assert text.startswith("[Note from the onsite plugin, not typed")
+    assert "moved this session to `laptop` with `/onsite`" in text
+    assert "now run on `laptop`, a remote machine" in text
+    assert "start in `/home/dev/app`" in text
+    assert "Until now they ran on `mac`" in text
+    assert text.endswith("may not exist on `laptop`.]")
+
+
+def test_a_move_note_is_one_paragraph():
+    # It rides inside the user's message. A blank line would make
+    # the rest read as something the user wrote.
+    move = moves.Move("mac", "laptop", "~")
+    text = messages.format_move_note(move, PARSED)
+
+    assert "\n" not in text
+    assert "start in its home folder" in text
+
+
+def test_a_move_note_for_a_cleared_override_says_so():
+    move = moves.Move("mac", "laptop", "~", cleared=True)
+    text = messages.format_move_note(move, PARSED)
+
+    assert "back to `laptop`" in text
+    assert "`/onsite auto`" in text
 
 
 def test_a_switch_to_a_dead_target_warns():
