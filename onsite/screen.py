@@ -25,6 +25,9 @@ import shlex
 from dataclasses import dataclass
 from dataclasses import field
 
+from .config import SCREEN_AUTO
+from .config import SCREEN_DRIVER
+from .config import SCREEN_SHARING
 from .config import TargetSpec
 from .mirror import MirrorError
 from .mirror import run_remote
@@ -204,6 +207,60 @@ def find_notes(seat: Seat) -> list[str]:
         ]
 
     return []
+
+
+def pick_route(setting: str, seat: Seat) -> str:
+    """Which way to a target's screen: its driver, or screen sharing.
+
+    Left to choose, the driver wins when the target has one. It can
+    name a button and check that a click landed. Screen sharing sees
+    pixels only, and is what is left when nothing is installed.
+    """
+
+    if setting != SCREEN_AUTO:
+        return setting
+
+    if seat.driver:
+        return SCREEN_DRIVER
+
+    return SCREEN_SHARING
+
+
+def find_route_problems(
+    spec: TargetSpec,
+    route: str,
+    seat: Seat,
+    sharing_problem: str,
+) -> list[str]:
+    """Why the chosen way cannot be used yet. Empty when it can."""
+
+    if route == SCREEN_DRIVER:
+        return find_problems(seat)
+
+    if not sharing_problem:
+        return []
+
+    problems = [
+        f"screen sharing did not answer on port {spec.screen_port}: "
+        f"{sharing_problem}."
+    ]
+
+    # Left to choose, either way would do, so both are named.
+    if spec.screen == SCREEN_AUTO:
+        problems += find_problems(seat)
+
+    return problems
+
+
+def find_route_notes(route: str, seat: Seat) -> list[str]:
+    if route == SCREEN_SHARING:
+        return [
+            "screen sharing shows pixels only. Hermes clicks by "
+            "position, cannot name a button and cannot check that a "
+            "click did what was meant.",
+        ]
+
+    return find_notes(seat)
 
 
 def driver_environment(seat: Seat, native_wayland: bool) -> dict:
