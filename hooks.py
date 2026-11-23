@@ -1,8 +1,15 @@
 """Hooks into the tool loop.
 
-One hook, and it changes no tool call. It only makes sure the file
-tools resolve paths against the same folder, on the same machine, as
-the terminal tool. The reasons are in `compat.anchor_file_tools`.
+Two jobs, and neither reroutes a tool call.
+
+The first makes sure the file tools resolve paths against the same
+folder, on the same machine, as the terminal tool. The reasons are in
+`compat.anchor_file_tools`.
+
+The second refuses an MCP tool that runs on one target when the
+session runs on another. Hermes loads MCP servers for a whole
+profile, so every session can see them. A session must still never
+act on a second machine by itself. See `mcptools`.
 
 A session-open hook was tried, to learn a session's folder before
 its first message. Hermes fires that hook without the folder in
@@ -13,10 +20,16 @@ from __future__ import annotations
 
 import logging
 
+from . import messages
+from . import mcptools
+from .config import ConfigError
+from .runtime import Runtime
+
 
 logger = logging.getLogger(__name__)
 
 HOOK_NAME = "pre_tool_call"
+ACTION_BLOCK = "block"
 FILE_TOOLS = frozenset({
     "read_file",
     "write_file",
@@ -25,10 +38,7 @@ FILE_TOOLS = frozenset({
 })
 
 
-def before_tool_call(tool_name: str = "", task_id: str = "", **kwargs):
-    if tool_name not in FILE_TOOLS:
-        return None
-
+def anchor(tool_name: str, task_id: str) -> None:
     from .compat import anchor_file_tools
 
     try:
@@ -38,8 +48,67 @@ def before_tool_call(tool_name: str = "", task_id: str = "", **kwargs):
         # with the target's name. Failing here would hide that.
         logger.debug("hands: could not anchor %s", tool_name, exc_info=True)
 
-    return None
+
+def session_target(runtime: Runtime, config) -> str:
+    from . import compat
+
+    route, _, _ = runtime.locate(
+        config,
+        key=compat.environment_key(),
+        session_id=compat.current_session_id(),
+        cwd=compat.current_session_cwd(),
+    )
+
+    return route.target
 
 
-def register(ctx) -> None:
-    ctx.register_hook(HOOK_NAME, before_tool_call)
+def refuse_foreign_mcp(runtime: Runtime, tool_name: str):
+    """A block for an MCP tool on another machine, or None to let it run.
+
+    When the session's machine cannot be worked out, the call goes
+    ahead. The tool is named for the machine it runs on, and Hermes'
+    own gates still stand in front of it.
+    """
+
+    try:
+        config = runtime.load_config()
+    except ConfigError:
+        return None
+
+    owner = mcptools.owner_of(tool_name, config)
+
+    if owner is None:
+        return None
+
+    try:
+        current = session_target(runtime, config)
+    except Exception:
+        logger.debug("hands: no session target for %s", tool_name,
+                     exc_info=True)
+        return None
+
+    if current == owner:
+        return None
+
+    return {
+        "action": ACTION_BLOCK,
+        "message": messages.format_mcp_refused(tool_name, owner, current),
+    }
+
+
+def build_hook(runtime: Runtime):
+    def before_tool_call(tool_name: str = "", task_id: str = "", **kwargs):
+        if tool_name in FILE_TOOLS:
+            anchor(tool_name, task_id)
+            return None
+
+        if tool_name.startswith(mcptools.TOOL_PREFIX):
+            return refuse_foreign_mcp(runtime, tool_name)
+
+        return None
+
+    return before_tool_call
+
+
+def register(ctx, runtime: Runtime) -> None:
+    ctx.register_hook(HOOK_NAME, build_hook(runtime))

@@ -56,7 +56,7 @@ def register(ctx) -> None:
     # Otherwise `hermes hands init`, which fixes them, would not load.
     ctx.register_terminal_environment_provider(build_provider(runtime))
 
-    hooks.register(ctx)
+    hooks.register(ctx, runtime)
     commands.register(ctx, runtime)
     tools.register(ctx, runtime)
     prompt.register(ctx, runtime)
