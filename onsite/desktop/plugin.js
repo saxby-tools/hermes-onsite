@@ -69,7 +69,7 @@ const SCREEN_ROUTES = [
 ]
 // The host's settings for a screen. A machine Hermes runs on keeps
 // Hermes' own, so these are dropped for it.
-const SCREEN_KEYS = ['screen', 'screen_port', 'screen_password_env']
+const SCREEN_KEYS = ['screen', 'screen_port']
 const HOME_FOLDER = '~'
 
 const INPUT_CLASS =
