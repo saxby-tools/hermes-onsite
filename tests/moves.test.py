@@ -131,6 +131,7 @@ def test_old_moves_are_dropped_past_the_limit():
 
 def test_the_turn_after_a_move_carries_the_note(monkeypatch):
     monkeypatch.setattr(hooks, "session_names", lambda: [])
+    monkeypatch.setattr(hooks, "screen_is_ours", lambda: False)
     fake = FakeRuntime()
     fake.moves.note(move("mac", "laptop"), "session:abc", "stored-1")
 
@@ -142,6 +143,7 @@ def test_the_turn_after_a_move_carries_the_note(monkeypatch):
 
 def test_the_turn_after_that_carries_nothing(monkeypatch):
     monkeypatch.setattr(hooks, "session_names", lambda: [])
+    monkeypatch.setattr(hooks, "screen_is_ours", lambda: False)
     fake = FakeRuntime()
     fake.moves.note(move("mac", "laptop"), "stored-1")
 
@@ -155,6 +157,7 @@ def test_a_move_is_found_by_the_ids_hermes_holds_for_the_turn(
     monkeypatch,
 ):
     monkeypatch.setattr(hooks, "session_names", lambda: ["session:abc"])
+    monkeypatch.setattr(hooks, "screen_is_ours", lambda: False)
     fake = FakeRuntime()
     fake.moves.note(move("mac", "laptop"), "session:abc")
 
@@ -165,6 +168,7 @@ def test_a_move_is_found_by_the_ids_hermes_holds_for_the_turn(
 
 def test_a_turn_in_another_session_carries_nothing(monkeypatch):
     monkeypatch.setattr(hooks, "session_names", lambda: [])
+    monkeypatch.setattr(hooks, "screen_is_ours", lambda: False)
     fake = FakeRuntime()
     fake.moves.note(move("mac", "laptop"), "stored-1")
 
@@ -175,6 +179,7 @@ def test_a_turn_in_another_session_carries_nothing(monkeypatch):
 
 def test_a_move_to_a_target_since_removed_carries_nothing(monkeypatch):
     monkeypatch.setattr(hooks, "session_names", lambda: [])
+    monkeypatch.setattr(hooks, "screen_is_ours", lambda: False)
     fake = FakeRuntime()
     fake.moves.note(move("mac", "desk"), "stored-1")
 
@@ -185,9 +190,23 @@ def test_a_move_to_a_target_since_removed_carries_nothing(monkeypatch):
 
 def test_broken_settings_carry_nothing(monkeypatch):
     monkeypatch.setattr(hooks, "session_names", lambda: [])
+    monkeypatch.setattr(hooks, "screen_is_ours", lambda: False)
     fake = FakeRuntime(parsed=None)
     fake.moves.note(move("mac", "laptop"), "stored-1")
 
     hook = hooks.build_turn_hook(fake)
 
     assert hook(session_id="stored-1") is None
+
+
+def test_the_note_warns_about_the_screen_when_the_plugin_runs_it(
+    monkeypatch,
+):
+    monkeypatch.setattr(hooks, "session_names", lambda: [])
+    monkeypatch.setattr(hooks, "screen_is_ours", lambda: True)
+    fake = FakeRuntime()
+    fake.moves.note(move("mac", "laptop"), "stored-1")
+
+    said = hooks.build_turn_hook(fake)(session_id="stored-1")
+
+    assert "`computer_use` tool did not move" in said["context"]
