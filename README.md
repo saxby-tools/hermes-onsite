@@ -1,5 +1,7 @@
 # onsite
 
+![onsite: a marble head on a pillar, standing on a yellow line](docs/brand/banner.png)
+
 Open a project folder on your own computer and your always-on
 [Hermes](https://github.com/NousResearch/hermes-agent) works in it.
 
