@@ -114,6 +114,7 @@ Each component's own file lists its options at the top.
 | `notice` | Paragraphs | A callout: `note`, `limit` or `untested` |
 | `chips` | A list | A row of status chips |
 | `diagram` | A text drawing | The "how a tool call travels" drawing |
+| `screen` | A screen described in words | A drawing of that screen of the app, in a window frame |
 | `marks` | A table | Each brand file on its own ground |
 | `swatches` | A table | Colour swatches, light and dark, above the table |
 | `specimen` | A table | A sample in each type class |
@@ -123,6 +124,12 @@ Each component's own file lists its options at the top.
 To add one, add `name.ejs` to `components/` to draw it, and `name.js`
 to turn the block into the template's data if it needs more than the
 block itself.
+
+The drawings a `screen` block can show are the files in
+`components/screens/`. To add one, add its file there and its name to
+the list in `components/screen.js`. Draw it with the `ui__` classes
+under "Screens" in the stylesheet, and use only words the app really
+shows. `docs/guide.md` uses them.
 
 ##  Styles, script and icons
 
