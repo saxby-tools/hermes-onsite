@@ -370,6 +370,7 @@ Read these before trusting it with real work.
 | 2 | A stopped, a frozen and a returning target | 20 | Pass |
 | 3 | `/hands`, `/run`, `hermes hands`, CLI and TUI | 28 | Pass |
 | 4 | Status routes, desktop plugin logic | 7 | Pass |
+| Screen | A target's screen: look, deny, approve | 8 | Pass |
 | 5 | A person at the real clients | 0 | Not run |
 
 The same checks pass twice: against a container on the host, and
@@ -437,6 +438,13 @@ key with no prompt. The rig writes only under
 
 ```bash
 python3 rig/run.py --apply --real you@laptop.example
+```
+
+Screen control is tested on a container with a desktop nobody looks
+at and Hermes' own screen driver. Its results start with `desk-`:
+
+```bash
+python3 rig/run.py --apply --desk --phase screen
 ```
 
 It swaps the test profile's `config.yaml` for the run and puts it
