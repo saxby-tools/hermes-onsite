@@ -45,6 +45,12 @@ LIST_SCRIPT = (
     "-not -path '*/.*' -print0"
 )
 CHECK_SCRIPT = 'cd {folder} && printf "%s\\0" "$(pwd -P)"'
+# The folders right inside one folder, for a person to pick from.
+CHILDREN_SCRIPT = (
+    'cd {folder} && printf "%s\\0" "$(pwd -P)" && '
+    "find . -mindepth 1 -maxdepth 1 -type d "
+    "-not -name '.*' -print0"
+)
 HOME_PREFIX = "~/"
 HOME_ALONE = "~"
 
@@ -272,6 +278,21 @@ def real_folder(spec: TargetSpec, target_folder: str) -> str:
         raise MirrorError(f"{spec.label} did not name {target_folder}")
 
     return fields[0]
+
+
+def list_children(spec: TargetSpec, target_folder: str) -> Listing:
+    """The folders inside one folder on a target. Nothing is made."""
+
+    script = CHILDREN_SCRIPT.format(folder=folder_word(target_folder))
+
+    try:
+        raw = run_remote(spec, script, CHECK_TIMEOUT_SECONDS)
+    except MirrorError as error:
+        raise MirrorError(
+            f"{target_folder} could not be listed on {spec.label}: {error}"
+        ) from None
+
+    return parse_listing(raw)
 
 
 def open_folder(
