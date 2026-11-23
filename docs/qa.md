@@ -163,8 +163,8 @@ On the laptop, in the desktop app, connected to the gateway.
       by" offers three choices. Pick the screen sharing one, save,
       and see `screen: sharing` under the laptop in `config.yaml`.
       Set it back to the first choice and the line is gone.
-- [ ] Switch to the **Bots** tab and open the test profile's chat.
-      If the app's active profile is another one, the pane says which
+- [ ] Switch to the **Bots** tab and open the test profile's chat. If
+      the app's active profile is another one, the pane says which
       profile this chat belongs to and which one it asked. That
       message is right, not a bug.
 
@@ -319,9 +319,9 @@ python3 rig/run.py --apply --desk --phase share
 
 Never tested.
 
-- [ ] In the Android app, open a chat with the test profile and ask for
-      `uname -n`. Note which machine answers and whether you can pick
-      a folder at all.
+- [ ] In the Android app, open a chat with the test profile and ask
+      for `uname -n`. Note which machine answers and whether you can
+      pick a folder at all.
 - [ ] Ask for a risky command. Note whether Hermes' approval prompt
       shows on the phone and whether you can answer it.
 
@@ -330,7 +330,7 @@ Never tested.
 Run these from a clone of the repository, on the host. The rig uses a
 profile named `buster` unless you pass `--profile`.
 
-- [ ] Unit tests: 384 pass.
+- [ ] Unit tests: 385 pass.
 
 ```bash
 uv run --no-project --with pytest --with pillow --with cryptography python -m pytest -q
@@ -355,6 +355,6 @@ python3 rig/run.py --apply --real you@laptop.example
 ## When you are done
 
 - [ ] Remove the throwaway profile: `hermes profile delete qa`.
-- [ ] Remove the two test files on the laptop:
+- [ ] Remove the test file on the laptop:
       `ssh you@laptop.example 'rm ~/Development/onsite-qa.txt'`.
 - [ ] Send back every empty box with what you saw.
