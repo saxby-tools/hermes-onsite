@@ -594,7 +594,7 @@ Written Nov. 22, 2026, against Hermes v0.23.2.
   is possible.
 - **This entry is the first route.** Hermes' screen driver runs on
   the target and Hermes talks to it over the SSH link. The second
-  route, a machine's own screen sharing, is not built yet.
+  route, a machine's own screen sharing, is entry 52.
 - **How it is picked.** Hermes chooses one screen backend for a
   whole profile, but builds one backend object per session, on the
   thread of the tool call. There the session is in scope, so the
@@ -774,6 +774,89 @@ Written Nov. 22, 2026, against Hermes v0.23.2.
   that, and there again after `/onsite auto`.
 - **Reverse.** Remove the `pre_llm_call` hook from `hooks.py` and
   `plugin.yaml`. Nothing else reads a move.
+
+### 52. The second route to a screen is the machine's own screen sharing
+
+- **Owner's call, Nov. 22.** More than one route to a screen, where
+  that is possible. Entry 47 was the first.
+- **Question.** The driver route needs a program installed on the
+  target. What works on a machine where nothing can be installed,
+  or where the driver does not run?
+- **Pick.** The screen sharing the machine already has, which speaks
+  VNC. The plugin reaches it at the target's own loopback address
+  through `ssh -W`, so the server needs no opening in a firewall and
+  SSH stays the lock.
+- **A target picks its route.** `screen: auto` uses the driver when
+  the target has one and screen sharing when not. `driver` and
+  `sharing` choose. `hermes onsite screen TARGET` asks both, names
+  the route and says what stands in its way.
+- **Owned code, and why.** The protocol client is about 500 lines in
+  `rfb.py`. The other choice was a VNC library. None is in Hermes'
+  environment, and a plugin that adds a package to a user's Hermes
+  for one optional route is a worse trade than a small client whose
+  every message is tested. It speaks three protocol versions, two
+  sign-ins and raw pixels, and nothing else.
+- **Borrowed, and why.** The picture is encoded by Pillow and the
+  VNC password answer is made by `cryptography`. Hermes pins both.
+  Neither is imported until a session uses screen sharing, and no
+  cipher was written by hand.
+- **The password.** VNC's password scheme is weak: eight characters
+  and DES. The settings take the name of an environment variable,
+  never the password, and refuse a value that could not be a name.
+- **What Hermes is told.** Screen sharing has no list of buttons. A
+  request by element is turned down with what to do instead. Every
+  action is reported as "unverifiable", which makes Hermes tell the
+  model to look again before it goes on. Only Hermes' public backend
+  contract is imported, so this route does not depend on the private
+  driver code that entry 47 leans on.
+- **Found by test: x11vnc queues pointer events.** It plays a
+  viewer's pointer events when more arrive, while keys go straight
+  through. A click followed by typing landed out of order about four
+  times in ten, and the start of the text went to whatever had focus
+  before. One press of a double click could vanish. The pointer now
+  reports every state three times. With that, 80 of 80 clicks landed
+  on time.
+- **Found by test: the desk started its terminal too early.** The
+  terminal and the window manager started together, so the terminal
+  never had the keyboard and its first click did nothing. The driver
+  route hid this by focusing the window itself. The terminal now
+  waits for the window manager.
+- **Checked, with no Hermes.** `rig/run.py --desk --phase share`: 8
+  checks against the desk's own VNC server. A typed line lands in a
+  file, a drag moves a window by exactly its length and back, and a
+  second window counts wheel turns, a right click and a double
+  click.
+- **Checked, in a fresh Hermes process.** The backend was driven
+  through Hermes' own tool dispatch: a capture was accepted, and a
+  click, a typed line and a key landed on the desk. The password
+  sign-in was run by hand against x11vnc: the right password in, a
+  wrong one refused with the server's reason.
+- **Not checked.** The screen phase over this route
+  (`--desk --share --phase screen`), for the reason in entry 53. A
+  Mac. Any server but x11vnc. A screen larger than the picture limit
+  on a real machine, where positions are scaled.
+- **Reverse.** Set `screen: driver` on a target. To remove the
+  route, delete `rfb.py`, `screenshare.py` and `sharebackend.py` and
+  the branch in `screenbackend.build_backend`.
+
+### 53. The screen backend never says it is unavailable
+
+- **Found by the rig.** After the plugin moved into its own folder
+  (entry 50), the desk's screen phase failed: Hermes had removed the
+  screen tool from every session, with no message.
+- **Cause.** The backend answered Hermes' availability check by
+  looking for the plugin's manifest on disk. Hermes loads a screen
+  backend once and keeps it for the life of its process. The gateway
+  had loaded it before the move and kept looking in the old place.
+- **Pick.** The check now always says yes. A missing plugin is
+  reported when a session first uses its screen, with what to do.
+- **What it means on the build machine.** The fix is in the file,
+  but the running gateway still holds the old copy. The screen phase
+  cannot pass there until that gateway restarts. The plugin does not
+  restart a gateway, and neither did this build.
+- **Until then.** Both routes were run in a fresh Hermes process
+  against the same desk, as entry 52 describes for screen sharing.
+  The driver route captured, clicked and typed a line that landed.
 
 ## Open decisions from the brief
 
