@@ -9,9 +9,10 @@
 //
 // Components live in site/components as a pair of files: `name.ejs`
 // draws it and `name.js` turns the block into the template's data.
-// A comment block such as `<!-- hands:name {...} -->` picks one.
+// A comment block such as `<!-- onsite:name {...} -->` picks one.
 //
-// The repo's root is the plugin itself, so everything the site needs
+// The plugin is the `onsite/` folder, which a user installs by
+// itself. The site is not part of it, so everything the site needs
 // stays in this folder. Run it from here with `npm run build`; the
 // script steps up to the repo root, which is Eleventy's input.
 
@@ -27,7 +28,7 @@ import mdMarks from "./plugins/md-marks.js";
 
 // ---- Constants --------------------------------------------------------
 
-const NAMESPACE = "hands";
+const NAMESPACE = "onsite";
 
 const SITE_NAME = "onsite";
 
@@ -50,14 +51,15 @@ const PASSTHROUGH = [
 ];
 
 // Everything that is not a page. Markdown in these folders is code,
-// test data or this folder's own notes.
+// test data or this folder's own notes. `onsite/` is the plugin
+// itself; its README is for the plugin catalog. `docs/qa.md` is the
+// owner's own checklist, with the names of his machines in it.
 const IGNORES = [
   "site/**",
   "rig/**",
   "tests/**",
-  "targets/**",
-  "dashboard/**",
-  "desktop/**",
+  "onsite/**",
+  "docs/qa.md",
   ".claude/**",
   ".rig/**",
   ".venv/**",

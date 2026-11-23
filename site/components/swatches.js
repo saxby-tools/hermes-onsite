@@ -2,13 +2,13 @@
 // the token's light value on the left and its dark value on the
 // right. The table stays, because it holds what each colour is for.
 //
-//   <!-- hands:swatches -->
+//   <!-- onsite:swatches -->
 //
 //   | Token | Light | Dark | Used for |
 //   | --- | --- | --- | --- |
 //   | `--color-ground` | `#f2f2f2` | `#05053d` | The page |
 //
-//   <!-- /hands:swatches -->
+//   <!-- /onsite:swatches -->
 //
 // The table needs the columns "Token", "Light" and "Dark".
 

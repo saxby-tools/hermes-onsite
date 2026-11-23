@@ -12,9 +12,10 @@ The setup is adapted from the
 
 ##  Why it lives in this folder
 
-The repo's root is the plugin. A user installs it by cloning the repo
-into a Hermes plugins folder, so the root stays free of site tooling.
-The config, the packages and the build output are all in `site/`.
+The plugin is the `onsite/` folder. A user installs that folder by
+itself, so nothing the site needs may live in it. The config, the
+packages and the build output are all in `site/`, and the pages come
+from the Markdown at the repo's root and in `docs/`.
 The one file outside it is `.github/workflows/pages.yml`, which
 GitHub only reads from there.
 
@@ -80,20 +81,20 @@ pages are already written:
 A comment block puts a component around ordinary Markdown:
 
 ```markdown
-<!-- hands:notice {"kind": "limit"} -->
+<!-- onsite:notice {"kind": "limit"} -->
 
 No sandbox. An SSH target can do anything its user can.
 
-<!-- /hands:notice -->
+<!-- /onsite:notice -->
 ```
 
 On GitHub, a reader sees the paragraph. On the site, it is boxed and
 labelled "Limit".
 
-- `<!-- hands:name {...} -->` opens a block. The options are strict
+- `<!-- onsite:name {...} -->` opens a block. The options are strict
   JSON: quote every key.
-- `<!-- /hands:name -->` closes it.
-- `<!-- hands:name {...} /-->` is a block with no content.
+- `<!-- /onsite:name -->` closes it.
+- `<!-- onsite:name {...} /-->` is a block with no content.
 - Put each comment on its own line.
 
 A mistake stops the build and names the file and line. The
@@ -114,6 +115,7 @@ Each component's own file lists its options at the top.
 | `notice` | Paragraphs | A callout: `note`, `limit` or `untested` |
 | `chips` | A list | A row of status chips |
 | `diagram` | A text drawing | The "how a tool call travels" drawing |
+| `screen` | A screen described in words | A drawing of that screen of the app, in a window frame |
 | `marks` | A table | Each brand file on its own ground |
 | `swatches` | A table | Colour swatches, light and dark, above the table |
 | `specimen` | A table | A sample in each type class |
@@ -123,6 +125,12 @@ Each component's own file lists its options at the top.
 To add one, add `name.ejs` to `components/` to draw it, and `name.js`
 to turn the block into the template's data if it needs more than the
 block itself.
+
+The drawings a `screen` block can show are the files in
+`components/screens/`. To add one, add its file there and its name to
+the list in `components/screen.js`. Draw it with the `ui__` classes
+under "Screens" in the stylesheet, and use only words the app really
+shows. `docs/guide.md` uses them.
 
 ##  Styles, script and icons
 
@@ -139,28 +147,42 @@ a token there is missing from `docs/design.md`, or a colour differs.
 Every page works with the script off. The script adds the Copy
 buttons and the theme toggle.
 
-The comment blocks still open with `hands:`. That prefix is set once,
-as `NAMESPACE` in `eleventy.config.js`, and every Markdown file that
-uses a block repeats it, so it changes in one pass of its own.
+The prefix of the comment blocks, `onsite:`, is set once, as
+`NAMESPACE` in `eleventy.config.js`. Every Markdown file that uses a
+block repeats it, so the two can only change together.
 
 ##  Brand files
 
-The mark and the wordmark are set in type, in `layouts/foot.ejs` and
-`layouts/top.ejs`, with their styles in `static/onsite.css`. They have
-no image files yet.
+The site sets the mark and the wordmark in type, in `layouts/foot.ejs`
+and `layouts/top.ejs`, with their styles in `static/onsite.css`.
 
-The plate on the front page is `docs/brand/plate-head.png`. It comes
-from a museum photo, by way of `docs/brand/make-plates.sh`.
+The same letters, as outlines that need no font, are in `docs/brand/`
+with the banner and the plate, because the README and the plugin
+catalog point at them there. Two scripts make them. Run both from the
+repo's root, in this order:
 
-Everything else in `docs/brand/`, and the icons and `social.png` in
-`static/`, were drawn for the old name, hermes-hands. They show the
-old mark, a cut h, and some have the old name drawn in. They are
-kept until new ones are made:
+```bash
+uv run --no-project --with fonttools --with brotli --with uharfbuzz python docs/brand/make-brand.py
+```
 
-- The icons in `static/` are still the old mark, so a browser tab
-  shows it.
-- `static/social.png` is not linked from any page.
-- `docs/brand/banner.png` is not linked from the README.
+```bash
+docs/brand/make-icons.sh
+```
+
+The first draws the mark, the wordmark, `banner.svg` and `social.svg`
+from the two font files. It stops if the mark's numbers no longer
+match the ones in `static/onsite.css` and `layouts/foot.ejs`. The
+second turns them into `docs/brand/banner.png`, `static/social.png`
+and the icons in `static/`: the mark at 16, 32, 48, 180, 192 and 512
+pixels. It needs `rsvg-convert` and ImageMagick.
+
+The plate, `docs/brand/plate-head.png`, comes from a museum photo by
+way of `docs/brand/make-plates.sh`. That script and
+`docs/brand/plate-hand.png` also hold a second plate, a marble hand,
+which is no longer used.
+
+The icon in the masthead's Source button is GitHub's own mark, from
+its Octicons set. Its license is in `static/icons/`.
 
 ##  Files
 

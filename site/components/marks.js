@@ -1,12 +1,12 @@
 // The brand files, each on the ground it is made for, from a table.
 //
-//   <!-- hands:marks -->
+//   <!-- onsite:marks -->
 //
 //   | File | Ground | Use |
 //   | --- | --- | --- |
 //   | ![The mark](brand/mark.svg) | any | Favicon, avatar |
 //
-//   <!-- /hands:marks -->
+//   <!-- /onsite:marks -->
 //
 // "Ground" is "light", "blue" or "any". The table needs the columns
 // "File", "Ground" and "Use". On the site the tiles take the table's

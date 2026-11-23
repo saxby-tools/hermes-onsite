@@ -22,6 +22,20 @@ as in on your computer.
 The wordmark is the word onsite in the same face, with the o lit.
 This site's masthead shows the wordmark. Its footer shows the mark.
 
+<!-- onsite:marks -->
+
+| File | Ground | Use |
+| --- | --- | --- |
+| ![The mark on its tile](brand/mark.svg) | any | Tab icon, avatar, anywhere the ground is unknown |
+| ![The mark in blue](brand/mark-blue.svg) | light | One colour, on light pages and in print |
+| ![The mark in pale](brand/mark-pale.svg) | blue | One colour, on blue and dark grounds |
+| ![The wordmark](brand/wordmark.svg) | blue | The name, with the o lit in yellow |
+| ![The wordmark for pale grounds](brand/wordmark-paper.svg) | light | The name, with the o lit in blue |
+| ![The wordmark in blue](brand/wordmark-blue.svg) | light | The name, one colour |
+| ![The wordmark in pale](brand/wordmark-pale.svg) | blue | The name, one colour |
+
+<!-- /onsite:marks -->
+
 | Piece | Ground | The o | The rest |
 | --- | --- | --- | --- |
 | The mark | Its own blue tile, on any ground | `--color-signal` | `--color-field-text` |
@@ -40,14 +54,11 @@ Rules for the mark and the wordmark:
   The wordmark goes where a name is needed.
 - Do not redraw, tilt, outline or recolour either one.
 
-Both are set in type for now, at weight 500 of Geist Mono. The site
-carries only the regular weight so far, so here they draw a little
-lighter than they should. Image files that need no font are not made
-yet.
-
-The files in `brand/` named `mark`, `wordmark`, `lockup`, `banner`
-and `social` were drawn for the old name, hermes-hands. They are kept
-for the record and are not used.
+On this site both are set in type, at weight 500 of Geist Mono. The
+files above hold the same letters as outlines, so they need no font
+installed. `brand/make-brand.py` draws them from the font files, and
+fails if its numbers and the stylesheet's drift apart.
+`brand/make-icons.sh` turns the mark into the site's icons.
 
 ### Plate
 
@@ -67,7 +78,7 @@ A second plate, a marble hand, was retired with the old name.
 Every text pair below passes WCAG AA. The lowest is the red chip, at
 5.5 to 1.
 
-<!-- hands:swatches -->
+<!-- onsite:swatches -->
 
 | Token | Light | Dark | Used for |
 | --- | --- | --- | --- |
@@ -91,14 +102,14 @@ Every text pair below passes WCAG AA. The lowest is the red chip, at
 | `--color-stop` | `#ff5a4d` | `#ff5a4d` | Hard limits |
 | `--color-stop-text` | `#06066b` | `#06066b` | Text on red. 5.5 to 1 |
 
-<!-- /hands:swatches -->
+<!-- /onsite:swatches -->
 
 The blue field is the same in both themes. The dark theme changes the
 page around it from paper to navy.
 
 ## Type
 
-<!-- hands:specimen -->
+<!-- onsite:specimen -->
 
 | Class | Sample |
 | --- | --- |
@@ -111,12 +122,12 @@ page around it from paper to navy.
 | `type-mono` | hermes config set terminal.backend onsite |
 | `type-plate` | Plate I. Marble head from a herm. |
 
-<!-- /hands:specimen -->
+<!-- /onsite:specimen -->
 
 | Token | Face | Cost |
 | --- | --- | --- |
 | `--font-display` | Oswald, weights 200 to 700 | 28 KB, self-hosted |
-| `--font-mono` | Geist Mono, weight 400 | 10 KB, self-hosted |
+| `--font-mono` | Geist Mono, weights 400 and 500 | 20 KB, self-hosted |
 | `--font-body` | The system's sans | Nothing |
 | `--font-plate` | The system's serif, in italic | Nothing |
 
@@ -135,7 +146,7 @@ license texts sit beside them in `site/static/fonts/`.
 
 ## Space
 
-<!-- hands:scale -->
+<!-- onsite:scale -->
 
 | Token | Value |
 | --- | --- |
@@ -146,7 +157,7 @@ license texts sit beside them in `site/static/fonts/`.
 | `--space-5` | 2.5rem |
 | `--space-6` | 4rem |
 
-<!-- /hands:scale -->
+<!-- /onsite:scale -->
 
 The gutter is `--gutter`, 1rem, on every screen. Text keeps to
 `--measure`, 42rem. The page column is `--column`, 70rem. The
@@ -172,7 +183,7 @@ system for less of it.
 | `--motion-slow` | 320ms | Larger moves |
 | `--motion-ease` | cubic-bezier(0.2, 0, 0, 1) | Every move |
 
-<!-- hands:motion /-->
+<!-- onsite:motion /-->
 
 ## Components
 
@@ -195,7 +206,7 @@ looks on the site.
 
 ### Chips
 
-<!-- hands:chips -->
+<!-- onsite:chips -->
 
 - Pass
 - Not run
@@ -203,7 +214,7 @@ looks on the site.
 - Limit
 - v0.1.0
 
-<!-- /hands:chips -->
+<!-- /onsite:chips -->
 
 In a table, a cell that says only "Pass" or "Not run" becomes a chip.
 
@@ -229,27 +240,27 @@ terminal:
 
 ### Callouts
 
-<!-- hands:notice -->
+<!-- onsite:notice -->
 
 A profile loads plugins only from its own `plugins/` folder.
 
-<!-- /hands:notice -->
+<!-- /onsite:notice -->
 
-<!-- hands:notice {"kind": "untested"} -->
+<!-- onsite:notice {"kind": "untested"} -->
 
 The desktop plugin inside the real Hermes Desktop app.
 
-<!-- /hands:notice -->
+<!-- /onsite:notice -->
 
-<!-- hands:notice {"kind": "limit"} -->
+<!-- onsite:notice {"kind": "limit"} -->
 
 No sandbox. An SSH target can do anything its user can.
 
-<!-- /hands:notice -->
+<!-- /onsite:notice -->
 
 ### Diagram
 
-<!-- hands:diagram {
+<!-- onsite:diagram {
   "caption": "Chat goes to the host. Tool calls come back past the gate."
 } -->
 
@@ -266,7 +277,21 @@ No sandbox. An SSH target can do anything its user can.
   your shell and files  <--- SSH, as you ----------+
 ```
 
-<!-- /hands:diagram -->
+<!-- /onsite:diagram -->
+
+### Screen
+
+A drawing of one screen of the app, for the
+[guide](guide.md). It is simplified on purpose, and every word in it
+is a word the app shows.
+
+<!-- onsite:screen {"shows": "chip"} -->
+
+The Hermes Desktop window, with a chat in the middle. In the bottom
+right corner is a chip with a green dot. It reads "onsite: laptop"
+and then the folder, "…/work/app".
+
+<!-- /onsite:screen -->
 
 ## Writing pages
 
@@ -281,6 +306,6 @@ the catalog entry pins.
 
 | Asset | File | The catalog's rule |
 | --- | --- | --- |
-| `image` | none yet | 2 to 1, such as 1200 by 600. The listing lays the title over its left side. The old banner has the old name drawn in |
+| `image` | `docs/brand/banner.png` | 2 to 1, here 1200 by 600. The listing lays the title over its left side, so the herm stands on the right. The ground is paper, because the catalog draws a blue halftone for entries with no picture |
 | `screenshots` | none yet | Up to six. They wait for a person at the real clients |
 | README | `README.md` | Shown as Markdown. Raw HTML is dropped, so it uses none |

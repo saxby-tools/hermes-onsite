@@ -114,6 +114,14 @@
   font-display: swap;
 }
 
+/* The Medium weight is for the wordmark and the mark only. */
+@font-face {
+  font-family: "Geist Mono";
+  src: url("fonts/geist-mono-latin-500-normal.woff2") format("woff2");
+  font-weight: 500;
+  font-display: swap;
+}
+
 /* ---- Base ----------------------------------------------------------- */
 
 *,
@@ -247,12 +255,9 @@ code {
 
 /* ---- Wordmark ------------------------------------------------------- */
 
-/* The name, set in type: the word onsite in Geist Mono, with the o
- * lit in yellow. It is drawn for the blue field and for dark grounds.
- *
- * The wordmark is specified at weight 500. Only the 400 file is in
- * site/static/fonts so far, so it draws in Regular until the Medium
- * file is added. */
+/* The name, set in type: the word onsite in Geist Mono Medium, with
+ * the o lit in yellow. It is drawn for the blue field and for dark
+ * grounds. */
 
 .wordmark {
   color: var(--color-field-text);
@@ -269,13 +274,10 @@ code {
 /* ---- Mark ----------------------------------------------------------- */
 
 /* "On, lit": the letters o and n on a blue tile of 64 units, with the
- * o lit in yellow. Both letters are Geist Mono at one size, 52.39
- * units, on a baseline at 46.25. The o starts at x 3 and the n at
- * x 30.92. That sets the gap between them at half what the font
- * gives, and centres the pair on the n.
- *
- * Like the wordmark it is specified at weight 500 and draws in
- * Regular until the Medium file is added. */
+ * o lit in yellow. Both letters are Geist Mono Medium at one size,
+ * 52.39 units, on a baseline at 46.25. The o starts at x 3 and the n
+ * at x 30.92. That sets the gap between them at half what the font
+ * gives, and centres the pair on the n. */
 
 .mark text {
   font-family: var(--font-mono);
@@ -354,6 +356,9 @@ code {
 }
 
 .top__link-button {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
   padding: var(--space-2) var(--space-3);
   background: var(--color-field-text);
   color: var(--color-field-deep);
@@ -363,6 +368,14 @@ code {
 
 .top__link-button:hover {
   transform: translateX(0.1875rem);
+}
+
+/* The icon in the Source button takes the button's text colour. */
+.top__icon {
+  flex: none;
+  width: 1rem;
+  height: 1rem;
+  fill: currentColor;
 }
 
 /* Three choices in one box, so it reads as a control and not as one
@@ -1149,6 +1162,390 @@ main {
 .motion__track:hover .motion__dot,
 .motion__track:focus-visible .motion__dot {
   transform: translateX(3rem);
+}
+
+/* ---- Screens -------------------------------------------------------- */
+
+/* A drawing of one screen of the app, for the guide. `.shot` is the
+ * window frame; `.ui` is the simplified app inside it. The app is
+ * dark in both themes, like the code blocks. The three dot colours
+ * are the ones the app's own chip uses, and each is always paired
+ * with words, so nothing is told by colour alone. */
+
+.shot {
+  --shot-ground: var(--color-code);
+  --shot-raised: #0c0c58;
+  --shot-line: #2a2a86;
+  --shot-text: var(--color-code-text);
+  --shot-muted: var(--color-code-muted);
+  --shot-ok: #3fb950;
+  --shot-bad: #f85149;
+  --shot-wait: #8b949e;
+
+  max-width: var(--measure);
+  margin: 0 0 var(--space-4);
+}
+
+.shot__window {
+  border: 1px solid var(--color-line);
+  background: var(--shot-ground);
+  color: var(--shot-text);
+  font-size: var(--size-small);
+  line-height: 1.5;
+}
+
+.shot__bar {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--shot-line);
+}
+
+.shot__dot {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  background: var(--shot-line);
+}
+
+.shot__app {
+  margin-left: var(--space-2);
+  color: var(--shot-muted);
+  font-family: var(--font-mono);
+  font-size: var(--size-label);
+}
+
+.shot__caption {
+  margin-top: var(--space-2);
+  color: var(--color-text-muted);
+  font-family: var(--font-plate);
+  font-size: var(--size-small);
+  font-style: italic;
+}
+
+.shot__words {
+  margin-top: var(--space-1);
+  font-size: var(--size-small);
+}
+
+.prose .shot p {
+  max-width: none;
+  margin: 0;
+}
+
+.prose .shot ul,
+.prose .shot dl {
+  max-width: none;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.prose .shot li {
+  margin: 0;
+}
+
+.prose .shot__words p {
+  margin-top: var(--space-2);
+}
+
+/* The app inside the frame. */
+
+.ui {
+  display: grid;
+  gap: 0;
+}
+
+.ui-split {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 17.5rem);
+}
+
+.ui__chat {
+  display: grid;
+  gap: var(--space-2);
+  align-content: start;
+  padding: var(--space-3);
+}
+
+.ui__bubble {
+  justify-self: start;
+  max-width: 28rem;
+}
+
+.ui__bubble-you {
+  justify-self: end;
+  padding: var(--space-2) var(--space-3);
+  background: var(--shot-raised);
+}
+
+.ui__between {
+  color: var(--shot-muted);
+  font-family: var(--font-plate);
+  font-style: italic;
+}
+
+.ui__statusbar {
+  display: flex;
+  justify-content: flex-end;
+  padding: var(--space-1) var(--space-3);
+  border-top: 1px solid var(--shot-line);
+  font-size: var(--size-label);
+}
+
+.ui__chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.15rem 0.4rem;
+  font-size: var(--size-label);
+  white-space: nowrap;
+}
+
+/* The one thing a screen is about gets the yellow outline. */
+.ui__chip-here {
+  outline: 2px solid var(--color-signal);
+  outline-offset: 2px;
+}
+
+.ui__dot {
+  flex: none;
+  display: inline-block;
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+}
+
+.ui__dot-ok {
+  background: var(--shot-ok);
+}
+
+.ui__dot-bad {
+  background: var(--shot-bad);
+}
+
+.ui__dot-wait {
+  background: var(--shot-wait);
+}
+
+.ui__quiet,
+.ui__hint,
+.ui__label {
+  color: var(--shot-muted);
+}
+
+.ui__hint,
+.ui__label {
+  font-size: var(--size-label);
+}
+
+.ui-states {
+  gap: var(--space-3);
+  padding: var(--space-3);
+}
+
+.ui__state {
+  display: grid;
+  grid-template-columns: minmax(0, 15rem) minmax(0, 1fr);
+  gap: var(--space-3);
+  align-items: start;
+}
+
+.ui__tip {
+  padding: var(--space-2);
+  border: 1px solid var(--shot-line);
+  background: var(--shot-raised);
+  font-size: var(--size-label);
+}
+
+.ui__pane {
+  display: grid;
+  gap: var(--space-2);
+  align-content: start;
+  padding: var(--space-3);
+  border-left: 1px solid var(--shot-line);
+}
+
+.ui-pane-only .ui__pane {
+  max-width: 17.5rem;
+  border-right: 1px solid var(--shot-line);
+  border-left: 0;
+}
+
+.ui__heading,
+.ui__title {
+  font-weight: 700;
+}
+
+.ui__title {
+  font-size: var(--size-body);
+}
+
+.ui__rows {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 0.15rem var(--space-2);
+  font-size: var(--size-label);
+}
+
+.ui__rows dt {
+  color: var(--shot-muted);
+}
+
+.ui__rows dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.ui__list {
+  display: grid;
+  gap: 0.15rem;
+  font-size: var(--size-label);
+}
+
+.ui__list li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.ui__list-folders li {
+  padding: 0.15rem var(--space-2);
+  border: 1px solid var(--shot-line);
+}
+
+.ui__line {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: center;
+}
+
+.ui__button,
+.ui__select,
+.ui__input {
+  display: inline-block;
+  padding: 0.2rem 0.6rem;
+  border: 1px solid var(--shot-muted);
+  border-radius: var(--radius-control);
+  font-size: var(--size-label);
+}
+
+.ui__button-main {
+  border-color: var(--shot-text);
+  background: var(--shot-text);
+  color: var(--shot-ground);
+}
+
+.ui__button-off {
+  border-color: var(--shot-line);
+  color: var(--shot-muted);
+}
+
+.ui__select::after {
+  content: " ▾";
+  color: var(--shot-muted);
+}
+
+.ui__input {
+  display: block;
+  border-color: var(--shot-line);
+  background: var(--shot-raised);
+}
+
+.ui__input-empty {
+  color: var(--shot-muted);
+}
+
+.ui__input-tall {
+  min-height: 2.75rem;
+}
+
+.ui__card {
+  display: grid;
+  gap: var(--space-2);
+  max-width: 30rem;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--shot-line);
+}
+
+.ui__card-ask {
+  border-color: var(--color-signal);
+}
+
+.ui__card-top {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--shot-muted);
+  font-size: var(--size-label);
+}
+
+.ui__code {
+  padding: var(--space-2);
+  background: var(--shot-raised);
+  font-family: var(--font-mono);
+  overflow-wrap: anywhere;
+}
+
+.ui-settings {
+  gap: var(--space-2);
+  padding: var(--space-3);
+}
+
+.ui__machine {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) 0;
+  border-top: 1px solid var(--shot-line);
+}
+
+.ui__form {
+  display: grid;
+  gap: var(--space-2);
+  max-width: 24rem;
+  padding: var(--space-3);
+  border: 1px solid var(--shot-line);
+}
+
+.ui__field {
+  display: grid;
+  gap: 0.15rem;
+}
+
+.ui__check {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--size-label);
+}
+
+.ui__box {
+  display: inline-grid;
+  place-items: center;
+  width: 1rem;
+  height: 1rem;
+  border: 1px solid var(--shot-muted);
+  font-size: 0.7rem;
+  line-height: 1;
+}
+
+@media (max-width: 40em) {
+  .ui-split,
+  .ui__state {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .ui-split .ui__pane {
+    border-top: 1px solid var(--shot-line);
+    border-left: 0;
+  }
 }
 
 /* ---- Footer --------------------------------------------------------- */
