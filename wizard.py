@@ -84,6 +84,7 @@ def settings_from_flags(
     key: list[str],
     known_hosts: list[str],
     default: str | None,
+    mirror: tuple[str, ...] | list[str] = (),
 ) -> dict[str, Any]:
     if not ssh and not local:
         raise FlagError(NO_TARGETS)
@@ -115,6 +116,10 @@ def settings_from_flags(
     for value in known_hosts:
         name, path = split_pair("--known-hosts", value)
         need_target(targets, "--known-hosts", name)["known_hosts"] = path
+
+    for value in mirror:
+        name, path = split_pair("--mirror", value)
+        need_target(targets, "--mirror", name)["mirror"] = path
 
     chosen = default
 
