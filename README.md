@@ -380,7 +380,7 @@ password. Neither has been tried on a Mac. See
 | Approve a risky command | Hermes' own prompt | Hermes' own prompt. |
 | Run a command the agent proposed | `/run <number>` | Run and Copy buttons, in a pane and in the transcript. |
 | Open a folder on a machine | `hermes onsite open laptop:~/work --apply` | Browse the machine in the pane and start a session there. |
-| Add, change or test a machine | `hermes onsite init`, or edit `config.yaml` | Settings, Plugins, Machines. |
+| Add, change or test a machine | `hermes onsite init`, or edit `config.yaml` | Settings, Plugins, Onsite, then Machines. |
 
 The agent has a tool, `propose_command`. It saves a command with a
 number and runs nothing. `/run N` then asks the agent to run it with
