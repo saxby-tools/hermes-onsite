@@ -109,7 +109,13 @@ def build_onsite_command(ctx, runtime: Runtime):
             )
 
         try:
-            route = runtime.switch(key, target, folder, session_id)
+            route = runtime.switch(
+                key,
+                target,
+                folder,
+                session_id,
+                session_key or "",
+            )
         except (ConfigError, UnknownTarget) as error:
             return str(error)
 
