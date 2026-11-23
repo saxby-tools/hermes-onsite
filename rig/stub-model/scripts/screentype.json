@@ -1,0 +1,41 @@
+{
+  "about": "Screen: does an approved click and keystroke land on the target?",
+  "steps": [
+    {
+      "tool": "computer_use",
+      "args": {
+        "action": "capture",
+        "mode": "som"
+      }
+    },
+    {
+      "tool": "computer_use",
+      "args": {
+        "action": "click",
+        "coordinate": [
+          300,
+          200
+        ]
+      }
+    },
+    {
+      "tool": "computer_use",
+      "args": {
+        "action": "type",
+        "text": "echo screen-rig > /tmp/hands-rig-allowed.txt",
+        "delivery_mode": "foreground"
+      }
+    },
+    {
+      "tool": "computer_use",
+      "args": {
+        "action": "key",
+        "keys": "return",
+        "delivery_mode": "foreground"
+      }
+    },
+    {
+      "text": "Done."
+    }
+  ]
+}

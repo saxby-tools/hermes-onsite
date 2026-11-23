@@ -1,0 +1,41 @@
+{
+  "about": "Screen: does a denied click and keystroke stay off the target?",
+  "steps": [
+    {
+      "tool": "computer_use",
+      "args": {
+        "action": "capture",
+        "mode": "som"
+      }
+    },
+    {
+      "tool": "computer_use",
+      "args": {
+        "action": "click",
+        "coordinate": [
+          300,
+          200
+        ]
+      }
+    },
+    {
+      "tool": "computer_use",
+      "args": {
+        "action": "type",
+        "text": "echo screen-rig > /tmp/hands-rig-denied.txt",
+        "delivery_mode": "foreground"
+      }
+    },
+    {
+      "tool": "computer_use",
+      "args": {
+        "action": "key",
+        "keys": "return",
+        "delivery_mode": "foreground"
+      }
+    },
+    {
+      "text": "Done."
+    }
+  ]
+}

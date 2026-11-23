@@ -1,0 +1,15 @@
+{
+  "about": "Screen: can the session see the screen of its own machine?",
+  "steps": [
+    {
+      "tool": "computer_use",
+      "args": {
+        "action": "capture",
+        "mode": "som"
+      }
+    },
+    {
+      "text": "Done."
+    }
+  ]
+}
