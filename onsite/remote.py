@@ -35,6 +35,9 @@ KEEPALIVE_COUNT = 3
 STDIO_ALIVE_INTERVAL = 15
 STDIO_ALIVE_COUNT = 3
 
+# A forward ends at the target's own loopback address.
+FORWARD_ADDRESS = "127.0.0.1"
+
 INHIBIT_NONE = "none"
 INHIBIT_BLOCK = "block"
 INHIBIT_DELAY = "delay"
@@ -126,10 +129,10 @@ def build_ssh_options(spec: TargetSpec) -> list[str]:
     return options
 
 
-def build_stdio_arguments(spec: TargetSpec, script: str) -> list[str]:
-    """Everything after `ssh` for a program that talks over the link.
+def build_link_options(spec: TargetSpec) -> list[str]:
+    """The options for a link that carries a conversation, not a shell.
 
-    The program's input and output are the link itself, so nothing
+    Whatever talks over the link owns its input and output, so nothing
     else may write to it: no terminal, no prompt, no warning line.
     """
 
@@ -155,10 +158,35 @@ def build_stdio_arguments(spec: TargetSpec, script: str) -> list[str]:
     if spec.host_key_alias:
         arguments += ["-o", f"HostKeyAlias={spec.host_key_alias}"]
 
-    # The login shell on a target may not be POSIX. `sh` always is.
-    arguments += [f"{spec.user}@{spec.host}", "sh -c " + shlex.quote(script)]
-
     return arguments
+
+
+def build_stdio_arguments(spec: TargetSpec, script: str) -> list[str]:
+    """Everything after `ssh` for a program that talks over the link."""
+
+    # The login shell on a target may not be POSIX. `sh` always is.
+    return [
+        *build_link_options(spec),
+        f"{spec.user}@{spec.host}",
+        "sh -c " + shlex.quote(script),
+    ]
+
+
+def build_forward_arguments(spec: TargetSpec, port: int) -> list[str]:
+    """Everything after `ssh` for a link to a port on the target.
+
+    The port is reached at the target's own loopback address, so a
+    service that listens only there, as screen sharing should, needs
+    no opening in a firewall. Nothing runs on the target but its SSH
+    server. Screens are mostly flat colour, so the link is compressed.
+    """
+
+    return [
+        *build_link_options(spec),
+        "-o", "Compression=yes",
+        "-W", f"{FORWARD_ADDRESS}:{port}",
+        f"{spec.user}@{spec.host}",
+    ]
 
 
 def build_setup_script(spec: TargetSpec) -> str:
