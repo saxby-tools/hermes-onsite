@@ -33,6 +33,8 @@ KIND_CONTAINER = "container"
 KIND_REAL = "real"
 
 IMAGE = "hermes-hands-rig/hands:dev"
+DESK_IMAGE = "hermes-hands-rig/desk:dev"
+DESK_BOOT_SECONDS = 3
 CONTAINER = "hermes-hands-rig-hands"
 CONTAINER_USER = "dev"
 CONTAINER_HOME = "/home/dev"
@@ -102,6 +104,8 @@ class ContainerHands:
     label = "the hands container"
     results_prefix = ""
     has_systemd = False
+    has_screen = False
+    image = IMAGE
     quote_path = True
 
     user = CONTAINER_USER
@@ -168,11 +172,14 @@ class ContainerHands:
 
         return public.read_text().strip()
 
+    def build(self) -> None:
+        must(["docker", "build", "--quiet", "--tag", IMAGE,
+              str(self.build_dir)])
+
     def start(self) -> None:
         public_key = self._make_keys()
 
-        must(["docker", "build", "--quiet", "--tag", IMAGE,
-              str(self.build_dir)])
+        self.build()
 
         run(["docker", "rm", "--force", CONTAINER])
 
@@ -181,7 +188,7 @@ class ContainerHands:
             "--name", CONTAINER,
             "--publish", f"{LOCALHOST}:{self.ssh_port}:22",
             "--env", f"HANDS_LOGIN_KEY={public_key}",
-            IMAGE,
+            self.image,
         ])
 
         wait_for_port(self.ssh_port, CONTAINER_BOOT_SECONDS)
@@ -212,6 +219,43 @@ class ContainerHands:
         run(["docker", "rm", "--force", CONTAINER])
 
 
+class DeskHands(ContainerHands):
+    """The hands container with a desktop nobody looks at.
+
+    It has an X display, a terminal, a VNC server on loopback and
+    Hermes' own screen driver, so screen control can be tested on a
+    real screen without driving a person's.
+    """
+
+    label = "the desk container"
+    results_prefix = "desk-"
+    has_screen = True
+    image = DESK_IMAGE
+
+    def __init__(self, build_dir: Path, keys_dir: Path, desk_dir: Path):
+        super().__init__(build_dir, keys_dir)
+
+        self.desk_dir = desk_dir
+
+    def plan(self) -> tuple[str, ...]:
+        return (
+            "build the hands container image, then the desk image on it",
+            "start the desk container with a fresh key pair",
+        )
+
+    def build(self) -> None:
+        super().build()
+
+        must(["docker", "build", "--quiet", "--tag", DESK_IMAGE,
+              str(self.desk_dir)])
+
+    def start(self) -> None:
+        super().start()
+
+        # The desktop comes up a moment after sshd does.
+        time.sleep(DESK_BOOT_SECONDS)
+
+
 class RealHands:
     """A real machine, reached as the user's own SSH setup reaches it.
 
@@ -223,6 +267,7 @@ class RealHands:
     kind = KIND_REAL
     results_prefix = "real-"
     has_systemd = True
+    has_screen = False
     quote_path = False
 
     ssh_host = LOCALHOST
