@@ -147,7 +147,7 @@ plugins:
 | `path` | ssh | `interactive` (default) or `none`. See below. |
 | `inhibit_sleep` | ssh | Default true. See below. |
 | `connect_timeout` | ssh | Seconds. Default 3. |
-| `mirror` | ssh | A folder on the host that holds the target's folder names. See below. |
+| `mirror` | ssh | Where on the host the target's folder names are kept. Default: the plugin's data folder. |
 | `mirror_depth` | ssh | Levels under the target's home to mirror. Default 3. |
 
 **`path_map`** is for when the two machines name one folder
@@ -200,32 +200,30 @@ A mirror is a folder on the host that copies the target's folder
 names and nothing else: no files, ever. Open a session in a mirrored
 folder and it runs in the real folder on the target.
 
-Name the mirror when you set up, or add `mirror` to the target:
+Every SSH target has a mirror with no set-up. It is kept in the
+plugin's data folder. To keep it somewhere you can browse, name the
+place with `mirror` in the target's settings.
 
-```bash
-hermes onsite init --ssh laptop=you@laptop.example --local mac --mirror laptop=/Users/you/Onsite/laptop
-```
-
-Then copy the folder names. Both commands are dry runs until you add
-`--apply`:
-
-```bash
-hermes onsite mirror --apply
-```
-
-That covers the folders under the target's home, three levels deep,
-and skips any whose name starts with a dot. For one folder at any
-depth:
+In Hermes Desktop, the pane does this for you: pick a machine, browse
+its folders, and start a session in one. From a terminal, open one
+folder at any depth. It is a dry run until you add `--apply`, and it
+prints the folder to start in:
 
 ```bash
 hermes onsite open laptop:~/work/site --apply
 ```
 
-It prints the folder to open on the host. The mirror is only an
-address. The app's file tree shows its empty folders, not the
-target's files, and anything the app itself writes there stays on the
-host. The plugin never deletes from a mirror and never makes one
-outside the folder you named.
+To fill a mirror with the folder names under the target's home, three
+levels deep, so the app's own folder picker can browse them:
+
+```bash
+hermes onsite mirror --apply
+```
+
+The mirror is only an address. The app's file tree shows its empty
+folders, not the target's files, and anything the app itself writes
+there stays on the host. The plugin never deletes from a mirror and
+never makes one outside its folder.
 
 ### MCP servers on a target
 
@@ -287,6 +285,8 @@ rig, with Hermes' pinned driver. See [What is tested](#what-is-tested).
 | Move this session | `/onsite <target>`, back with `/onsite auto` | Same, typed in the chat. |
 | Approve a risky command | Hermes' own prompt | Hermes' own prompt. |
 | Run a command the agent proposed | `/run <number>` | Run and Copy buttons, in a pane and in the transcript. |
+| Open a folder on a machine | `hermes onsite open laptop:~/work --apply` | Browse the machine in the pane and start a session there. |
+| Add, change or test a machine | `hermes onsite init`, or edit `config.yaml` | Settings, Plugins, Machines. |
 
 The agent has a tool, `propose_command`. It saves a command with a
 number and runs nothing. `/run N` then asks the agent to run it with
@@ -382,9 +382,10 @@ Read these before trusting it with real work.
 - **The folder must exist on the host.** Hermes will not run a turn
   in a folder the host cannot see, and the desktop app's folder
   picker and file tree read the host's disk. To work in a folder on
-  an SSH target, the host needs its own view of that folder: a
-  `mirror` of its folder names, or a network mount with a `path_map`
-  entry. With a mirror, the app's file tree shows folders and no
+  an SSH target, the host needs its own view of that folder. The
+  plugin keeps a mirror of folder names for every SSH target, so any
+  folder can be opened. A network mount with a `path_map` entry also
+  works. With a mirror, the app's file tree shows folders and no
   files.
 - **The Bots tab in Hermes Desktop.** The app sends the chip's
   requests to its active profile, which is set in the Sessions tab.
@@ -412,13 +413,14 @@ Read these before trusting it with real work.
 | 1 | Routing, file tools, approvals | 18 | Pass |
 | 2 | A stopped, a frozen and a returning target | 20 | Pass |
 | 3 | `/onsite`, `/run`, `hermes onsite`, CLI and TUI | 28 | Pass |
-| 4 | Status routes, desktop plugin logic | 7 | Pass |
+| 4 | Routes for status, machines and folders; desktop plugin logic | 17 | Pass |
 | Screen | A target's screen: look, deny, approve | 8 | Pass |
 | 5 | A person at the real clients | 0 | Not run |
 
 The same checks pass twice: against a container on the host, and
 against a real Linux laptop over a real network. The laptop run adds
-three checks of the sleep lock, for 76 in all. The output of each run
+three checks of the sleep lock, for 86 in all. The screen checks run
+on a container with its own desktop. The output of each run
 is in [rig/results/](rig/results/). The laptop's files start with
 `real-`.
 
@@ -437,9 +439,10 @@ Not yet tested by anyone:
   fakes both by cutting a relay in front of the laptop's SSH port.
 - A person approving a real command in the TUI, the desktop app and
   an editor.
-- The run card and its Run button inside the real Hermes Desktop
-  app. The chip and the pane have been seen there, on a gateway that
-  serves several profiles, with the laptop shown as connected.
+- The run card, the folder browser and the Machines page inside
+  the real Hermes Desktop app. The chip and the pane have been
+  seen there, on a gateway that serves several profiles, with the
+  laptop shown as connected.
 - A macOS machine as an SSH target, and `caffeinate`.
 - `hermes plugins install` from the Git URL.
 - Screen control on macOS, on Wayland, or on any desktop a
