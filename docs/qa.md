@@ -256,7 +256,8 @@ hermes -p test onsite mcp laptop files --apply -- npx -y @modelcontextprotocol/s
 ## 12. Screen control
 
 - [ ] Check the laptop. It names the desktop, says whether Hermes'
-      screen driver is there, and adds notes for a Wayland desktop:
+      screen driver is there and whether screen sharing answers,
+      names the route it would use, and adds notes for that route:
 
 ```bash
 hermes -p test onsite screen laptop
@@ -264,10 +265,26 @@ hermes -p test onsite screen laptop
 
 - [ ] Run the rig's screen phase from a clone of the repository. It
       builds a container with its own desktop and drives that, not
-      your screen. Eight checks pass:
+      your screen. Ten checks pass. This needs the gateway restart
+      from "Before you start":
 
 ```bash
 python3 rig/run.py --apply --desk --phase screen
+```
+
+- [ ] Run it again over screen sharing. Ten checks pass. **This has
+      never been run.** If a check fails, send back the file
+      `rig/results/desk-share-phase-screen.txt`:
+
+```bash
+python3 rig/run.py --apply --desk --share --phase screen
+```
+
+- [ ] Run the phase that drives the same desktop with no Hermes
+      session. Eight checks pass, with or without a restart:
+
+```bash
+python3 rig/run.py --apply --desk --phase share
 ```
 
 - [ ] Optional, and your call: install Hermes' driver on the laptop
@@ -278,6 +295,11 @@ python3 rig/run.py --apply --desk --phase screen
       On Wayland expect a partial view. Note exactly what you get.
 - [ ] With the backend selected, a Mac session still captures the
       Mac's own screen.
+- [ ] Optional, and your call: try screen sharing on the laptop. On
+      an X11 session, run `x11vnc -localhost -nopw -forever -shared`
+      there, set `screen: sharing` on the target, and ask a laptop
+      session to capture the screen and click somewhere harmless.
+      GNOME on Wayland is not covered: its sharing speaks RDP.
 
 ## 13. An editor
 
@@ -304,10 +326,10 @@ Never tested.
 Run these from a clone of the repository, on the host. The rig uses a
 profile named `buster` unless you pass `--profile`.
 
-- [ ] Unit tests: 273 pass.
+- [ ] Unit tests: 378 pass.
 
 ```bash
-uv run --no-project --with pytest python -m pytest -q
+uv run --no-project --with pytest --with pillow --with cryptography python -m pytest -q
 ```
 
 - [ ] Desktop tests: 29 pass.
