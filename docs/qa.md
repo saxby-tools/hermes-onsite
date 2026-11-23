@@ -151,8 +151,13 @@ On the laptop, in the desktop app, connected to the gateway.
       click "Start a session in ...". A new session opens, and its
       chip reads `onsite: laptop`. **Never seen in the real app.**
 - [ ] Ask that session for `pwd`. It prints the folder you picked.
-- [ ] Open Settings, then Plugins, then Machines. Both machines are
-      listed. **Never seen in the real app.**
+- [ ] Open Settings, then Plugins, then Onsite. Both machines are
+      listed, and a line names the profile these settings belong to.
+      The "Applies to" row at the top does not change it: the page
+      follows the profile picked in the Sessions tab. **Never seen in
+      the real app.**
+- [ ] Open Machines, under Onsite in the list on the left. The same
+      two machines have Edit and Remove buttons.
 - [ ] Click Edit on `laptop`, then "Test connection". It says
       "Connected in" some milliseconds.
 - [ ] Add a machine named `spare` of the kind "The machine Hermes
@@ -336,7 +341,7 @@ profile named `buster` unless you pass `--profile`.
 uv run --no-project --with pytest --with pillow --with cryptography python -m pytest -q
 ```
 
-- [ ] Desktop tests: 31 pass.
+- [ ] Desktop tests: 35 pass.
 
 ```bash
 node --test tests/desktop.test.mjs
