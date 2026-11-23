@@ -52,9 +52,13 @@ const AREA_DIRECTIVES = 'transcript.directives'
 
 const CHIP_ORDER = 120
 
-const SETTINGS_PAGE_ID = 'machines'
-const SETTINGS_PAGE_TITLE = 'Machines'
+// Settings, Plugins: one entry named for the plugin, with its pages
+// folded out beneath it.
+const SETTINGS_PAGE_ID = 'onsite'
+const SETTINGS_PAGE_TITLE = 'Onsite'
 const SETTINGS_PAGE_ICON = 'remote'
+const MACHINES_PAGE_ID = 'machines'
+const MACHINES_PAGE_TITLE = 'Machines'
 
 const KIND_SSH = 'ssh'
 const KIND_LOCAL = 'local'
@@ -1184,6 +1188,98 @@ function describeTest(answer) {
   return `No connection: ${answer.detail || 'no answer'}`
 }
 
+// The app shows an "Applies to" row of profiles above every plugin
+// page. A plugin's requests go to the app's active profile whatever
+// that row says, so each page names the profile it really edits.
+function describeSettingsProfile() {
+  const profile = activeProfile()
+
+  if (profile === '') {
+    return 'These are the settings of the profile the app is using now.'
+  }
+
+  return (
+    `These are the settings of the "${profile}" profile, the one ` +
+    'picked in the Sessions tab. The "Applies to" row above does not ' +
+    'change this page.'
+  )
+}
+
+function ProfileNote() {
+  return jsx('div', {
+    className: TEXT_MUTED,
+    'data-onsite-profile-note': true,
+    children: describeSettingsProfile()
+  })
+}
+
+function OnsiteHome() {
+  const [settings, setSettings] = useState(null)
+  const [note, setNote] = useState('')
+
+  useEffect(() => {
+    send('/targets', {})
+      .then(answer => {
+        if (!answer?.ok) {
+          setNote(answer?.error || 'The settings could not be read.')
+
+          return
+        }
+
+        setSettings(answer)
+        setNote(answer.problem || '')
+      })
+      .catch(error => setNote(describeError(error)))
+  }, [])
+
+  const names = Object.keys(settings?.targets ?? {})
+
+  return jsxs('div', {
+    className: 'flex max-w-xl flex-col gap-3 text-[0.8125rem]',
+    'data-onsite-home': true,
+    children: [
+      jsx('div', {
+        children:
+          'Onsite runs a session\'s commands and file edits on the ' +
+          'machine its folder lives on.'
+      }),
+      jsx(ProfileNote, {}),
+      names.map(name =>
+        jsxs(
+          'div',
+          {
+            className: 'flex items-center gap-2',
+            'data-onsite-summary': name,
+            children: [
+              jsx('span', { className: 'font-medium', children: name }),
+              jsx('span', {
+                className: TEXT_MUTED,
+                children: describeMachine(settings.targets[name])
+              }),
+              settings.default === name
+                ? jsx('span', { className: TEXT_MUTED, children: '(default)' })
+                : null
+            ]
+          },
+          name
+        )
+      ),
+      settings && names.length === 0
+        ? jsx('div', { className: TEXT_MUTED, children: 'No machines yet.' })
+        : null,
+      note
+        ? jsx('div', { className: TEXT_MUTED, role: 'status', children: note })
+        : null,
+      jsx('div', {
+        className: TEXT_MUTED,
+        children:
+          'Add, change and test machines on the Machines page, under ' +
+          'Onsite in the list on the left.'
+      })
+    ]
+  })
+}
+
 function MachinesPage() {
   const [settings, setSettings] = useState(null)
   const [form, setForm] = useState(null)
@@ -1252,6 +1348,7 @@ function MachinesPage() {
           'The machines a session can run on. A session picks one from ' +
           'the folder it is opened in.'
       }),
+      jsx(ProfileNote, {}),
       names.map(name =>
         jsx(
           MachineRow,
@@ -1346,13 +1443,21 @@ export default {
       }
     })
 
-    // 5. MACHINES PAGE. Older apps have no settings pages; the
-    // machines can still be set up with `hermes onsite init`.
+    // 5. SETTINGS. One entry, Onsite, with the Machines page under
+    // it. Older apps have no settings pages; the machines can still
+    // be set up with `hermes onsite init`.
     ctx.registerSettingsPage?.({
       id: SETTINGS_PAGE_ID,
       title: SETTINGS_PAGE_TITLE,
       icon: SETTINGS_PAGE_ICON,
-      render: () => jsx(MachinesPage, {})
+      render: () => jsx(OnsiteHome, {}),
+      children: [
+        {
+          id: MACHINES_PAGE_ID,
+          title: MACHINES_PAGE_TITLE,
+          render: () => jsx(MachinesPage, {})
+        }
+      ]
     })
 
     // Status comes from a live probe on the host each time. Nothing
