@@ -50,14 +50,15 @@ const PASSTHROUGH = [
 ];
 
 // Everything that is not a page. Markdown in these folders is code,
-// test data or this folder's own notes.
+// test data or this folder's own notes. `onsite/` is the plugin
+// itself; its README is for the plugin catalog. `docs/qa.md` is the
+// owner's own checklist, with the names of his machines in it.
 const IGNORES = [
   "site/**",
   "rig/**",
   "tests/**",
-  "targets/**",
-  "dashboard/**",
-  "desktop/**",
+  "onsite/**",
+  "docs/qa.md",
   ".claude/**",
   ".rig/**",
   ".venv/**",
