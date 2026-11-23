@@ -44,7 +44,7 @@ Site: <https://saxby-tools.github.io/hermes-onsite/>
                                                          (local)
 ```
 
-<!-- /onsite:diagram -->
+<!-- /hands:diagram -->
 
 One backend plugin routes each session's tool calls to a named
 target. The clients, the agent loop and the approval gate are stock
@@ -455,7 +455,7 @@ Not yet tested by anyone:
 - A machine that dials out from its own side. The rig opens the
   same kind of link from the host.
 
-<!-- /onsite:notice -->
+<!-- /hands:notice -->
 
 ### Run the tests
 
