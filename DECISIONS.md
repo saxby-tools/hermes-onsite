@@ -415,9 +415,16 @@ Written Nov. 22, 2026, against Hermes v0.23.2.
   cannot start until Buster points at the laptop.
 - **Checked.** `hermes hands status` shows the laptop connected, and
   one real-model command ran there.
-- **Not done.** `desktop/plugin.js` was not copied to the laptop.
-  The desktop app there may be attached to a profile that is off
-  limits until Gate 4, and Gate 3 is the owner's to open.
+- **Held back at first.** `desktop/plugin.js` was not copied to the
+  laptop. The desktop app there may be attached to a profile that is
+  off limits until Gate 4, and Gate 3 is the owner's to open.
+- **Since.** The owner said to copy it on Nov. 22. It is at
+  `~/.hermes/desktop-plugins/hermes-hands/plugin.js` on the laptop,
+  and its checksum matches the repo's. Nobody has yet looked at it
+  in the app. On a profile without the plugin, the chip says the
+  host has no hermes-hands plugin enabled.
+- **Reverse the copy.** Delete that one folder on the laptop and
+  run "Reload desktop plugins".
 - **Reverse.** `hermes -p buster config set terminal.backend local`
   and `hermes -p buster plugins disable hermes-hands`. A copy of the
   config from before is in `.rig/buster-config.before-gate-2.yaml`.
