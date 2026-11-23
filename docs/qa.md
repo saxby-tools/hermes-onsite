@@ -39,13 +39,17 @@ hermes profile create qa
 ```
 
 ```bash
-hermes -p qa plugins install saxby-tools/hermes-onsite
+hermes -p qa plugins install saxby-tools/hermes-onsite/onsite
 ```
 
 - [ ] The security scan passes and Hermes offers to enable it.
 - [ ] `hermes -p qa plugins list` shows `onsite`.
-- [ ] No folder named `rig` or `site` is a surprise to you in the
-      installed plugin folder. They ship today. See the known gaps.
+- [ ] The installed folder holds the plugin and nothing else: no
+      `rig`, `site`, `docs` or `tests`.
+
+```bash
+ls "$(hermes -p qa config path | xargs dirname)/plugins/onsite"
+```
 
 ## 2. Set up
 
