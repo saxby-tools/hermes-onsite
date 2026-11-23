@@ -216,9 +216,17 @@ def answer_challenge(challenge: bytes, password: str) -> bytes:
     triple DES with one key three times, which is plain DES.
     """
 
-    from cryptography.hazmat.decrepit.ciphers.algorithms import TripleDES
-    from cryptography.hazmat.primitives.ciphers import Cipher
-    from cryptography.hazmat.primitives.ciphers import modes
+    try:
+        from cryptography.hazmat.decrepit.ciphers.algorithms import (
+            TripleDES,
+        )
+        from cryptography.hazmat.primitives.ciphers import Cipher
+        from cryptography.hazmat.primitives.ciphers import modes
+    except ImportError:
+        raise RfbError(
+            "the server asks for a VNC password, and the `cryptography` "
+            "package that answers it is missing from this Hermes"
+        ) from None
 
     key = password_key(password)
     cipher = Cipher(TripleDES(key * 3), modes.ECB())
