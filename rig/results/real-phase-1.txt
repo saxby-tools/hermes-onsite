@@ -1,7 +1,7 @@
 # Phase 1: backend and routing
 
 == Phase 1.1: a session in a laptop folder runs there
-  --- terminal: pwd + 2 commands [completed, 1.25s]
+  --- terminal: pwd + 2 commands [completed, 1.16s]
   | terminal result
   | - **output:** <laptop-rig>/sample
   | <this-user>
@@ -17,10 +17,10 @@
         the interactive shell adds 10 folders; 10 of them are in the session
 
 == Phase 1.3: file tools act on the laptop's files
-  --- write_file: rig-note.txt [completed, 0.29s]
+  --- write_file: rig-note.txt [completed, 0.27s]
   | ✅ write_file completed for `rig-note.txt`
   | Files: `<laptop-rig>/sample/rig-note.txt`
-  --- read_file: rig-note.txt [completed, 0.09s]
+  --- read_file: rig-note.txt [completed, 0.06s]
   | Read rig-note.txt — 2 total lines
   | 
   | ```
@@ -35,7 +35,7 @@
   |   bravo
   | - ./notes.txt:2
   |   bravo
-  --- terminal: cat rig-note.txt + 1 command [completed, 0.10s]
+  --- terminal: cat rig-note.txt + 1 command [completed, 0.07s]
   | terminal result
   | - **output:** alpha
   | bravo
@@ -88,15 +88,15 @@
   PASS  the folder is still on the laptop
 
 == Phase 1.6: an allowed approval runs the command
-  --- terminal: mkdir -p hands-rig-victim + 1 command [completed, 1.04s]
+  --- terminal: mkdir -p hands-rig-victim + 1 command [completed, 1.15s]
   | terminal result
   | - **exit_code:** 0
   | - **cwd:** <laptop-rig>/sample
-  --- terminal: rm -rf hands-rig-victim [completed, 0.07s]
+  --- terminal: rm -rf hands-rig-victim [completed, 0.08s]
   | terminal result
   | - **exit_code:** 0
   | - **approval:** Command required approval (recursive delete) and was approved by the user.
-  --- terminal: test -e hands-rig-victim/keep + 2 commands [completed, 0.07s]
+  --- terminal: test -e hands-rig-victim/keep + 2 commands [completed, 0.08s]
   | terminal result
   | - **output:** GONE
   | - **exit_code:** 0
