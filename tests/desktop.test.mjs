@@ -265,7 +265,9 @@ async function setup() {
 
   await settle(() => plugin.register(ctx))
 
-  return { backend, calls, click, ctx, made, mount, plugin, settle }
+  return {
+    backend, calls, click, ctx, host, made, mount, plugin, settle
+  }
 }
 
 test('the file imports only what the desktop loader allows', () => {
@@ -332,6 +334,22 @@ test('the chip says so when the host has no plugin', { skip: SKIP }, async () =>
   assert.equal(chip.getAttribute('data-hands-chip'), 'down')
   assert.match(chip.textContent, /not set up/)
   assert.match(chip.getAttribute('title'), /no hermes-hands plugin enabled/)
+})
+
+test('the chip names the profile that has no plugin', { skip: SKIP }, async () => {
+  const { backend, host, made, mount, settle } = await setup()
+  const box = await mount(made.contributions.chip.render())
+
+  // A gateway that serves several profiles: the app is still on the
+  // default one, which does not have the plugin.
+  host.state.profile = atom('default')
+  backend.fail = 'HTTP 404'
+  await settle(made.intervals[0])
+
+  const title = box.querySelector('[data-hands-chip]').getAttribute('title')
+
+  assert.match(title, /asked the "default" profile/)
+  assert.match(title, /no hermes-hands plugin enabled/)
 })
 
 test('clicking the chip opens the pane', { skip: SKIP }, async () => {
