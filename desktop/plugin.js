@@ -1,13 +1,16 @@
 /**
  * onsite: the Hermes Desktop half.
  *
- * Three features, each in its own labeled section so one can be
+ * Five features, each in its own labeled section so one can be
  * dropped without touching the others:
  *
- *   1. STATUS CHIP    where this session's tools run, and whether that
- *                     machine answers right now
- *   2. COMMANDS PANE  the commands the agent proposed, with Run and Copy
- *   3. RUN CARD       the same Run and Copy, inline in the transcript
+ *   1. STATUS CHIP     where this session's tools run, and whether that
+ *                      machine answers right now
+ *   2. COMMANDS PANE   the commands the agent proposed, with Run and Copy
+ *   3. RUN CARD        the same Run and Copy, inline in the transcript
+ *   4. FOLDER BROWSER  pick a folder on a machine and start a session
+ *                      in it, in the pane
+ *   5. MACHINES PAGE   add, edit, test and remove machines, in Settings
  *
  * The desktop loader takes one plain ESM file. Only three imports
  * resolve, there is no build step, and UI is jsx() calls.
@@ -48,6 +51,34 @@ const AREA_PANES = 'panes'
 const AREA_DIRECTIVES = 'transcript.directives'
 
 const CHIP_ORDER = 120
+
+const SETTINGS_PAGE_ID = 'machines'
+const SETTINGS_PAGE_TITLE = 'Machines'
+const SETTINGS_PAGE_ICON = 'remote'
+
+const KIND_SSH = 'ssh'
+const KIND_LOCAL = 'local'
+const HOME_FOLDER = '~'
+
+const INPUT_CLASS =
+  'w-full rounded border border-(--ui-border) bg-transparent px-2 py-1 ' +
+  'text-[0.8125rem]'
+const ROW_CLASS =
+  'flex w-full items-center gap-2 rounded px-2 py-1 text-left ' +
+  'hover:bg-(--chrome-action-hover)'
+
+const EMPTY_MACHINE = {
+  name: '',
+  kind: KIND_SSH,
+  host: '',
+  user: '',
+  port: '',
+  key: '',
+  prefixes: '',
+  mirror: '',
+  isDefault: false,
+  isNew: true
+}
 const PANE_WIDTH = '280px'
 
 const TONE_UP = 'up'
@@ -534,6 +565,223 @@ function TargetList({ rows }) {
   })
 }
 
+/* ------------------------------------------------------------------ */
+/* 4. FOLDER BROWSER                                                   */
+/* ------------------------------------------------------------------ */
+
+async function send(path, body) {
+  return plugin.rest(path, {
+    method: 'POST',
+    body,
+    timeoutMs: REQUEST_TIMEOUT_MS
+  })
+}
+
+function folderName(path) {
+  const parts = String(path).split('/').filter(Boolean)
+
+  if (parts.length === 0) {
+    return '/'
+  }
+
+  return parts[parts.length - 1]
+}
+
+function joinFolder(path, name) {
+  if (path === '/') {
+    return `/${name}`
+  }
+
+  return `${path}/${name}`
+}
+
+function sshTargets(rows) {
+  return (rows ?? []).filter(row => row.kind === KIND_SSH).map(row => row.name)
+}
+
+function canStartSessions() {
+  if (typeof sdk.host?.request !== 'function') {
+    return false
+  }
+
+  return typeof sdk.host?.openSession === 'function'
+}
+
+// Starts a new session in a folder on the host, the way Hermes' own
+// chat plugin does. The folder is the host's stand-in for the folder
+// on the machine, so the session runs there.
+async function openSessionAt(cwd, title) {
+  if (!canStartSessions()) {
+    await copyText(cwd)
+    notify('info', `Open this folder to work there. It is copied: ${cwd}`)
+
+    return false
+  }
+
+  const request = { cwd, cwd_explicit: true }
+  const profile = activeProfile()
+
+  if (profile !== '') {
+    request.profile = profile
+  }
+
+  const made = await sdk.host.request('session.create', request)
+
+  // A new session has no saved row until it has a title or a prompt.
+  await sdk.host.request('session.title', {
+    session_id: made.session_id,
+    title
+  })
+  await sdk.host.openSession(made.stored_session_id, { expectHistory: false })
+
+  return true
+}
+
+function FolderRow({ label, onPick }) {
+  return jsx('button', {
+    type: 'button',
+    className: ROW_CLASS,
+    'data-onsite-folder': label,
+    onClick: onPick,
+    children: label
+  })
+}
+
+function FolderBrowser({ rows }) {
+  const names = sshTargets(rows)
+  const [picked, setPicked] = useState('')
+  const [listing, setListing] = useState(null)
+  const [message, setMessage] = useState('')
+  const [busy, setBusy] = useState(false)
+
+  if (names.length === 0) {
+    return null
+  }
+
+  const target = names.includes(picked) ? picked : names[0]
+
+  const load = async path => {
+    setBusy(true)
+    setMessage('')
+
+    try {
+      const answer = await send('/browse', { target, path })
+
+      if (answer?.ok) {
+        setListing(answer)
+      } else {
+        setMessage(answer?.error || 'That folder could not be listed.')
+      }
+    } catch (error) {
+      setMessage(describeError(error))
+    }
+
+    setBusy(false)
+  }
+
+  const openHere = async () => {
+    setBusy(true)
+    setMessage('')
+
+    try {
+      const answer = await send('/open', { target, path: listing.path })
+
+      if (answer?.ok) {
+        const title = `${folderName(listing.path)} on ${target}`
+
+        await openSessionAt(answer.cwd, title)
+      } else {
+        setMessage(answer?.error || 'That folder could not be opened.')
+      }
+    } catch (error) {
+      setMessage(describeError(error))
+    }
+
+    setBusy(false)
+  }
+
+  const choose = event => {
+    setPicked(event.target.value)
+    setListing(null)
+    setMessage('')
+  }
+
+  return jsxs('div', {
+    className: 'flex flex-col gap-1',
+    'data-onsite-browser': true,
+    children: [
+      jsx('div', { className: 'font-medium', children: 'Open a folder' }),
+      jsxs('div', {
+        className: 'flex items-center gap-2',
+        children: [
+          jsx('select', {
+            className: INPUT_CLASS,
+            'aria-label': 'Machine',
+            value: target,
+            onChange: choose,
+            children: names.map(name =>
+              jsx('option', { value: name, children: name }, name)
+            )
+          }),
+          jsx('button', {
+            type: 'button',
+            className: BUTTON_CLASS,
+            'data-onsite-browse': true,
+            disabled: busy,
+            onClick: () => load(HOME_FOLDER),
+            children: 'Browse'
+          })
+        ]
+      }),
+      message
+        ? jsx('div', { className: TEXT_MUTED, role: 'alert', children: message })
+        : null,
+      listing
+        ? jsxs('div', {
+            className: 'flex flex-col',
+            children: [
+              jsx('div', {
+                className: joinClasses(TEXT_SMALL, TEXT_MUTED, 'break-all'),
+                'data-onsite-path': true,
+                children: listing.path
+              }),
+              listing.parent
+                ? jsx(FolderRow, {
+                    label: '..',
+                    onPick: () => load(listing.parent)
+                  })
+                : null,
+              listing.folders.map(name =>
+                jsx(
+                  FolderRow,
+                  {
+                    label: name,
+                    onPick: () => load(joinFolder(listing.path, name))
+                  },
+                  name
+                )
+              ),
+              listing.more
+                ? jsx('div', {
+                    className: joinClasses(TEXT_SMALL, TEXT_MUTED),
+                    children: 'More folders than fit here. Go deeper to narrow it.'
+                  })
+                : null,
+              jsx('button', {
+                type: 'button',
+                className: joinClasses(BUTTON_CLASS, 'mt-1 self-start'),
+                'data-onsite-open': true,
+                disabled: busy,
+                onClick: openHere,
+                children: `Start a session in ${folderName(listing.path)}`
+              })
+            ]
+          })
+        : null
+    ]
+  })
+}
+
 function OnsitePane() {
   const status = useStore(statusStore)
   const proposals = useStore(proposalsStore)
@@ -551,6 +799,7 @@ function OnsitePane() {
         className: joinClasses(TEXT_SMALL, TEXT_MUTED),
         children: 'Move this session with /onsite <target>.'
       }),
+      jsx(FolderBrowser, { rows: status?.rows }),
       jsx('div', { className: 'font-medium', children: 'Proposed commands' }),
       pending.length === 0
         ? jsx('div', {
@@ -616,13 +865,389 @@ function RunCard({ attrs, sessionId, streaming }) {
 }
 
 /* ------------------------------------------------------------------ */
+/* 5. MACHINES PAGE                                                    */
+/* ------------------------------------------------------------------ */
+
+function machineToForm(name, block, isDefault) {
+  return {
+    name,
+    kind: block?.kind === KIND_LOCAL ? KIND_LOCAL : KIND_SSH,
+    host: block?.host ?? '',
+    user: block?.user ?? '',
+    port: block?.port === undefined ? '' : String(block.port),
+    key: block?.key ?? '',
+    prefixes: (block?.prefixes ?? []).join('\n'),
+    mirror: block?.mirror ?? '',
+    isDefault,
+    isNew: false,
+    // Settings this form does not show are kept as they were.
+    kept: block ?? {}
+  }
+}
+
+function formToTarget(form) {
+  const prefixes = form.prefixes
+    .split('\n')
+    .map(line => line.trim())
+    .filter(Boolean)
+  const target = { ...(form.kept ?? {}), kind: form.kind, prefixes }
+
+  if (form.kind === KIND_LOCAL) {
+    delete target.host
+    delete target.user
+    delete target.port
+    delete target.key
+    delete target.mirror
+
+    return target
+  }
+
+  target.host = form.host.trim()
+  target.user = form.user.trim()
+  target.key = form.key.trim()
+  target.mirror = form.mirror.trim()
+  target.port = form.port.trim() === '' ? '' : Number(form.port)
+
+  return target
+}
+
+function describeMachine(block) {
+  if (block?.kind === KIND_LOCAL) {
+    return 'this machine'
+  }
+
+  return `${block?.user ?? '?'}@${block?.host ?? '?'}`
+}
+
+function Field({ label, name, value, onChange, placeholder, disabled }) {
+  return jsxs('label', {
+    className: 'flex flex-col gap-1',
+    children: [
+      jsx('span', { className: joinClasses(TEXT_SMALL, TEXT_MUTED), children: label }),
+      jsx('input', {
+        className: INPUT_CLASS,
+        'data-onsite-field': name,
+        value,
+        placeholder,
+        disabled,
+        onChange: event => onChange(name, event.target.value)
+      })
+    ]
+  })
+}
+
+function MachineForm({ form, note, busy, onChange, onSave, onTest, onCancel }) {
+  const overSsh = form.kind === KIND_SSH
+
+  return jsxs('div', {
+    className: 'flex flex-col gap-2 rounded border border-(--ui-border) p-3',
+    'data-onsite-form': true,
+    children: [
+      jsx(Field, {
+        label: 'Name',
+        name: 'name',
+        value: form.name,
+        placeholder: 'laptop',
+        disabled: !form.isNew,
+        onChange
+      }),
+      jsxs('label', {
+        className: 'flex flex-col gap-1',
+        children: [
+          jsx('span', {
+            className: joinClasses(TEXT_SMALL, TEXT_MUTED),
+            children: 'Where it is'
+          }),
+          jsxs('select', {
+            className: INPUT_CLASS,
+            'data-onsite-field': 'kind',
+            value: form.kind,
+            onChange: event => onChange('kind', event.target.value),
+            children: [
+              jsx('option', { value: KIND_SSH, children: 'Another machine, over SSH' }),
+              jsx('option', { value: KIND_LOCAL, children: 'The machine Hermes runs on' })
+            ]
+          })
+        ]
+      }),
+      overSsh
+        ? jsx(Field, {
+            label: 'Address',
+            name: 'host',
+            value: form.host,
+            placeholder: 'laptop.example',
+            onChange
+          })
+        : null,
+      overSsh
+        ? jsx(Field, {
+            label: 'Log in as',
+            name: 'user',
+            value: form.user,
+            placeholder: 'you',
+            onChange
+          })
+        : null,
+      overSsh
+        ? jsx(Field, {
+            label: 'Port (leave empty for 22)',
+            name: 'port',
+            value: form.port,
+            placeholder: '22',
+            onChange
+          })
+        : null,
+      overSsh
+        ? jsx(Field, {
+            label: 'Key file (leave empty to use your SSH setup)',
+            name: 'key',
+            value: form.key,
+            placeholder: '',
+            onChange
+          })
+        : null,
+      jsxs('label', {
+        className: 'flex flex-col gap-1',
+        children: [
+          jsx('span', {
+            className: joinClasses(TEXT_SMALL, TEXT_MUTED),
+            children: 'Folders that belong to it, one a line'
+          }),
+          jsx('textarea', {
+            className: INPUT_CLASS,
+            'data-onsite-field': 'prefixes',
+            rows: 2,
+            value: form.prefixes,
+            placeholder: '/home/you/',
+            onChange: event => onChange('prefixes', event.target.value)
+          })
+        ]
+      }),
+      jsxs('label', {
+        className: 'flex items-center gap-2',
+        children: [
+          jsx('input', {
+            type: 'checkbox',
+            'data-onsite-field': 'isDefault',
+            checked: form.isDefault,
+            onChange: event => onChange('isDefault', event.target.checked)
+          }),
+          jsx('span', { children: 'Use it when no folder rule matches' })
+        ]
+      }),
+      note
+        ? jsx('div', { className: TEXT_MUTED, role: 'status', children: note })
+        : null,
+      jsxs('div', {
+        className: 'flex items-center gap-2',
+        children: [
+          jsx('button', {
+            type: 'button',
+            className: BUTTON_CLASS,
+            'data-onsite-save': true,
+            disabled: busy,
+            onClick: onSave,
+            children: 'Save'
+          }),
+          overSsh
+            ? jsx('button', {
+                type: 'button',
+                className: BUTTON_CLASS,
+                'data-onsite-test': true,
+                disabled: busy,
+                onClick: onTest,
+                children: 'Test connection'
+              })
+            : null,
+          jsx('button', {
+            type: 'button',
+            className: BUTTON_CLASS,
+            disabled: busy,
+            onClick: onCancel,
+            children: 'Cancel'
+          })
+        ]
+      })
+    ]
+  })
+}
+
+function MachineRow({ name, block, isDefault, busy, onEdit, onRemove }) {
+  return jsxs('div', {
+    className: 'flex items-center gap-2',
+    'data-onsite-machine': name,
+    children: [
+      jsxs('div', {
+        className: 'min-w-0 flex-1',
+        children: [
+          jsx('span', { className: 'font-medium', children: name }),
+          jsx('span', {
+            className: TEXT_MUTED,
+            children: `  ${describeMachine(block)}${isDefault ? '  (default)' : ''}`
+          })
+        ]
+      }),
+      jsx('button', {
+        type: 'button',
+        className: BUTTON_CLASS,
+        'data-onsite-edit': name,
+        disabled: busy,
+        onClick: onEdit,
+        children: 'Edit'
+      }),
+      jsx('button', {
+        type: 'button',
+        className: BUTTON_CLASS,
+        'data-onsite-remove': name,
+        disabled: busy || isDefault,
+        title: isDefault ? 'Make another machine the default first.' : '',
+        onClick: onRemove,
+        children: 'Remove'
+      })
+    ]
+  })
+}
+
+function describeTest(answer) {
+  if (!answer?.ok) {
+    return answer?.error || 'It could not be tested.'
+  }
+
+  if (answer.connected) {
+    return `Connected in ${answer.latency_ms} ms.`
+  }
+
+  return `No connection: ${answer.detail || 'no answer'}`
+}
+
+function MachinesPage() {
+  const [settings, setSettings] = useState(null)
+  const [form, setForm] = useState(null)
+  const [note, setNote] = useState('')
+  const [busy, setBusy] = useState(false)
+
+  // One request at a time. Each answer is the whole list again, so
+  // the page always shows what the settings file holds.
+  const ask = async (path, body, done) => {
+    setBusy(true)
+
+    try {
+      done(await send(path, body))
+    } catch (error) {
+      setNote(describeError(error))
+    }
+
+    setBusy(false)
+  }
+
+  const showList = answer => {
+    if (!answer?.ok) {
+      setNote(answer?.error || 'The settings could not be read.')
+
+      return
+    }
+
+    setSettings(answer)
+    setForm(null)
+    setNote(answer.problem || '')
+  }
+
+  useEffect(() => {
+    ask('/targets', {}, showList)
+  }, [])
+
+  const change = (name, value) => setForm({ ...form, [name]: value })
+
+  const save = () =>
+    ask(
+      '/targets/save',
+      {
+        name: form.name.trim(),
+        target: formToTarget(form),
+        default: form.isDefault
+      },
+      showList
+    )
+
+  const test = () =>
+    ask(
+      '/targets/test',
+      { name: form.name.trim(), target: formToTarget(form) },
+      answer => setNote(describeTest(answer))
+    )
+
+  const names = Object.keys(settings?.targets ?? {})
+
+  return jsxs('div', {
+    className: 'flex max-w-xl flex-col gap-3 text-[0.8125rem]',
+    'data-onsite-machines': true,
+    children: [
+      jsx('div', {
+        className: TEXT_MUTED,
+        children:
+          'The machines a session can run on. A session picks one from ' +
+          'the folder it is opened in.'
+      }),
+      names.map(name =>
+        jsx(
+          MachineRow,
+          {
+            name,
+            block: settings.targets[name],
+            isDefault: settings.default === name,
+            busy,
+            onEdit: () => {
+              setNote('')
+              setForm(
+                machineToForm(name, settings.targets[name], settings.default === name)
+              )
+            },
+            onRemove: () => ask('/targets/remove', { name }, showList)
+          },
+          name
+        )
+      ),
+      form
+        ? jsx(MachineForm, {
+            form,
+            note,
+            busy,
+            onChange: change,
+            onSave: save,
+            onTest: test,
+            onCancel: () => {
+              setForm(null)
+              setNote('')
+            }
+          })
+        : jsx('button', {
+            type: 'button',
+            className: joinClasses(BUTTON_CLASS, 'self-start'),
+            'data-onsite-add': true,
+            disabled: busy,
+            onClick: () => {
+              setNote('')
+              setForm({ ...EMPTY_MACHINE, isDefault: names.length === 0 })
+            },
+            children: 'Add a machine'
+          }),
+      !form && note
+        ? jsx('div', { className: TEXT_MUTED, role: 'status', children: note })
+        : null
+    ]
+  })
+}
+
+/* ------------------------------------------------------------------ */
 /* Registration                                                        */
 /* ------------------------------------------------------------------ */
 
 export default {
   id: ID,
   name: NAME,
-  description: 'Shows where this session runs and lets you run proposed commands.',
+  description:
+    'Shows where a session runs, opens folders on your machines and ' +
+    'runs the commands the agent proposes.',
   register(ctx) {
     plugin = ctx
 
@@ -655,6 +1280,15 @@ export default {
         name: DIRECTIVE,
         render: props => jsx(RunCard, props)
       }
+    })
+
+    // 5. MACHINES PAGE. Older apps have no settings pages; the
+    // machines can still be set up with `hermes onsite init`.
+    ctx.registerSettingsPage?.({
+      id: SETTINGS_PAGE_ID,
+      title: SETTINGS_PAGE_TITLE,
+      icon: SETTINGS_PAGE_ICON,
+      render: () => jsx(MachinesPage, {})
     })
 
     // Status comes from a live probe on the host each time. Nothing
