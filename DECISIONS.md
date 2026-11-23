@@ -685,6 +685,40 @@ Written Nov. 22, 2026, against Hermes v0.23.2.
   new name. The test profile was moved by hand and reports the
   laptop as connected through `hermes onsite status`.
 
+### 49. Machines are set up in the app, and any folder opens with no set-up
+
+- **Owner's call, Nov. 22.** A plugin headed for the catalog needs a
+  settings GUI for its SSH machines, and a streamlined way in.
+- **A mirror for every SSH target.** A target with no `mirror` named
+  gets one in the plugin's data folder. So a folder that exists only
+  on a machine can be opened with nothing configured.
+- **A folder browser in the pane.** It lists a machine's folders
+  live, one level at a time. Picking one makes its place on the host
+  and starts a session there with the app's own session calls, the
+  way Hermes' bundled chat plugin does. The mirror stays out of
+  sight.
+- **A Machines page in Settings.** Add, edit, test and remove
+  machines. Hermes' automatic settings form was not used: it shows a
+  nested block as one box of raw JSON.
+- **Saving.** Hermes' writer for plugin settings merges what it is
+  given into the file, so a machine removed from the block stayed
+  there. `hermes onsite init` had that flaw. Both now replace the
+  plugin's whole block through `hermes_cli.config`, which is public
+  plugin API and is what Hermes' bundled Kanban plugin uses. A
+  managed install is refused.
+- **Kept safe.** The default machine cannot be removed. A machine
+  that would not load is not saved. Settings the form does not show,
+  such as a path map, are sent back as they were.
+- **Older apps.** With no settings pages, the page is simply not
+  added. With no way to start a session, the folder's path is copied
+  for the person to open.
+- **Checked.** 26 unit tests and 15 desktop tests with real React.
+  On a real Hermes server the rig saves a machine, sees it in the
+  settings file, removes it, sees it gone, browses the laptop's home
+  and opens a folder that then routes to the laptop.
+- **Not checked.** Any of it in the real desktop app. The session
+  calls were read from the app's source, not seen working there.
+
 ## Open decisions from the brief
 
 | # | Decision | What the build did |
