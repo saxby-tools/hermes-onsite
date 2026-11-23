@@ -1,6 +1,6 @@
 """Hooks into the tool loop.
 
-Two jobs, and neither reroutes a tool call.
+Three jobs, and none reroutes a tool call.
 
 The first makes sure the file tools resolve paths against the same
 folder, on the same machine, as the terminal tool. The reasons are in
@@ -10,6 +10,9 @@ The second refuses an MCP tool that runs on one target when the
 session runs on another. Hermes loads MCP servers for a whole
 profile, so every session can see them. A session must still never
 act on a second machine by itself. See `mcptools`.
+
+The third tells an agent, once, that `/onsite` moved its session.
+Hermes adds the note to the user's next message. See `moves`.
 
 A session-open hook was tried, to learn a session's folder before
 its first message. Hermes fires that hook without the folder in
@@ -29,6 +32,7 @@ from .runtime import Runtime
 logger = logging.getLogger(__name__)
 
 HOOK_NAME = "pre_tool_call"
+TURN_HOOK_NAME = "pre_llm_call"
 ACTION_BLOCK = "block"
 FILE_TOOLS = frozenset({
     "read_file",
@@ -110,5 +114,52 @@ def build_hook(runtime: Runtime):
     return before_tool_call
 
 
+def session_names() -> list[str]:
+    """The ids Hermes itself has for the session in this turn.
+
+    The hook is handed two ids. These two more are asked for because
+    the slash command may have filed the move under either.
+    """
+
+    from . import compat
+
+    names = []
+
+    for read in (compat.environment_key, compat.current_session_id):
+        try:
+            names.append(str(read() or ""))
+        except Exception:
+            logger.debug("onsite: no session name", exc_info=True)
+
+    return names
+
+
+def build_turn_hook(runtime: Runtime):
+    def before_turn(session_id: str = "", task_id: str = "", **kwargs):
+        move = runtime.moves.take(
+            task_id or "",
+            session_id or "",
+            *session_names(),
+        )
+
+        if move is None:
+            return None
+
+        try:
+            config = runtime.load_config()
+        except ConfigError:
+            return None
+
+        # The target can be removed between the move and the turn.
+        # The terminal tool reports that itself, in its own words.
+        if move.after not in config.targets:
+            return None
+
+        return {"context": messages.format_move_note(move, config)}
+
+    return before_turn
+
+
 def register(ctx, runtime: Runtime) -> None:
     ctx.register_hook(HOOK_NAME, build_hook(runtime))
+    ctx.register_hook(TURN_HOOK_NAME, build_turn_hook(runtime))
