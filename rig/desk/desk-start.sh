@@ -31,11 +31,30 @@ while ! xdpyinfo >/dev/null 2>&1; do
     sleep 0.1
 done
 
+# The terminal waits for the window manager. A window that is on
+# screen first is never given the keyboard, and the first click on it
+# does nothing, which no real desktop does to a person.
+#
 # The VNC server stays in front so the session lives as long as it
 # does. Loopback only and no password: it is reached through SSH.
 exec dbus-run-session -- sh -c '
     openbox &
+
+    step=0
+
+    while ! xprop -root _NET_SUPPORTING_WM_CHECK 2>/dev/null \
+        | grep -q "window id"; do
+        step=$((step + 1))
+
+        if [ "${step}" -gt "$1" ]; then
+            echo "desk: the window manager never came up" >&2
+            exit 1
+        fi
+
+        sleep 0.1
+    done
+
     xterm -geometry "$0" -title desk-terminal &
     exec x11vnc -display "${DISPLAY}" -localhost -nopw -forever \
         -shared -quiet
-' "${TERMINAL_PLACE}"
+' "${TERMINAL_PLACE}" "${WAIT_STEPS}"
