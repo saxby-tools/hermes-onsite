@@ -19,6 +19,7 @@ import shlex
 
 from dataclasses import dataclass
 
+from .config import DEFAULT_SSH_PORT
 from .config import PATH_MODE_INTERACTIVE
 from .config import TargetSpec
 
@@ -28,6 +29,11 @@ from .config import TargetSpec
 # acceptance bar is five.
 KEEPALIVE_INTERVAL = 1
 KEEPALIVE_COUNT = 3
+
+# A server or a driver that talks over the link for a whole
+# session. A dead link is noticed in 45 seconds.
+STDIO_ALIVE_INTERVAL = 15
+STDIO_ALIVE_COUNT = 3
 
 INHIBIT_NONE = "none"
 INHIBIT_BLOCK = "block"
@@ -53,6 +59,19 @@ PATH_SCRIPT = (
     f"printf '%s\\n' {PATH_BEGIN}\n"
     '"${SHELL:-sh}" -ic \'printf "%s\\n" "$PATH"\' 2>/dev/null </dev/null\n'
     f"printf '%s\\n' {PATH_END}\n"
+)
+
+QUIET_PATH_MARK = "__HANDS_QUIET_PATH__"
+
+# Many people build PATH in a file only an interactive shell reads,
+# so `npx` or `uvx` would not be found. The interactive shell is asked
+# for PATH with its output captured and its input closed. Nothing it
+# prints can reach the server's own input or output.
+QUIET_PATH_LINES = (
+    "p=$(\"${SHELL:-sh}\" -ic "
+    f"'printf \"\\n{QUIET_PATH_MARK}%s\\n\" \"$PATH\"' 2>/dev/null </dev/null "
+    f"| sed -n 's/^{QUIET_PATH_MARK}//p' | tail -n 1); "
+    '[ -n "$p" ] && PATH="$p" && export PATH; '
 )
 
 # A remote login may only take a delay lock, or none. Each mode is
@@ -105,6 +124,41 @@ def build_ssh_options(spec: TargetSpec) -> list[str]:
         options += ["-o", f"HostKeyAlias={spec.host_key_alias}"]
 
     return options
+
+
+def build_stdio_arguments(spec: TargetSpec, script: str) -> list[str]:
+    """Everything after `ssh` for a program that talks over the link.
+
+    The program's input and output are the link itself, so nothing
+    else may write to it: no terminal, no prompt, no warning line.
+    """
+
+    arguments = [
+        "-T",
+        "-o", "BatchMode=yes",
+        "-o", f"ConnectTimeout={spec.connect_timeout}",
+        "-o", f"ServerAliveInterval={STDIO_ALIVE_INTERVAL}",
+        "-o", f"ServerAliveCountMax={STDIO_ALIVE_COUNT}",
+        "-o", "StrictHostKeyChecking=accept-new",
+        "-o", "LogLevel=ERROR",
+    ]
+
+    if spec.port != DEFAULT_SSH_PORT:
+        arguments += ["-p", str(spec.port)]
+
+    if spec.key:
+        arguments += ["-i", spec.key]
+
+    if spec.known_hosts:
+        arguments += ["-o", f"UserKnownHostsFile={spec.known_hosts}"]
+
+    if spec.host_key_alias:
+        arguments += ["-o", f"HostKeyAlias={spec.host_key_alias}"]
+
+    # The login shell on a target may not be POSIX. `sh` always is.
+    arguments += [f"{spec.user}@{spec.host}", "sh -c " + shlex.quote(script)]
+
+    return arguments
 
 
 def build_setup_script(spec: TargetSpec) -> str:
