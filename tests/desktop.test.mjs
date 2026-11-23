@@ -106,7 +106,7 @@ function atom(initial) {
 }
 
 function createHost() {
-  const calls = { submit: [], notify: [], reveal: [] }
+  const calls = { submit: [], notify: [], reveal: [], rpc: [], opened: [] }
 
   const host = {
     state: {
@@ -123,7 +123,15 @@ function createHost() {
       }
     },
     notify: message => calls.notify.push(message),
-    revealPane: id => calls.reveal.push(id)
+    revealPane: id => calls.reveal.push(id),
+    request: async (method, params) => {
+      calls.rpc.push([method, params])
+
+      return { session_id: 'runtime-new', stored_session_id: 'stored-new' }
+    },
+    openSession: async (id, options) => {
+      calls.opened.push([id, options])
+    }
   }
 
   return { host, calls }
@@ -183,7 +191,10 @@ async function loadPlugin(require, host) {
 }
 
 function createContext(backend) {
-  const made = { contributions: {}, intervals: [], events: {}, copied: [], requests: [] }
+  const made = {
+    contributions: {}, intervals: [], events: {}, copied: [], requests: [],
+    pages: []
+  }
 
   const ctx = {
     register: item => {
@@ -200,7 +211,14 @@ function createContext(backend) {
         return backend.status
       }
 
+      if (backend.routes[route]) {
+        return backend.routes[route](options?.body)
+      }
+
       return { items: backend.proposals }
+    },
+    registerSettingsPage: page => {
+      made.pages.push(page)
     },
     setInterval: fn => {
       made.intervals.push(fn)
@@ -234,7 +252,7 @@ async function setup() {
   const { createRoot } = require('react-dom/client')
   const { host, calls } = createHost()
   const plugin = await loadPlugin(require, host)
-  const backend = { status: UP, proposals: [], fail: '' }
+  const backend = { status: UP, proposals: [], fail: '', routes: {} }
   const { ctx, made } = createContext(backend)
 
   const mount = async node => {
@@ -458,3 +476,268 @@ test('a failed send tells the user what to type instead', { skip: SKIP }, async 
   assert.equal(run.textContent, 'Run')
   assert.match(calls.notify[0].message, /Type \/run 4/)
 })
+
+/* ------------------------------------------------------------------ */
+/* 4. FOLDER BROWSER                                                   */
+/* ------------------------------------------------------------------ */
+
+const TWO_MACHINES = {
+  ...UP,
+  rows: [
+    { name: 'laptop', kind: 'ssh', label: 'laptop (dev@laptop.example)', connected: true },
+    { name: 'mac', kind: 'local', label: 'mac (this machine)', connected: true }
+  ]
+}
+
+const LISTINGS = {
+  '~': { ok: true, path: '/home/dev', parent: '/home', folders: ['notes', 'work'] },
+  '/home/dev/work': { ok: true, path: '/home/dev/work', parent: '/home/dev', folders: [] }
+}
+
+async function openBrowser() {
+  const made = await setup()
+
+  made.backend.status = TWO_MACHINES
+  made.backend.routes['/browse'] = body => LISTINGS[body.path]
+  made.backend.routes['/open'] = body => ({
+    ok: true,
+    target: body.target,
+    cwd: `/host/mirror/laptop${body.path}`
+  })
+
+  await made.settle(made.made.intervals[0])
+
+  const box = await made.mount(made.made.contributions.pane.render())
+
+  return { ...made, box }
+}
+
+test('the pane offers folders only for machines reached over SSH', { skip: SKIP }, async () => {
+  const { box } = await openBrowser()
+  const options = [...box.querySelectorAll('[data-onsite-browser] option')]
+
+  assert.deepEqual(options.map(option => option.value), ['laptop'])
+})
+
+test('browsing asks the machine, one folder at a time', { skip: SKIP }, async () => {
+  const { box, click, made } = await openBrowser()
+
+  await click(box.querySelector('[data-onsite-browse]'))
+
+  const names = () =>
+    [...box.querySelectorAll('[data-onsite-folder]')].map(row => row.textContent)
+
+  assert.deepEqual(names(), ['..', 'notes', 'work'])
+  assert.equal(box.querySelector('[data-onsite-path]').textContent, '/home/dev')
+
+  await click(box.querySelector('[data-onsite-folder="work"]'))
+
+  assert.equal(box.querySelector('[data-onsite-path]').textContent, '/home/dev/work')
+
+  const asked = made.requests.filter(([route]) => route === '/browse')
+
+  assert.deepEqual(asked.map(([, options]) => options.body), [
+    { target: 'laptop', path: '~' },
+    { target: 'laptop', path: '/home/dev/work' }
+  ])
+})
+
+test('picking a folder starts a session in its place on the host', { skip: SKIP }, async () => {
+  const { box, calls, click } = await openBrowser()
+
+  await click(box.querySelector('[data-onsite-browse]'))
+  await click(box.querySelector('[data-onsite-folder="work"]'))
+  await click(box.querySelector('[data-onsite-open]'))
+
+  assert.deepEqual(calls.rpc, [
+    ['session.create', { cwd: '/host/mirror/laptop/home/dev/work', cwd_explicit: true }],
+    ['session.title', { session_id: 'runtime-new', title: 'work on laptop' }]
+  ])
+  assert.deepEqual(calls.opened, [['stored-new', { expectHistory: false }]])
+})
+
+test('a session is started in the profile the app is on', { skip: SKIP }, async () => {
+  const { box, calls, click, host } = await openBrowser()
+
+  host.state.profile = atom('buster')
+
+  await click(box.querySelector('[data-onsite-browse]'))
+  await click(box.querySelector('[data-onsite-open]'))
+
+  assert.equal(calls.rpc[0][1].profile, 'buster')
+})
+
+test('an app that cannot start sessions is given the folder to open', { skip: SKIP }, async () => {
+  const { box, calls, click, host, made } = await openBrowser()
+
+  delete host.request
+
+  await click(box.querySelector('[data-onsite-browse]'))
+  await click(box.querySelector('[data-onsite-open]'))
+
+  assert.deepEqual(made.copied, ['/host/mirror/laptop/home/dev'])
+  assert.equal(calls.opened.length, 0)
+  assert.match(JSON.stringify(calls.notify), /Open this folder to work there/)
+})
+
+test('a machine that cannot be listed says why', { skip: SKIP }, async () => {
+  const { backend, box, click } = await openBrowser()
+
+  backend.routes['/browse'] = () => ({ ok: false, error: 'Connection refused' })
+
+  await click(box.querySelector('[data-onsite-browse]'))
+
+  assert.equal(box.querySelector('[role="alert"]').textContent, 'Connection refused')
+  assert.equal(box.querySelector('[data-onsite-open]'), null)
+})
+
+/* ------------------------------------------------------------------ */
+/* 5. MACHINES PAGE                                                    */
+/* ------------------------------------------------------------------ */
+
+const SAVED = {
+  ok: true,
+  default: 'mac',
+  problem: '',
+  targets: {
+    laptop: {
+      kind: 'ssh',
+      host: 'laptop.example',
+      user: 'dev',
+      prefixes: ['/home/dev/'],
+      path_map: { '/Users/dev/Development': '/home/dev/Development' }
+    },
+    mac: { kind: 'local' }
+  }
+}
+
+async function openMachines() {
+  const made = await setup()
+
+  made.backend.routes['/targets'] = () => SAVED
+  made.backend.routes['/targets/save'] = () => SAVED
+  made.backend.routes['/targets/remove'] = () => SAVED
+  made.backend.routes['/targets/test'] = () => ({
+    ok: true,
+    connected: true,
+    detail: '',
+    latency_ms: 41
+  })
+
+  const page = made.made.pages[0]
+  const box = await made.mount(page.render())
+
+  await made.settle()
+
+  return { ...made, box, page }
+}
+
+test('it adds a Machines page to Settings', { skip: SKIP }, async () => {
+  const { page } = await openMachines()
+
+  assert.equal(page.id, 'machines')
+  assert.equal(page.title, 'Machines')
+})
+
+test('the page lists the machines in the settings', { skip: SKIP }, async () => {
+  const { box } = await openMachines()
+  const rows = [...box.querySelectorAll('[data-onsite-machine]')]
+
+  assert.deepEqual(rows.map(row => row.getAttribute('data-onsite-machine')), ['laptop', 'mac'])
+  assert.match(rows[0].textContent, /dev@laptop\.example/)
+  assert.match(rows[1].textContent, /this machine.*\(default\)/)
+})
+
+test('the default machine cannot be removed from the page', { skip: SKIP }, async () => {
+  const { box } = await openMachines()
+
+  assert.equal(box.querySelector('[data-onsite-remove="mac"]').disabled, true)
+  assert.equal(box.querySelector('[data-onsite-remove="laptop"]').disabled, false)
+})
+
+test('saving keeps the settings the form does not show', { skip: SKIP }, async () => {
+  const { box, click, made } = await openMachines()
+
+  await click(box.querySelector('[data-onsite-edit="laptop"]'))
+
+  assert.equal(box.querySelector('[data-onsite-field="host"]').value, 'laptop.example')
+  assert.equal(box.querySelector('[data-onsite-field="name"]').disabled, true)
+
+  await click(box.querySelector('[data-onsite-save]'))
+
+  const [, options] = made.requests.find(([route]) => route === '/targets/save')
+
+  assert.equal(options.body.name, 'laptop')
+  assert.equal(options.body.default, false)
+  assert.deepEqual(options.body.target, {
+    kind: 'ssh',
+    host: 'laptop.example',
+    user: 'dev',
+    port: '',
+    key: '',
+    mirror: '',
+    prefixes: ['/home/dev/'],
+    path_map: { '/Users/dev/Development': '/home/dev/Development' }
+  })
+})
+
+test('a machine can be tested before it is saved', { skip: SKIP }, async () => {
+  const { box, click, made } = await openMachines()
+
+  await click(box.querySelector('[data-onsite-edit="laptop"]'))
+  await click(box.querySelector('[data-onsite-test]'))
+
+  assert.equal(box.querySelector('[role="status"]').textContent, 'Connected in 41 ms.')
+  assert.equal(made.requests.some(([route]) => route === '/targets/save'), false)
+})
+
+test('a refused save keeps the form open and says why', { skip: SKIP }, async () => {
+  const { backend, box, click } = await openMachines()
+
+  backend.routes['/targets/save'] = () => ({
+    ok: false,
+    error: '`laptop.host` is required for an ssh target'
+  })
+
+  await click(box.querySelector('[data-onsite-edit="laptop"]'))
+  await click(box.querySelector('[data-onsite-save]'))
+
+  assert.notEqual(box.querySelector('[data-onsite-form]'), null)
+  assert.match(box.querySelector('[role="status"]').textContent, /is required/)
+})
+
+test('removing a machine asks the host to take it out', { skip: SKIP }, async () => {
+  const { box, click, made } = await openMachines()
+
+  await click(box.querySelector('[data-onsite-remove="laptop"]'))
+
+  const [, options] = made.requests.find(([route]) => route === '/targets/remove')
+
+  assert.deepEqual(options.body, { name: 'laptop' })
+})
+
+test('this machine has no address fields', { skip: SKIP }, async () => {
+  const { box, click } = await openMachines()
+
+  await click(box.querySelector('[data-onsite-edit="mac"]'))
+
+  assert.equal(box.querySelector('[data-onsite-field="host"]'), null)
+  assert.equal(box.querySelector('[data-onsite-test]'), null)
+})
+
+test('an app with no settings pages still loads the plugin', { skip: SKIP }, async () => {
+  const require = createRequire(path.join(REACT_DOM, 'package.json'))
+
+  installDom(require)
+
+  const { host } = createHost()
+  const plugin = await loadPlugin(require, host)
+  const { ctx, made } = createContext({ status: UP, proposals: [], fail: '', routes: {} })
+
+  delete ctx.registerSettingsPage
+  plugin.register(ctx)
+
+  assert.notEqual(made.contributions.chip, undefined)
+  assert.equal(made.pages.length, 0)
+})
+
