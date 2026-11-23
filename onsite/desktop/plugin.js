@@ -58,6 +58,18 @@ const SETTINGS_PAGE_ICON = 'remote'
 
 const KIND_SSH = 'ssh'
 const KIND_LOCAL = 'local'
+
+// How a machine's screen is reached. `auto` is what the host assumes
+// when the setting is absent, so it is saved as an empty value.
+const SCREEN_AUTO = 'auto'
+const SCREEN_ROUTES = [
+  [SCREEN_AUTO, "Hermes' driver if it is installed there, else screen sharing"],
+  ['driver', "Hermes' driver, installed on that machine"],
+  ['sharing', "The machine's own screen sharing"]
+]
+// The host's settings for a screen. A machine Hermes runs on keeps
+// Hermes' own, so these are dropped for it.
+const SCREEN_KEYS = ['screen', 'screen_port', 'screen_password_env']
 const HOME_FOLDER = '~'
 
 const INPUT_CLASS =
@@ -76,6 +88,7 @@ const EMPTY_MACHINE = {
   key: '',
   prefixes: '',
   mirror: '',
+  screen: SCREEN_AUTO,
   isDefault: false,
   isNew: true
 }
@@ -903,6 +916,7 @@ function machineToForm(name, block, isDefault) {
     key: block?.key ?? '',
     prefixes: (block?.prefixes ?? []).join('\n'),
     mirror: block?.mirror ?? '',
+    screen: block?.screen ?? SCREEN_AUTO,
     isDefault,
     isNew: false,
     // Settings this form does not show are kept as they were.
@@ -924,6 +938,10 @@ function formToTarget(form) {
     delete target.key
     delete target.mirror
 
+    for (const key of SCREEN_KEYS) {
+      delete target[key]
+    }
+
     return target
   }
 
@@ -932,6 +950,7 @@ function formToTarget(form) {
   target.key = form.key.trim()
   target.mirror = form.mirror.trim()
   target.port = form.port.trim() === '' ? '' : Number(form.port)
+  target.screen = form.screen === SCREEN_AUTO ? '' : form.screen
 
   return target
 }
@@ -1029,6 +1048,26 @@ function MachineForm({ form, note, busy, onChange, onSave, onTest, onCancel }) {
             value: form.key,
             placeholder: '',
             onChange
+          })
+        : null,
+      overSsh
+        ? jsxs('label', {
+            className: 'flex flex-col gap-1',
+            children: [
+              jsx('span', {
+                className: joinClasses(TEXT_SMALL, TEXT_MUTED),
+                children: 'Its screen is reached by'
+              }),
+              jsx('select', {
+                className: INPUT_CLASS,
+                'data-onsite-field': 'screen',
+                value: form.screen,
+                onChange: event => onChange('screen', event.target.value),
+                children: SCREEN_ROUTES.map(([value, label]) =>
+                  jsx('option', { value, children: label }, value)
+                )
+              })
+            ]
           })
         : null,
       jsxs('label', {
