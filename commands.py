@@ -4,9 +4,13 @@ from __future__ import annotations
 
 import logging
 import os
+import shlex
+import shutil
+import subprocess
 import sys
 
 from . import dialout
+from . import mcptools
 from . import messages
 from . import mirror
 from . import wizard
@@ -343,6 +347,47 @@ def cli_open(runtime: Runtime, args) -> int:
     return EXIT_OK
 
 
+def cli_mcp(runtime: Runtime, args) -> int:
+    try:
+        config = runtime.load_config()
+    except ConfigError as error:
+        print(error)
+        return EXIT_USAGE
+
+    if args.target not in config.targets:
+        print(f"`{args.target}` is not a target.")
+        return EXIT_USAGE
+
+    spec = config.target(args.target)
+    words = list(args.server_command)
+    mode = MODE_LIVE if args.apply else MODE_DRY
+
+    try:
+        call = mcptools.add_command(spec, args.name, words)
+        server = mcptools.server_name(spec, args.name)
+    except mcptools.McpError as error:
+        print(error)
+        return EXIT_USAGE
+
+    print(messages.format_mcp_add(
+        mode,
+        spec,
+        server,
+        shlex.join(words),
+        shlex.join(call),
+        args.apply,
+    ))
+
+    if not args.apply:
+        return EXIT_OK
+
+    # Hermes owns the MCP settings and may ask which tools to keep,
+    # so its own command does the adding. It inherits this profile.
+    call[0] = shutil.which(mcptools.HERMES_BINARY) or call[0]
+
+    return subprocess.run(call, check=False).returncode
+
+
 def cli_dial_out(ctx, args) -> int:
     name = args.target
     mode = MODE_LIVE if args.apply else MODE_DRY
@@ -482,6 +527,24 @@ def setup_cli(parser) -> None:
         help="make the folder. Without it, its place is only shown.",
     )
 
+    served = actions.add_parser(
+        "mcp",
+        help="show how to add an MCP server that runs on a target.",
+    )
+    served.add_argument("target", help="the target the server runs on.")
+    served.add_argument("name", help="a short name for the server.")
+    served.add_argument(
+        "--apply",
+        action="store_true",
+        help="add the server. Without it, the call is only shown.",
+    )
+    served.add_argument(
+        "server_command",
+        nargs="*",
+        metavar="-- COMMAND",
+        help="after `--`, the command that starts the server there.",
+    )
+
     dialed = actions.add_parser(
         "dial-out",
         help="set up a machine this host cannot reach, which dials "
@@ -528,6 +591,9 @@ def build_cli_handler(ctx, runtime: Runtime):
 
         if action == "dial-out":
             return cli_dial_out(ctx, args)
+
+        if action == "mcp":
+            return cli_mcp(runtime, args)
 
         return cli_status(runtime, args)
 
