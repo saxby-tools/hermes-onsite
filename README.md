@@ -173,6 +173,9 @@ plugins:
 | `connect_timeout` | ssh | Seconds. Default 3. |
 | `mirror` | ssh | Where on the host the target's folder names are kept. Default: the plugin's data folder. |
 | `mirror_depth` | ssh | Levels under the target's home to mirror. Default 3. |
+| `screen` | ssh | How its screen is reached: `auto` (default), `driver` or `sharing`. See [Screen control](#screen-control-on-a-target). |
+| `screen_port` | ssh | The port its screen sharing listens on. Default 5900. |
+| `screen_password_env` | ssh | The name of an environment variable that holds its VNC password. Never the password itself. |
 
 **`path_map`** is for when the two machines name one folder
 differently. A host that mounts your laptop's `~/Development` at
@@ -275,16 +278,56 @@ Hermes' `computer_use` tool can act on a target's screen. It follows
 the session: a session on the host keeps the host's screen, and a
 session on a target gets that target's.
 
-It works by running Hermes' own screen driver on the target and
-talking to it over the SSH link. The plugin never installs that
-driver. This checks a target and says what is missing:
+There are two ways to a target's screen.
+
+| Route | Needs on the target | What Hermes gets |
+| --- | --- | --- |
+| Hermes' driver | Hermes' own screen driver, installed by you | Windows and buttons by name, and a check that a click landed |
+| Screen sharing | The screen sharing the machine already has | Pixels only. Hermes clicks by position and looks again to see what happened |
+
+A target is left on `screen: auto`. It uses the driver when the
+target has one, and screen sharing when not. Set `screen: driver` or
+`screen: sharing` to choose. The plugin never installs anything on a
+target. This checks a target, names the route it would use and says
+what is missing:
 
 ```bash
 hermes onsite screen laptop
 ```
 
-Then link the screen backend into place and select it. The first
-command is a dry run until you add `--apply`:
+**Hermes' driver.** The driver runs on the target and talks to
+Hermes over the SSH link. Install it there yourself, with
+`hermes computer-use install` or as its own project describes.
+
+**Screen sharing.** Turn on the target's screen sharing so that it
+listens only on the target itself, at `127.0.0.1`. The plugin reaches
+it through SSH, so nothing is opened in a firewall and SSH stays the
+lock. The target's SSH server has to allow forwarding, which it does
+unless someone turned it off. Screen sharing here means VNC:
+
+- On Linux with X11, `x11vnc -localhost -nopw -forever -shared`
+  shares the desktop you are logged in to.
+- On a Mac, turn on Screen Sharing, then "VNC viewers may control
+  screen with password" in its settings. A Mac always asks for that
+  password.
+- GNOME's own sharing on Wayland speaks RDP, not VNC. It is not
+  covered.
+
+A VNC password goes in an environment variable, never in the
+settings. Put `LAPTOP_SCREEN_PASSWORD=...` in the profile's `.env`
+file and name the variable:
+
+```yaml
+laptop:
+  kind: ssh
+  host: laptop.example
+  user: you
+  screen: sharing
+  screen_password_env: LAPTOP_SCREEN_PASSWORD
+```
+
+**Turn it on.** Link the screen backend into place and select it.
+The first command is a dry run until you add `--apply`:
 
 ```bash
 hermes onsite screen-install --apply
@@ -295,11 +338,14 @@ hermes config set computer_use.backend onsite-screen
 ```
 
 Hermes' own approval prompt and hard blocks still stand in front of
-every click and keystroke. The prompt does not name the machine, so
-check the status chip or `/onsite` when it matters.
+every click and keystroke, on both routes. The prompt does not name
+the machine, so check the status chip or `/onsite` when it matters.
 
-This is new and narrowly tested: on a Linux X11 desktop in the test
-rig, with Hermes' pinned driver. See [What is tested](#what-is-tested).
+This is new and narrowly tested. The driver has run on a Linux X11
+desktop in the test rig, with Hermes' pinned version. Screen sharing
+has run against `x11vnc` in the same rig, with and without a
+password. Neither has been tried on a Mac. See
+[What is tested](#what-is-tested).
 
 ## Use
 
@@ -355,9 +401,11 @@ there, as the account you named, with everything that account may do.
 The commands and edits are the ones the agent asks for. Hermes'
 approval prompt is the only gate. While a command runs it may hold a
 sleep lock (`systemd-inhibit` or `caffeinate`). To check a screen it
-reads the environment of your own desktop processes. With screen
-control on, it starts Hermes' screen driver there, which can see the
-screen and send clicks and keys. It installs nothing on a target.
+reads the environment of your own desktop processes and asks its
+screen sharing to answer. With screen control on, it starts Hermes'
+screen driver there, or connects to the screen sharing the target
+already runs. Either can see the screen and send clicks and keys. It
+installs nothing on a target.
 
 **On the host.** It starts `ssh` processes: one kept open per target
 while sessions use it, one for each MCP server you add, and one per
@@ -369,7 +417,10 @@ commands the agent has proposed. A mirror makes empty folders under
 the folder you name, and nothing else.
 
 **Your keys.** It uses the `ssh` program and whatever keys your SSH
-setup offers. It never reads, copies or stores a key.
+setup offers. It never reads, copies or stores a key. A VNC password,
+when a target's screen sharing asks for one, is read from the
+environment variable you name each time a link opens. The plugin
+never writes it down.
 
 **The network.** It opens SSH connections to the targets you name
 and nothing else. It sends no telemetry and calls no other service.
@@ -421,6 +472,14 @@ Read these before trusting it with real work.
   different profile. It names the one it asked.
 - **Before the first message,** `/onsite` cannot know a session's
   folder and says so.
+- **Screen sharing sees pixels.** On that route Hermes cannot name a
+  button, list windows or check that a click did what was meant. It
+  clicks by position and looks again. The driver route is the better
+  one where you can install it.
+- **A VNC password is weak.** It is cut to eight characters and
+  protected by a cipher broken long ago. That is the protocol, not
+  the plugin. Keep screen sharing on the target's loopback address,
+  where only SSH can reach it.
 - **One slow case.** A target that freezes in the few seconds before
   a call can take about seven seconds to report, not three.
 - **Host-only guards.** Hermes guards keyed on the backend name
@@ -438,17 +497,28 @@ Read these before trusting it with real work.
 | --- | --- | --- | --- |
 | 1 | Routing, file tools, approvals | 18 | Pass |
 | 2 | A stopped, a frozen and a returning target | 20 | Pass |
-| 3 | `/onsite`, `/run`, `hermes onsite`, CLI and TUI | 28 | Pass |
+| 3 | `/onsite`, `/run`, `hermes onsite`, CLI and TUI | 31 | Pass |
 | 4 | Routes for status, machines and folders; desktop plugin logic | 17 | Pass |
-| Screen | A target's screen: look, deny, approve | 8 | Pass |
+| Share | A target's screen through screen sharing, with no Hermes session: link, pixels, typing, a drag, each button | 8 | Pass |
+| Screen | A target's screen through a Hermes session and its approval prompt: look, deny, approve | 8 | Passed on Nov. 22. Not run since: see below |
 | 5 | A person at the real clients | 0 | Not run |
 
-The same checks pass twice: against a container on the host, and
-against a real Linux laptop over a real network. The laptop run adds
-three checks of the sleep lock, for 86 in all. The screen checks run
-on a container with its own desktop. The output of each run
-is in [rig/results/](rig/results/). The laptop's files start with
-`real-`.
+Phases 1 to 4 pass twice: against a container on the host, 86
+checks, and against a real Linux laptop over a real network. The
+laptop run adds three checks of the sleep lock, for 89 in all. The
+two screen phases run on a container with its own desktop. The output
+of each run is in [rig/results/](rig/results/). The laptop's files
+start with `real-`.
+
+The screen phase goes through the Hermes gateway. It passed with
+Hermes' driver before the plugin moved into its own folder. The
+gateway on the build machine has run since before that move and holds
+an old copy of the screen backend, so the phase cannot pass there
+until that gateway is restarted, which this build does not do. In
+its place, both routes were run inside a fresh Hermes process against
+the same desktop, through Hermes' own tool code: a capture, a click,
+a typed line and a key each landed. The screen phase has never run
+over screen sharing.
 
 One real-model command has also run from the host's copy of a shared
 folder and landed on the laptop, as the laptop's user.
@@ -474,6 +544,8 @@ Not yet tested by anyone:
 - Screen control on macOS, on Wayland, or on any desktop a
   person is using. It has run only against the rig's own X11
   desktop.
+- Screen sharing against any server but `x11vnc`, on a Mac, or
+  through a Hermes session's approval prompt.
 - A machine that dials out from its own side. The rig opens the
   same kind of link from the host.
 
@@ -481,10 +553,11 @@ Not yet tested by anyone:
 
 ### Run the tests
 
-Unit tests need nothing but `pytest`:
+Unit tests need `pytest`. Six of them also need the two packages
+Hermes ships for pictures and ciphers, and are skipped without them:
 
 ```bash
-uv run --no-project --with pytest python -m pytest
+uv run --no-project --with pytest --with pillow --with cryptography python -m pytest
 ```
 
 The desktop tests borrow React and jsdom from a Hermes checkout:
@@ -513,10 +586,23 @@ python3 rig/run.py --apply --real you@laptop.example
 ```
 
 Screen control is tested on a container with a desktop nobody looks
-at and Hermes' own screen driver. Its results start with `desk-`:
+at, Hermes' own screen driver and a VNC server. Its results start
+with `desk-`. The `screen` phase goes through a Hermes session and
+its approval prompt. Add `--share` to run it over screen sharing:
 
 ```bash
 python3 rig/run.py --apply --desk --phase screen
+```
+
+```bash
+python3 rig/run.py --apply --desk --share --phase screen
+```
+
+The `share` phase drives the same desktop with the plugin's own
+code and no Hermes session, so it needs no running gateway:
+
+```bash
+python3 rig/run.py --apply --desk --phase share
 ```
 
 It swaps the test profile's `config.yaml` for the run and puts it
@@ -539,9 +625,12 @@ onsite/              the plugin: all that an install puts on a host
   mirror.py          a names-only copy of a target's folders
   dialout.py         set-up text for a machine that dials out
   mcptools.py        MCP servers that run on a target
-  screen.py          find a target's desktop and screen driver
-  screenbackend.py   Hermes' screen backend, on a target
-  onsite-screen/     the folder Hermes finds that backend by
+  screen.py          find a target's desktop, and pick a route to it
+  screenbackend.py   Hermes' screen driver, run on a target
+  rfb.py             the screen-sharing (VNC) protocol
+  screenshare.py     clicks, keys and pictures over screen sharing
+  sharebackend.py    Hermes' screen tool, through screen sharing
+  onsite-screen/     the folder Hermes finds the screen backend by
   exits.py           the four ways a command can end
   hooks.py           file tools on the right folder, MCP tools on
                      the right machine, a note after a move
