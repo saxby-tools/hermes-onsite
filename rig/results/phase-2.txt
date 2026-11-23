@@ -2,14 +2,14 @@
 
 == Phase 2.1: the target stops under a live session
   PASS  the session works before the outage
-  --- terminal: pwd + 2 commands [failed, 0.05s]
+  --- terminal: pwd + 2 commands [failed, 0.06s]
   | terminal result
   | - **output:** ssh: connect to host 127.0.0.1 port 2222: Connection refused
   | [onsite: no exit status from laptop (dev@127.0.0.1): ssh: connect to host 127.0.0.1 port 2222: Connection refused. The command may have run, may still be running, or may not have started. It was not retried.]
   | - **exit_code:** 255
   PASS  the error names the target
   PASS  it arrives within 5 seconds
-        took 0.05s
+        took 0.06s
   PASS  it says the command was not retried
   --- terminal: pwd + 2 commands [failed, 0.01s]
   | terminal result
@@ -19,11 +19,11 @@
         took 0.01s
   PASS  it still names the target
   waiting 11s for the cooldown
-  --- terminal: pwd + 2 commands [completed, 0.18s]
+  --- terminal: pwd + 2 commands [completed, 0.16s]
   | terminal result
   | - **output:** /home/dev/Development/sample
   | dev
-  | 35beffa072ba
+  | 6450437cf83a
   | - **exit_code:** 0
   PASS  service resumes with no restart once the target is back
 
@@ -38,13 +38,13 @@
 == Phase 2.3: the target freezes, as a sleeping laptop
   PASS  the session works before the freeze
   idle for 6s, then a tool call
-  --- terminal: pwd + 2 commands [failed, 3.06s]
+  --- terminal: pwd + 2 commands [failed, 3.18s]
   | terminal result
   | - **output:** [onsite: onsite target laptop (dev@127.0.0.1) is unreachable: Connection timed out during banner exchange. No command was run and nothing was retried. The target is checked again in about 10s.]
   | - **exit_code:** 255
   PASS  the error names the target
   PASS  it arrives within 5 seconds
-        took 3.06s
+        took 3.18s
   PASS  the command was never sent
   PASS  the next call fails at once
         took 0.01s
@@ -53,13 +53,13 @@
   | terminal result
   | - **output:** /home/dev/Development/sample
   | dev
-  | 35beffa072ba
+  | 6450437cf83a
   | - **exit_code:** 0
   PASS  service resumes with no restart once the target wakes
 
 == Phase 2.4: the target freezes just before a call
   PASS  the session works before the freeze
-  --- terminal: pwd + 2 commands [failed, 6.83s]
+  --- terminal: pwd + 2 commands [failed, 7.17s]
   | terminal result
   | - **output:** mux_client_request_session: read from master failed: Broken pipe
   | Connection timed out during banner exchange
@@ -69,4 +69,4 @@
   PASS  the error names the target
   PASS  it says the command may have run and was not retried
   PASS  it arrives within 10 seconds
-        took 6.83s (the five-second bar is missed here; see DECISIONS.md)
+        took 7.17s (the five-second bar is missed here; see DECISIONS.md)
