@@ -346,7 +346,13 @@ def encode_picture(
     height: int,
     limit: int,
 ) -> Picture:
-    from PIL import Image
+    try:
+        from PIL import Image
+    except ImportError:
+        raise SharingError(
+            "the Pillow package that makes the picture is missing from "
+            "this Hermes"
+        ) from None
 
     image = Image.frombuffer(
         "RGB",
