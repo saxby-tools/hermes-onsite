@@ -6,7 +6,10 @@ from onsite import config
 from onsite import messages
 from onsite import moves
 from onsite import proposals
+from onsite import rfb
 from onsite import routing
+from onsite import screen
+from onsite import screenshare
 
 
 PARSED = config.parse_config({
@@ -206,3 +209,75 @@ def test_the_cli_status_marks_the_default_target():
     assert "Target    laptop (dev@laptop.example)" in text
     assert " * mac     local  up" in text
     assert "   laptop  ssh    up (41 ms)" in text
+
+
+# ---- the screen report ------------------------------------------------
+
+
+SEAT = screen.Seat(
+    system="Linux",
+    user="dev",
+    driver="",
+    variables={"DISPLAY": ":0"},
+)
+ANSWERED = screenshare.Answer(
+    hello=rfb.Hello((3, 8), rfb.SECURITY_NONE, 1280, 800, "desk"),
+)
+SILENT = screenshare.Answer(problem="Connection refused")
+
+
+def test_the_screen_report_says_which_way_was_picked_and_why():
+    text = messages.format_screen_report(
+        PARSED.target("laptop"),
+        SEAT,
+        ANSWERED,
+        config.SCREEN_SHARING,
+        [],
+        [],
+    )
+
+    assert "Driver   not installed" in text
+    assert "Sharing  answers on port 5900: 1280 by 800" in text
+    assert "no password asked" in text
+    assert "Route    screen sharing, by position only" in text
+    assert "(`screen: auto`)" in text
+    assert "It can be driven." in text
+
+
+def test_the_screen_report_lists_what_stands_in_the_way():
+    text = messages.format_screen_report(
+        PARSED.target("laptop"),
+        SEAT,
+        SILENT,
+        config.SCREEN_SHARING,
+        ["screen sharing did not answer on port 5900: refused."],
+        [],
+    )
+
+    assert "Sharing  no answer on port 5900" in text
+    assert "It cannot be driven yet:" in text
+    assert "  - screen sharing did not answer" in text
+
+
+def test_a_failed_start_names_the_port_and_how_to_check():
+    text = messages.format_sharing_failed(
+        PARSED.target("laptop"),
+        "Connection refused",
+        driver_missing=False,
+    )
+
+    assert "screen sharing on port 5900: Connection refused." in text
+    assert "`hermes onsite screen laptop`" in text
+    assert "driver" not in text
+
+
+def test_a_failed_start_with_no_driver_either_gives_both_ways_out():
+    text = messages.format_sharing_failed(
+        PARSED.target("laptop"),
+        "Connection refused",
+        driver_missing=True,
+    )
+
+    assert "driver is not installed there either" in text
+    assert "Turn on screen sharing" in text
+    assert "`hermes computer-use install`" in text
