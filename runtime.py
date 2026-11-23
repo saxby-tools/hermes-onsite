@@ -210,22 +210,14 @@ class Runtime:
     def find_pin(self, key: str = "", session_id: str = ""):
         return self.pins.get(key) or self.pins.find(session_id)
 
-    def status(
+    def locate(
         self,
+        config: HandsConfig,
         key: str = "",
         session_id: str = "",
         cwd: str = "",
-    ) -> dict[str, Any]:
-        """Where a session runs and whether that target answers now.
-
-        The answer comes from a live probe on every call. It is never
-        read from a cache.
-        """
-
-        try:
-            config = self.load_config()
-        except ConfigError as error:
-            return {"ok": False, "error": str(error)}
+    ):
+        """A session's route, its pin and its folder. Nothing is dialed."""
 
         pin = self.find_pin(key, session_id)
         folder = cwd or self.folders.find(key, session_id)
@@ -243,6 +235,26 @@ class Runtime:
 
             route = routing.resolve(folder, config, pin.target, reason)
 
+        return route, pin, folder
+
+    def status(
+        self,
+        key: str = "",
+        session_id: str = "",
+        cwd: str = "",
+    ) -> dict[str, Any]:
+        """Where a session runs and whether that target answers now.
+
+        The answer comes from a live probe on every call. It is never
+        read from a cache.
+        """
+
+        try:
+            config = self.load_config()
+        except ConfigError as error:
+            return {"ok": False, "error": str(error)}
+
+        route, pin, folder = self.locate(config, key, session_id, cwd)
         spec = config.target(route.target)
         probe = self.gate_for(spec).check()
 
