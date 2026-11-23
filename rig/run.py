@@ -61,6 +61,7 @@ HOST_NODE = os.uname().nodename
 # The folder the gated command removes. The name is the rig's own,
 # so a wrong working folder on a real machine could not hit anything.
 VICTIM = "hands-rig-victim"
+SPARE_MACHINE = "rig-spare"
 
 INHIBIT_WHO = "onsite"
 INHIBIT_COUNT_COMMAND = (
@@ -1049,6 +1050,94 @@ def start_server(profile: Profile, token: str) -> subprocess.Popen:
     return process
 
 
+def machine_checks(report: Report, profile: Profile, hands, token) -> None:
+    """The routes behind the Machines page and the folder browser."""
+
+    report.section("Phase 4.1b: machines and folders on a real server")
+
+    code, listed = post_json("/targets", {}, token)
+    report.check(
+        "the machines form is given the settings as written",
+        code == 200
+        and sorted(listed.get("targets", {})) == ["laptop", "mac"]
+        and listed.get("default") == "mac",
+    )
+
+    block = dict(listed.get("targets", {}).get("laptop", {}))
+    code, tried = post_json(
+        "/targets/test", {"name": "laptop", "target": block}, token,
+    )
+    report.check(
+        "a machine can be tested from the form",
+        tried.get("connected") is True,
+        f"detail: {tried.get('detail')!r}",
+    )
+
+    code, shown = post_json("/browse", {"target": "laptop"}, token)
+    report.check(
+        "browsing starts in the machine's home and lists its folders",
+        shown.get("path") == hands.home
+        and "Development" in shown.get("folders", []),
+        f"folders: {shown.get('folders')}",
+    )
+
+    code, opened = post_json(
+        "/open", {"target": "laptop", "path": hands.sample_dir}, token,
+    )
+    place = Path(opened.get("cwd") or "/nonexistent")
+    report.check(
+        "opening a folder makes a place for it on the host, with no set-up",
+        opened.get("ok") is True and place.is_dir(),
+    )
+
+    done = profile.cli(place, PLUGIN_ID, "status")
+    report.check(
+        "a session in that place runs in the folder on the machine",
+        f"Start in  {hands.sample_dir}" in done.stdout
+        and "its mirror" in done.stdout,
+    )
+
+    spare = {"kind": "local"}
+    code, saved = post_json(
+        "/targets/save", {"name": SPARE_MACHINE, "target": spare}, token,
+    )
+    on_disk = profile.config.read_text()
+    report.check(
+        "saving a machine writes it to the settings file",
+        saved.get("ok") is True
+        and SPARE_MACHINE in saved.get("targets", {})
+        and f"{SPARE_MACHINE}:" in on_disk,
+    )
+    report.check(
+        "saving one machine leaves the others as they were",
+        saved.get("targets", {}).get("laptop") == block,
+    )
+
+    code, removed = post_json(
+        "/targets/remove", {"name": SPARE_MACHINE}, token,
+    )
+    on_disk = profile.config.read_text()
+    report.check(
+        "removing a machine takes it out of the settings file",
+        removed.get("ok") is True
+        and SPARE_MACHINE not in removed.get("targets", {})
+        and f"{SPARE_MACHINE}:" not in on_disk,
+    )
+
+    code, kept = post_json("/targets/remove", {"name": "mac"}, token)
+    report.check(
+        "the default machine cannot be removed",
+        kept.get("ok") is False,
+        f"error: {kept.get('error')!r}",
+    )
+
+    done = profile.cli(LAPTOP_SESSION_DIR, PLUGIN_ID, "status")
+    report.check(
+        "the settings still load and route after the edits",
+        "laptop" in done.stdout and "connected" in done.stdout,
+    )
+
+
 def phase_four_api(report: Report, profile: Profile, hands) -> None:
     report.section("Phase 4.1: the status routes on a real Hermes server")
     token = secrets.token_hex(16)
@@ -1093,6 +1182,8 @@ def phase_four_api(report: Report, profile: Profile, hands) -> None:
             "the proposals route answers",
             code == 200 and listed.get("items") == [],
         )
+
+        machine_checks(report, profile, hands, token)
     finally:
         server.terminate()
 
