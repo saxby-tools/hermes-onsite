@@ -1,0 +1,27 @@
+# Screen control on a target
+
+== Screen: the target's screen can be found
+  --- hermes hands screen laptop
+  | Screen of laptop (dev@127.0.0.1)
+  |   System   Linux
+  |   Desktop  x11
+  |   Driver   /usr/local/bin/cua-driver
+  | 
+  | It can be driven.
+  PASS  the check finds a desktop and a driver
+
+== Screen: a session sees the screen of its own machine
+  PASS  looking needs no approval
+  PASS  the plugin picked the target's screen for this session
+  PASS  the screen backend started
+
+== Screen: a denied click and keystroke stay off it
+  PASS  Hermes' own prompt fired for each gated step
+        prompts: 3
+  PASS  nothing was typed on the target
+
+== Screen: an approved click and keystroke land on it
+  PASS  Hermes' own prompt fired for each gated step
+        prompts: 3
+  PASS  the typed line ran in the terminal on the target
+        file holds: 'screen-rig'
