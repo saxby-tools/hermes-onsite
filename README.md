@@ -33,14 +33,14 @@ Site: <https://saxby-tools.github.io/hermes-hands/>
                                                    |
                                             approval gate (stock)
                                                    |
-                                            hands backend (this plugin)
+                                            onsite backend (this plugin)
                                               |              |
   your shell and files  <--- SSH, as you ---  laptop       mac
                                               target      target
                                                          (local)
 ```
 
-<!-- /hands:diagram -->
+<!-- /onsite:diagram -->
 
 One backend plugin routes each session's tool calls to a named
 target. The clients, the agent loop and the approval gate are stock
@@ -48,7 +48,7 @@ Hermes.
 
 A session picks its target once, from the folder it was opened in:
 
-1. A target set with `/hands <target>` wins for that session.
+1. A target set with `/onsite <target>` wins for that session.
 2. Otherwise the longest matching path wins.
 3. Otherwise the default target is used.
 
@@ -72,11 +72,11 @@ down, tool calls fail with an error that names the target.
 On the host, in the Hermes home of the profile that will use it:
 
 ```bash
-git clone https://github.com/saxby-tools/hermes-hands.git "$HERMES_HOME/plugins/hermes-hands"
+git clone https://github.com/saxby-tools/hermes-onsite.git "$HERMES_HOME/plugins/onsite"
 ```
 
 ```bash
-hermes plugins enable hermes-hands
+hermes plugins enable onsite
 ```
 
 A profile loads plugins only from its own `plugins/` folder, so a
@@ -90,7 +90,7 @@ not been tried.
 Name your targets. This is a dry run that prints the settings:
 
 ```bash
-hermes hands init --ssh laptop=you@laptop.example --local mac --prefix laptop=/home/you/
+hermes onsite init --ssh laptop=you@laptop.example --local mac --prefix laptop=/home/you/
 ```
 
 Add `--apply` to write them. With no flags, on a terminal, it asks
@@ -99,24 +99,24 @@ instead.
 Then select the backend and check it:
 
 ```bash
-hermes config set terminal.backend hands
+hermes config set terminal.backend onsite
 ```
 
 ```bash
-hermes hands status
+hermes onsite status
 ```
 
 The settings land in `config.yaml`:
 
 ```yaml
 terminal:
-  backend: hands
+  backend: onsite
 
 plugins:
   enabled:
-    - hermes-hands
+    - onsite
   entries:
-    hermes-hands:
+    onsite:
       allow_gateway_injection: true   # lets /run hand a command to the agent
       settings:
         default: mac
@@ -182,7 +182,7 @@ keeps the link up, and the target's settings. It is a dry run until
 you add `--apply`, which writes the settings:
 
 ```bash
-hermes hands dial-out laptop --server you@host.example --user you
+hermes onsite dial-out laptop --server you@host.example --user you
 ```
 
 The machine still needs its own SSH server, but only the host can
@@ -203,14 +203,14 @@ folder and it runs in the real folder on the target.
 Name the mirror when you set up, or add `mirror` to the target:
 
 ```bash
-hermes hands init --ssh laptop=you@laptop.example --local mac --mirror laptop=/Users/you/Hands/laptop
+hermes onsite init --ssh laptop=you@laptop.example --local mac --mirror laptop=/Users/you/Onsite/laptop
 ```
 
 Then copy the folder names. Both commands are dry runs until you add
 `--apply`:
 
 ```bash
-hermes hands mirror --apply
+hermes onsite mirror --apply
 ```
 
 That covers the folders under the target's home, three levels deep,
@@ -218,7 +218,7 @@ and skips any whose name starts with a dot. For one folder at any
 depth:
 
 ```bash
-hermes hands open laptop:~/work/site --apply
+hermes onsite open laptop:~/work/site --apply
 ```
 
 It prints the folder to open on the host. The mirror is only an
@@ -234,7 +234,7 @@ starts a local MCP server by running a command, and that command can
 be `ssh`. This shows the call, and adds the server with `--apply`:
 
 ```bash
-hermes hands mcp laptop files --apply -- npx -y @modelcontextprotocol/server-filesystem /home/you
+hermes onsite mcp laptop files --apply -- npx -y @modelcontextprotocol/server-filesystem /home/you
 ```
 
 The server is named for its target, here `laptop_files`, and Hermes
@@ -258,23 +258,23 @@ talking to it over the SSH link. The plugin never installs that
 driver. This checks a target and says what is missing:
 
 ```bash
-hermes hands screen laptop
+hermes onsite screen laptop
 ```
 
 Then link the screen backend into place and select it. The first
 command is a dry run until you add `--apply`:
 
 ```bash
-hermes hands screen-install --apply
+hermes onsite screen-install --apply
 ```
 
 ```bash
-hermes config set computer_use.backend hermes-hands-screen
+hermes config set computer_use.backend onsite-screen
 ```
 
 Hermes' own approval prompt and hard blocks still stand in front of
 every click and keystroke. The prompt does not name the machine, so
-check the status chip or `/hands` when it matters.
+check the status chip or `/onsite` when it matters.
 
 This is new and narrowly tested: on a Linux X11 desktop in the test
 rig, with Hermes' pinned driver. See [What is tested](#what-is-tested).
@@ -283,8 +283,8 @@ rig, with Hermes' pinned driver. See [What is tested](#what-is-tested).
 
 | What | CLI and TUI | Hermes Desktop |
 | --- | --- | --- |
-| See where tools run | `/hands`, or `hermes hands status` | A chip on the right of the status bar. |
-| Move this session | `/hands <target>`, back with `/hands auto` | Same, typed in the chat. |
+| See where tools run | `/onsite`, or `hermes onsite status` | A chip on the right of the status bar. |
+| Move this session | `/onsite <target>`, back with `/onsite auto` | Same, typed in the chat. |
 | Approve a risky command | Hermes' own prompt | Hermes' own prompt. |
 | Run a command the agent proposed | `/run <number>` | Run and Copy buttons, in a pane and in the transcript. |
 
@@ -299,15 +299,15 @@ app connects to a host over SSH, copy one file to the machine the app
 runs on:
 
 ```bash
-mkdir -p ~/.hermes/desktop-plugins/hermes-hands
+mkdir -p ~/.hermes/desktop-plugins/onsite
 ```
 
 ```bash
-scp host.example:'$HERMES_HOME/plugins/hermes-hands/desktop/plugin.js' ~/.hermes/desktop-plugins/hermes-hands/plugin.js
+scp host.example:'$HERMES_HOME/plugins/onsite/desktop/plugin.js' ~/.hermes/desktop-plugins/onsite/plugin.js
 ```
 
 Then run "Reload desktop plugins" from the command palette. The
-folder must be named `hermes-hands`.
+folder must be named `onsite`.
 
 ## When a target is down
 
@@ -321,6 +321,49 @@ folder must be named `hermes-hands`.
 
 The agent is told the same thing in plain words, and told not to work
 around it.
+
+## What it touches
+
+Read this before you install it. It is the full list.
+
+**On a target.** It runs shell commands and reads and writes files
+there, as the account you named, with everything that account may do.
+The commands and edits are the ones the agent asks for. Hermes'
+approval prompt is the only gate. While a command runs it may hold a
+sleep lock (`systemd-inhibit` or `caffeinate`). To check a screen it
+reads the environment of your own desktop processes. With screen
+control on, it starts Hermes' screen driver there, which can see the
+screen and send clicks and keys. It installs nothing on a target.
+
+**On the host.** It starts `ssh` processes: one kept open per target
+while sessions use it, one for each MCP server you add, and one per
+session that uses a target's screen. It files each target's host key
+in your `known_hosts`, on first contact. It writes three small files
+under `plugin-data/onsite/` in the profile's Hermes home: which
+target each session is pinned to, each session's folder, and the
+commands the agent has proposed. A mirror makes empty folders under
+the folder you name, and nothing else.
+
+**Your keys.** It uses the `ssh` program and whatever keys your SSH
+setup offers. It never reads, copies or stores a key.
+
+**The network.** It opens SSH connections to the targets you name
+and nothing else. It sends no telemetry and calls no other service.
+It does not update itself.
+
+**Inside Hermes.** It registers a terminal backend, one tool
+(`propose_command`), one hook that runs before each tool call, two
+slash commands and one CLI command. The hook can refuse an MCP tool
+that belongs to another machine; it never approves anything. `/run`
+puts a message into the chat for the agent, which needs
+`allow_gateway_injection: true`. It serves two routes to the desktop
+app under `/api/plugins/onsite/`. The desktop half adds a status
+chip, a pane and a run card.
+
+**Private Hermes code.** It imports Hermes modules that are not
+plugin API, to reuse Hermes' own SSH, local and screen code. They are
+listed in `compat.py` and `screenbackend.py`. A Hermes release can
+move them, which is why `requires_hermes` has an upper bound.
 
 ## Limits
 
@@ -347,9 +390,9 @@ Read these before trusting it with real work.
   requests to its active profile, which is set in the Sessions tab.
   With a bot's chat open in the Bots tab, the chip can describe a
   different profile. It names the one it asked.
-- **Before the first message,** `/hands` cannot know a session's
+- **Before the first message,** `/onsite` cannot know a session's
   folder and says so.
-- **After `/hands <target>`,** the agent is not told. Say so in your
+- **After `/onsite <target>`,** the agent is not told. Say so in your
   next message if it matters.
 - **One slow case.** A target that freezes in the few seconds before
   a call can take about seven seconds to report, not three.
@@ -368,7 +411,7 @@ Read these before trusting it with real work.
 | --- | --- | --- | --- |
 | 1 | Routing, file tools, approvals | 18 | Pass |
 | 2 | A stopped, a frozen and a returning target | 20 | Pass |
-| 3 | `/hands`, `/run`, `hermes hands`, CLI and TUI | 28 | Pass |
+| 3 | `/onsite`, `/run`, `hermes onsite`, CLI and TUI | 28 | Pass |
 | 4 | Status routes, desktop plugin logic | 7 | Pass |
 | Screen | A target's screen: look, deny, approve | 8 | Pass |
 | 5 | A person at the real clients | 0 | Not run |
@@ -405,7 +448,7 @@ Not yet tested by anyone:
 - A machine that dials out from its own side. The rig opens the
   same kind of link from the host.
 
-<!-- /hands:notice -->
+<!-- /onsite:notice -->
 
 ### Run the tests
 
@@ -432,9 +475,9 @@ python3 rig/run.py
 python3 rig/run.py --apply
 ```
 
-To use a real machine as the hands, name it. It must take your SSH
+To test against a real machine, name it. It must take your SSH
 key with no prompt. The rig writes only under
-`~/.cache/hermes-hands-rig` there and removes it at the end:
+`~/.cache/onsite-rig` there and removes it at the end:
 
 ```bash
 python3 rig/run.py --apply --real you@laptop.example
@@ -459,7 +502,7 @@ compat.py            every import from Hermes, in one place
 config.py            parse and validate the settings
 routing.py           pick a target from a folder
 runtime.py           shared state: pins, breakers, status
-provider.py          the `hands` terminal backend
+provider.py          the `onsite` terminal backend
 targets/             one class per kind of target: ssh, local
 health.py            probe and circuit breaker
 remote.py            SSH options, PATH, sleep inhibitor
@@ -468,15 +511,15 @@ dialout.py           set-up text for a machine that dials out
 mcptools.py          MCP servers that run on a target
 screen.py            find a target's desktop and screen driver
 screenbackend.py     Hermes' screen backend, on a target
-hermes-hands-screen/ the folder Hermes finds that backend by
+onsite-screen/ the folder Hermes finds that backend by
 exits.py             the four ways a command can end
 hooks.py             file tools on the right folder, MCP tools
                      on the right machine
-commands.py          /hands, /run, hermes hands
+commands.py          /onsite, /run, hermes onsite
 tools.py             propose_command
 prompt.py            the per-session note in the system prompt
 messages.py          every string shown to a person or the model
-wizard.py            hermes hands init
+wizard.py            hermes onsite init
 api.py               what the desktop half is told
 dashboard/           the HTTP routes Hermes mounts
 desktop/plugin.js    status chip, commands pane, run card
@@ -490,7 +533,7 @@ site/                the site's build: Eleventy, layouts, styles
 
 Copyright (C) 2026 saxby-tools.
 
-hermes-hands is free software. You can redistribute it and modify it
+onsite is free software. You can redistribute it and modify it
 under the terms of the GNU Affero General Public License as published
 by the Free Software Foundation, either version 3 of the License, or
 (at your option) any later version. See [LICENSE](LICENSE).
