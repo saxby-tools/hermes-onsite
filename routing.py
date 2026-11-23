@@ -7,6 +7,9 @@ The rules, in order:
    target's `prefixes` or through the left side of its `path_map`.
 3. Otherwise the default target is used.
 
+A target's `mirror` is one more map entry: that folder on the host
+stands for the root of the target's disk.
+
 A brain and a hand rarely agree on paths, so a route also carries the
 folder to start in on the target. This module is pure. It imports
 nothing from Hermes and touches no network.
@@ -24,11 +27,13 @@ from .config import normalize_path
 
 
 HOME = "~"
+ROOT = "/"
 
 REASON_OVERRIDE = "override"
 REASON_PINNED = "pinned"
 REASON_PREFIX = "prefix"
 REASON_PATH_MAP = "path_map"
+REASON_MIRROR = "mirror"
 REASON_DEFAULT = "default"
 
 
@@ -73,12 +78,26 @@ def swap_prefix(path: str, source: str, destination: str) -> str:
     return f"{destination}/{rest}"
 
 
+def map_entries(spec: TargetSpec) -> list[tuple[str, str, str]]:
+    """Every host folder that stands for a folder on the target."""
+
+    entries = [
+        (source, destination, REASON_PATH_MAP)
+        for source, destination in spec.path_map
+    ]
+
+    if spec.mirror:
+        entries.append((spec.mirror, ROOT, REASON_MIRROR))
+
+    return entries
+
+
 def map_path(path: str, spec: TargetSpec) -> str | None:
     """Translate a host path through the longest matching map entry."""
 
     best = None
 
-    for source, destination in spec.path_map:
+    for source, destination, _ in map_entries(spec):
         if not is_under(path, source):
             continue
 
@@ -138,7 +157,7 @@ def collect_candidates(path: str, config: HandsConfig) -> list[Candidate]:
                 reason=REASON_PREFIX,
             ))
 
-        for source, destination in spec.path_map:
+        for source, destination, reason in map_entries(spec):
             if not is_under(path, source):
                 continue
 
@@ -147,7 +166,7 @@ def collect_candidates(path: str, config: HandsConfig) -> list[Candidate]:
                 order=order,
                 target=spec.name,
                 cwd=swap_prefix(path, source, destination),
-                reason=REASON_PATH_MAP,
+                reason=reason,
             ))
 
     return candidates
