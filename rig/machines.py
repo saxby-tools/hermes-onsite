@@ -35,6 +35,10 @@ KIND_REAL = "real"
 IMAGE = "onsite-rig/hands:dev"
 DESK_IMAGE = "onsite-rig/desk:dev"
 DESK_BOOT_SECONDS = 3
+
+# The plugin's `screen` setting for the target. See `onsite/config.py`.
+SCREEN_AUTO = "auto"
+SCREEN_SHARING = "sharing"
 CONTAINER = "onsite-rig-hands"
 CONTAINER_USER = "dev"
 CONTAINER_HOME = "/home/dev"
@@ -105,6 +109,7 @@ class ContainerHands:
     results_prefix = ""
     has_systemd = False
     has_screen = False
+    screen_route = SCREEN_AUTO
     image = IMAGE
     quote_path = True
 
@@ -256,6 +261,18 @@ class DeskHands(ContainerHands):
         time.sleep(DESK_BOOT_SECONDS)
 
 
+class SharedDeskHands(DeskHands):
+    """The desk container, with its screen reached by screen sharing.
+
+    Same machine, same driver installed. Only the plugin's setting
+    differs, so the screen phase runs over the second route.
+    """
+
+    label = "the desk container, by screen sharing"
+    results_prefix = "desk-share-"
+    screen_route = SCREEN_SHARING
+
+
 class RealHands:
     """A real machine, reached as the user's own SSH setup reaches it.
 
@@ -268,6 +285,7 @@ class RealHands:
     results_prefix = "real-"
     has_systemd = True
     has_screen = False
+    screen_route = SCREEN_AUTO
     quote_path = False
 
     ssh_host = LOCALHOST
