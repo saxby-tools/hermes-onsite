@@ -9,6 +9,8 @@ import shutil
 import subprocess
 import sys
 
+from pathlib import Path
+
 from . import dialout
 from . import mcptools
 from . import messages
@@ -427,6 +429,32 @@ def cli_screen(runtime: Runtime, args) -> int:
     return EXIT_OK
 
 
+def cli_screen_install(args) -> int:
+    from .compat import plugins_dir
+
+    # Hermes finds a screen backend by the name of its folder, in the
+    # same folder it loads this plugin from.
+    source = Path(__file__).resolve().parent / messages.SCREEN_PLUGIN
+    link = plugins_dir() / messages.SCREEN_PLUGIN
+    mode = MODE_LIVE if args.apply else MODE_DRY
+
+    present = link.exists() or link.is_symlink()
+    in_place = present and link.resolve() == source
+    blocked = present and not in_place
+
+    if args.apply and not present:
+        link.symlink_to(source, target_is_directory=True)
+
+    print(messages.format_screen_install(
+        mode, str(link), str(source), in_place, blocked, args.apply,
+    ))
+
+    if blocked:
+        return EXIT_USAGE
+
+    return EXIT_OK
+
+
 def cli_dial_out(ctx, args) -> int:
     name = args.target
     mode = MODE_LIVE if args.apply else MODE_DRY
@@ -591,6 +619,17 @@ def setup_cli(parser) -> None:
     )
     seen.add_argument("target", help="the target to check.")
 
+    installed = actions.add_parser(
+        "screen-install",
+        help="put the screen backend where Hermes looks for it. A "
+        "dry run unless --apply is given.",
+    )
+    installed.add_argument(
+        "--apply",
+        action="store_true",
+        help="make the link. Without it, it is only shown.",
+    )
+
     dialed = actions.add_parser(
         "dial-out",
         help="set up a machine this host cannot reach, which dials "
@@ -643,6 +682,9 @@ def build_cli_handler(ctx, runtime: Runtime):
 
         if action == "screen":
             return cli_screen(runtime, args)
+
+        if action == "screen-install":
+            return cli_screen_install(args)
 
         return cli_status(runtime, args)
 
