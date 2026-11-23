@@ -471,3 +471,34 @@ def format_mcp_add(
 
     return "\n".join(lines)
 
+
+def format_screen_report(spec: TargetSpec, seat, problems, notes) -> str:
+    """The output of `hermes hands screen`."""
+
+    desktop = seat.variables.get("XDG_CURRENT_DESKTOP", "")
+    described = seat.kind
+
+    if desktop:
+        described = f"{seat.kind} ({desktop})"
+
+    lines = [
+        f"Screen of {spec.label}",
+        f"  System   {seat.system or 'unknown'}",
+        f"  Desktop  {described}",
+        f"  Driver   {seat.driver or 'not installed'}",
+        "",
+    ]
+
+    if problems:
+        lines.append("It cannot be driven yet:")
+        lines += [f"  - {problem}" for problem in problems]
+    else:
+        lines.append("It can be driven.")
+
+    if notes:
+        lines.append("")
+        lines.append("Know before you rely on it:")
+        lines += [f"  - {note}" for note in notes]
+
+    return "\n".join(lines)
+
