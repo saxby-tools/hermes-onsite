@@ -63,6 +63,7 @@ known_issues:
   - "Needs plugins.isolation in_process (the default): Hermes cannot hand a terminal environment across the plugin-host boundary."
   - "Hermes only runs a session in a folder that exists on the host. The plugin keeps empty folders that mirror a target's folder names, so any folder can be opened, but the desktop app's own file tree shows those empty folders, not the target's files."
   - "Screen control needs either Hermes' screen driver installed on the target by its owner, or screen sharing (VNC) turned on there. Screen sharing sees pixels only: Hermes clicks by position and cannot name a button. Both have been tested only on a Linux X11 desktop. The approval prompt for a screen action cannot name the computer."
+  - "Screen sharing borrows two packages Hermes itself ships, Pillow for the picture and cryptography for a VNC password. They are not declared as the plugin's own, and are only imported when a session uses that route."
   - "Editors over ACP: Hermes leaves the screen tool out, and patch only works where the same path exists on both computers."
   - "In the desktop app's Bots tab the chip follows the app's active profile, which may not be the bot in view. It names the profile it asked."
   - "A real sleeping laptop, macOS as a target and the mobile apps have not been tested. See the repository's issues."
