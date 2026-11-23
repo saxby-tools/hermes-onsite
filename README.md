@@ -73,21 +73,36 @@ down, tool calls fail with an error that names the target.
 
 ## Install
 
-On the host, in the Hermes home of the profile that will use it:
+On the host, for the profile that will use it:
 
 ```bash
-git clone https://github.com/saxby-tools/hermes-onsite.git "$HERMES_HOME/plugins/onsite"
+hermes plugins install saxby-tools/hermes-onsite/onsite
+```
+
+That installs one folder of this repository, `onsite/`, which is the
+plugin. The test rig, the site and these docs stay on GitHub.
+
+A profile loads plugins only from its own `plugins/` folder, so a
+named profile needs its own install: add `-p <profile>` after
+`hermes`.
+
+To work on the plugin itself, clone the repository and link that one
+folder into a profile:
+
+```bash
+git clone https://github.com/saxby-tools/hermes-onsite.git
+```
+
+```bash
+ln -s "$PWD/hermes-onsite/onsite" "$HERMES_HOME/plugins/onsite"
 ```
 
 ```bash
 hermes plugins enable onsite
 ```
 
-A profile loads plugins only from its own `plugins/` folder, so a
-named profile needs its own copy or link.
-
-`hermes plugins install` from the Git URL should also work. It has
-not been tried.
+The install command has not been run by anyone yet. The link is how
+every test here was run.
 
 ## Set up
 
@@ -366,7 +381,8 @@ chip, a pane and a run card.
 
 **Private Hermes code.** It imports Hermes modules that are not
 plugin API, to reuse Hermes' own SSH, local and screen code. They are
-listed in `compat.py` and `screenbackend.py`. A Hermes release can
+listed in `onsite/compat.py` and `onsite/screenbackend.py`. A Hermes
+release can
 move them, which is why `requires_hermes` has an upper bound.
 
 ## Limits
@@ -448,7 +464,7 @@ Not yet tested by anyone:
   seen there, on a gateway that serves several profiles, with the
   laptop shown as connected.
 - A macOS machine as an SSH target, and `caffeinate`.
-- `hermes plugins install` from the Git URL.
+- `hermes plugins install` of the plugin's folder from GitHub.
 - Screen control on macOS, on Wayland, or on any desktop a
   person is using. It has run only against the rig's own X11
   desktop.
@@ -503,36 +519,37 @@ back at the end. It never restarts the Hermes gateway.
 ## Layout
 
 ```text
-plugin.yaml          the manifest
-__init__.py          register(ctx)
-compat.py            every import from Hermes, in one place
-config.py            parse and validate the settings
-routing.py           pick a target from a folder
-runtime.py           shared state: pins, breakers, status
-provider.py          the `onsite` terminal backend
-targets/             one class per kind of target: ssh, local
-health.py            probe and circuit breaker
-remote.py            SSH options, PATH, sleep inhibitor
-mirror.py            a names-only copy of a target's folders
-dialout.py           set-up text for a machine that dials out
-mcptools.py          MCP servers that run on a target
-screen.py            find a target's desktop and screen driver
-screenbackend.py     Hermes' screen backend, on a target
-onsite-screen/ the folder Hermes finds that backend by
-exits.py             the four ways a command can end
-hooks.py             file tools on the right folder, MCP tools
-                     on the right machine
-commands.py          /onsite, /run, hermes onsite
-tools.py             propose_command
-prompt.py            the per-session note in the system prompt
-messages.py          every string shown to a person or the model
-wizard.py            hermes onsite init
-api.py               what the desktop half is told
-dashboard/           the HTTP routes Hermes mounts
-desktop/plugin.js    status chip, commands pane, run card
+onsite/              the plugin: all that an install puts on a host
+  plugin.yaml        the manifest
+  __init__.py        register(ctx)
+  compat.py          every import from Hermes, in one place
+  config.py          parse and validate the settings
+  routing.py         pick a target from a folder
+  runtime.py         shared state: pins, breakers, status, settings
+  provider.py        the `onsite` terminal backend
+  targets/           one class per kind of target: ssh, local
+  health.py          probe and circuit breaker
+  remote.py          SSH options, PATH, sleep inhibitor
+  mirror.py          a names-only copy of a target's folders
+  dialout.py         set-up text for a machine that dials out
+  mcptools.py        MCP servers that run on a target
+  screen.py          find a target's desktop and screen driver
+  screenbackend.py   Hermes' screen backend, on a target
+  onsite-screen/     the folder Hermes finds that backend by
+  exits.py           the four ways a command can end
+  hooks.py           file tools on the right folder, MCP tools on
+                     the right machine
+  commands.py        /onsite, /run, hermes onsite
+  tools.py           propose_command
+  prompt.py          the per-session note in the system prompt
+  messages.py        every string shown to a person or the model
+  wizard.py          hermes onsite init
+  api.py             what the desktop half is told and may change
+  dashboard/         the HTTP routes Hermes mounts
+  desktop/plugin.js  chip, pane, run card, folder browser, Machines
 tests/               unit tests
 rig/                 the end-to-end rig and its saved results
-docs/                the design page, brand files, findings, drafts
+docs/                the design page, brand files, QA journeys, drafts
 site/                the site's build: Eleventy, layouts, styles
 ```
 
