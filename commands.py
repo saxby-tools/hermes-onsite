@@ -13,6 +13,7 @@ from . import dialout
 from . import mcptools
 from . import messages
 from . import mirror
+from . import screen
 from . import wizard
 from .config import ConfigError
 from .config import KIND_LOCAL
@@ -388,6 +389,44 @@ def cli_mcp(runtime: Runtime, args) -> int:
     return subprocess.run(call, check=False).returncode
 
 
+def cli_screen(runtime: Runtime, args) -> int:
+    try:
+        config = runtime.load_config()
+    except ConfigError as error:
+        print(error)
+        return EXIT_USAGE
+
+    if args.target not in config.targets:
+        print(f"`{args.target}` is not a target.")
+        return EXIT_USAGE
+
+    spec = config.target(args.target)
+
+    if spec.kind == KIND_LOCAL:
+        print(
+            f"`{spec.name}` is this machine. Check its screen with "
+            "`hermes computer-use doctor`."
+        )
+        return EXIT_USAGE
+
+    try:
+        seat = screen.read_seat(spec)
+    except screen.ScreenError as error:
+        print(error)
+        return EXIT_DOWN
+
+    problems = screen.find_problems(seat)
+
+    print(messages.format_screen_report(
+        spec, seat, problems, screen.find_notes(seat),
+    ))
+
+    if problems:
+        return EXIT_DOWN
+
+    return EXIT_OK
+
+
 def cli_dial_out(ctx, args) -> int:
     name = args.target
     mode = MODE_LIVE if args.apply else MODE_DRY
@@ -545,6 +584,13 @@ def setup_cli(parser) -> None:
         help="after `--`, the command that starts the server there.",
     )
 
+    seen = actions.add_parser(
+        "screen",
+        help="check whether a target's screen can be driven, and what "
+        "is missing. Changes nothing.",
+    )
+    seen.add_argument("target", help="the target to check.")
+
     dialed = actions.add_parser(
         "dial-out",
         help="set up a machine this host cannot reach, which dials "
@@ -594,6 +640,9 @@ def build_cli_handler(ctx, runtime: Runtime):
 
         if action == "mcp":
             return cli_mcp(runtime, args)
+
+        if action == "screen":
+            return cli_screen(runtime, args)
 
         return cli_status(runtime, args)
 
