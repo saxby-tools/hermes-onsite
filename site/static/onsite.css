@@ -1,4 +1,4 @@
-/* The hermes-hands site's one stylesheet.
+/* The onsite site's one stylesheet.
  *
  * The look is "glitched marble": the electric blue and condensed type
  * of the Hermes site, with classical plates screened into blue. The
@@ -10,8 +10,8 @@
  * Breakpoints are in em. Nothing loads from another origin.
  *
  * Colours that change with the theme use light-dark(). The theme
- * follows the system unless the reader picks one, which sets
- * `data-theme` on <html>.
+ * follows the system unless the reader picks light or dark in the
+ * masthead, which sets `data-theme` on <html>.
  */
 
 /* ---- Tokens --------------------------------------------------------- */
@@ -245,6 +245,56 @@ code {
   margin: 0;
 }
 
+/* ---- Wordmark ------------------------------------------------------- */
+
+/* The name, set in type: the word onsite in Geist Mono, with the o
+ * lit in yellow. It is drawn for the blue field and for dark grounds.
+ *
+ * The wordmark is specified at weight 500. Only the 400 file is in
+ * site/static/fonts so far, so it draws in Regular until the Medium
+ * file is added. */
+
+.wordmark {
+  color: var(--color-field-text);
+  font-family: var(--font-mono);
+  font-weight: 500;
+  line-height: 1;
+  text-decoration: none;
+}
+
+.wordmark__lit {
+  color: var(--color-signal);
+}
+
+/* ---- Mark ----------------------------------------------------------- */
+
+/* "On, lit": the letters o and n on a blue tile of 64 units, with the
+ * o lit in yellow. Both letters are Geist Mono at one size, 52.39
+ * units, on a baseline at 46.25. The o starts at x 3 and the n at
+ * x 30.92. That sets the gap between them at half what the font
+ * gives, and centres the pair on the n.
+ *
+ * Like the wordmark it is specified at weight 500 and draws in
+ * Regular until the Medium file is added. */
+
+.mark text {
+  font-family: var(--font-mono);
+  font-size: 52.39px;
+  font-weight: 500;
+}
+
+.mark__tile {
+  fill: var(--color-field);
+}
+
+.mark__lit {
+  fill: var(--color-signal);
+}
+
+.mark__rest {
+  fill: var(--color-field-text);
+}
+
 /* ---- Masthead ------------------------------------------------------- */
 
 .top {
@@ -272,8 +322,8 @@ code {
   margin-right: auto;
 }
 
-.top__lockup {
-  width: 11rem;
+.top__wordmark {
+  font-size: 1.5rem;
 }
 
 .top__nav {
@@ -282,8 +332,7 @@ code {
   gap: var(--space-1) var(--space-4);
 }
 
-.top__link,
-.top__theme {
+.top__link {
   padding: var(--space-1) 0;
   border: 0;
   background: linear-gradient(var(--color-signal), var(--color-signal))
@@ -300,8 +349,7 @@ code {
   transition: background-size var(--motion-fast) var(--motion-ease);
 }
 
-.top__link:hover,
-.top__theme:hover {
+.top__link:hover {
   background-size: 100% 2px;
 }
 
@@ -315,6 +363,43 @@ code {
 
 .top__link-button:hover {
   transform: translateX(0.1875rem);
+}
+
+/* Three choices in one box, so it reads as a control and not as one
+ * more link. The pressed choice is filled. */
+.theme-toggle {
+  display: inline-flex;
+  border: 1px solid var(--color-field-muted);
+  border-radius: var(--radius-control);
+}
+
+/* `display` above would otherwise beat the `hidden` attribute. */
+.theme-toggle[hidden] {
+  display: none;
+}
+
+.theme-toggle__option {
+  padding: var(--space-1) var(--space-2);
+  border: 0;
+  background: none;
+  color: var(--color-field-text);
+  font-family: var(--font-display);
+  font-size: var(--size-label);
+  font-weight: 500;
+  letter-spacing: var(--track);
+  line-height: 1.3;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background var(--motion-fast) var(--motion-ease);
+}
+
+.theme-toggle__option:hover {
+  background: var(--color-field-deep);
+}
+
+.theme-toggle__option[aria-pressed="true"] {
+  background: var(--color-field-text);
+  color: var(--color-field-deep);
 }
 
 .top :focus-visible,
@@ -367,7 +452,7 @@ code {
 }
 
 /* A banner picture at the top of the README is for GitHub and the
- * plugin catalog. Here the plates beside the text do that job. */
+ * plugin catalog. Here the plate beside the text does that job. */
 .hero__text p:has(> img:only-child) {
   display: none;
 }
@@ -381,18 +466,28 @@ code {
 }
 
 .hero__text h1 + p,
-.hero__text .status {
+.hero__text .status,
+.hero__text li strong {
   color: var(--color-field-text);
 }
 
-/* ---- Plates --------------------------------------------------------- */
-
-.plates {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: var(--space-2);
-  margin: 0;
+/* A list in the hero: quiet text, with markers that show on blue. */
+.hero__text li {
+  color: var(--color-field-muted);
 }
+
+.hero__text li::marker {
+  color: var(--color-signal);
+}
+
+/* The one plate keeps to the right, at a size the head reads at. */
+.hero__plate {
+  justify-self: end;
+  width: 100%;
+  max-width: 26rem;
+}
+
+/* ---- Plate ---------------------------------------------------------- */
 
 .plate {
   margin: 0;
@@ -1123,8 +1218,8 @@ main {
     position: static;
   }
 
-  .top__lockup {
-    width: 9.5rem;
+  .top__wordmark {
+    font-size: 1.25rem;
   }
 
   .top__nav {

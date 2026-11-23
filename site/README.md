@@ -1,6 +1,6 @@
-#  The hermes-hands site
+#  The onsite site
 
-Eleventy builds <https://saxby-tools.github.io/hermes-hands/> from
+Eleventy builds <https://saxby-tools.github.io/hermes-onsite/> from
 the same Markdown files GitHub shows. One rule shapes everything
 here: **a Markdown file must read as plain Markdown on GitHub.** The
 Hermes plugin catalog shows the repo's README too, and drops any raw
@@ -128,34 +128,39 @@ block itself.
 
 Every layout includes `layouts/head.ejs`: the viewport, the share
 tags, the icons, and the site's one stylesheet and one script,
-`static/hands.css` and `static/hands.js`. There is no bundler.
+`static/onsite.css` and `static/onsite.js`. There is no bundler.
 `static/` is copied to the site's root as it is. Nothing loads from
 another origin: the two fonts are self-hosted, with their licenses
 beside them.
 
-The tokens are at the top of `hands.css`. `design.test.js` fails if a
-token there is missing from `docs/design.md`, or a colour differs.
+The tokens are at the top of `onsite.css`. `design.test.js` fails if
+a token there is missing from `docs/design.md`, or a colour differs.
 
 Every page works with the script off. The script adds the Copy
-buttons and the Theme button.
+buttons and the theme toggle.
+
+The comment blocks still open with `hands:`. That prefix is set once,
+as `NAMESPACE` in `eleventy.config.js`, and every Markdown file that
+uses a block repeats it, so it changes in one pass of its own.
 
 ##  Brand files
 
-The mark, the wordmark, the lockup and the plates are in
-`docs/brand/`, because the README and the plugin catalog point at
-them there. Three pictures are made from sources in that folder:
+The mark and the wordmark are set in type, in `layouts/foot.ejs` and
+`layouts/top.ejs`, with their styles in `static/onsite.css`. They have
+no image files yet.
 
-```bash
-rsvg-convert docs/brand/banner.svg -o docs/brand/banner.png
-```
+The plate on the front page is `docs/brand/plate-head.png`. It comes
+from a museum photo, by way of `docs/brand/make-plates.sh`.
 
-```bash
-rsvg-convert docs/brand/social.svg -o site/static/social.png
-```
+Everything else in `docs/brand/`, and the icons and `social.png` in
+`static/`, were drawn for the old name, hermes-hands. They show the
+old mark, a cut h, and some have the old name drawn in. They are
+kept until new ones are made:
 
-The plates come from two museum photos, by way of
-`docs/brand/make-plates.sh`. The icons in `static/` are
-`docs/brand/mark.svg` at 16, 32, 48, 180, 192 and 512 pixels.
+- The icons in `static/` are still the old mark, so a browser tab
+  shows it.
+- `static/social.png` is not linked from any page.
+- `docs/brand/banner.png` is not linked from the README.
 
 ##  Files
 
@@ -171,7 +176,7 @@ layouts/page.ejs        the page around every other Markdown file
 layouts/head.ejs        the shared head, in every layout
 layouts/top.ejs         the masthead, in every layout
 layouts/foot.ejs        the footer, in every layout
-static/hands.css        the one stylesheet
-static/hands.js         the one script
+static/onsite.css       the one stylesheet
+static/onsite.js        the one script
 static/                 copied to the site's root as is
 ```

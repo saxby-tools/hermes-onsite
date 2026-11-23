@@ -17,8 +17,8 @@ function render(markdown) {
 
 test("a heading gets the anchor GitHub gives it", () => {
   assert.equal(slugOf("What is tested"), "what-is-tested");
-  assert.equal(slugOf("12. `/hands <target>` drops it"),
-    "12-hands-target-drops-it");
+  assert.equal(slugOf("12. `/onsite <target>` drops it"),
+    "12-onsite-target-drops-it");
   assert.match(render("## What is tested"), /<h2 id="what-is-tested">/);
 });
 
@@ -49,7 +49,7 @@ test("a cell that only mentions a status stays text", () => {
 });
 
 test("a shell block is framed, labelled and marked for copying", () => {
-  const html = render("```bash\nhermes hands status\n```\n");
+  const html = render("```bash\nhermes onsite status\n```\n");
 
   assert.match(html, /<div class="code" data-copy>/);
   assert.match(html, /<p class="code__label">bash<\/p>/);

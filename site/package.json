@@ -1,7 +1,7 @@
 {
-  "name": "hermes-hands-site",
+  "name": "hermes-onsite-site",
   "private": true,
-  "description": "Builds the hermes-hands site from the repo's Markdown.",
+  "description": "Builds the onsite site from the repo's Markdown.",
   "license": "AGPL-3.0-or-later",
   "type": "module",
   "engines": {

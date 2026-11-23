@@ -8,7 +8,7 @@ import { test } from "node:test";
 
 // ---- Constants --------------------------------------------------------
 
-const CSS_PATH = new URL("./static/hands.css", import.meta.url);
+const CSS_PATH = new URL("./static/onsite.css", import.meta.url);
 
 const PAGE_PATH = new URL("../docs/design.md", import.meta.url);
 

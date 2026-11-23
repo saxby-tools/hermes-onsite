@@ -1,4 +1,4 @@
-// Builds the hermes-hands site from the same Markdown GitHub shows.
+// Builds the onsite site from the same Markdown GitHub shows.
 //
 // No Markdown file carries front matter, because GitHub would show it
 // as a table and the Hermes marketplace would print it. Each page's
@@ -29,20 +29,20 @@ import mdMarks from "./plugins/md-marks.js";
 
 const NAMESPACE = "hands";
 
-const SITE_NAME = "hermes-hands";
+const SITE_NAME = "onsite";
 
 const HOME_PAGE = "./README.md";
 
 const COMPONENTS_DIR = "site/components";
 
 const SOURCE_URL =
-  "https://github.com/saxby-tools/hermes-hands/blob/build/v1/";
+  "https://github.com/saxby-tools/hermes-onsite/blob/build/v1/";
 
-const SITE_URL = "https://saxby-tools.github.io/hermes-hands/";
+const SITE_URL = "https://saxby-tools.github.io/hermes-onsite/";
 
-const SITE_SUMMARY = "A community plugin that makes a remote Hermes " +
-  "agent act on the machine you are sitting at, with Hermes' own " +
-  "approval prompts kept on.";
+const SITE_SUMMARY = "A community plugin for the Hermes agent. Open a " +
+  "project folder on your own computer and your always-on Hermes " +
+  "works in it, with Hermes' own approval prompts kept on.";
 
 // Copied as they are. The README and the design page point at these.
 const PASSTHROUGH = [
@@ -62,6 +62,7 @@ const IGNORES = [
   ".rig/**",
   ".venv/**",
   ".pytest_cache/**",
+  ".scratch/**",
 ];
 
 // ---- Components -------------------------------------------------------
