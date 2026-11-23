@@ -1,4 +1,4 @@
-// The hermes-hands site's one script, linked by site/layouts/head.ejs
+// The onsite site's one script, linked by site/layouts/head.ejs
 // with `defer`. Every page reads and works without it. It adds two
 // extras:
 //
