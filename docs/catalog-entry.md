@@ -30,12 +30,16 @@ description: >-
   Hermes Desktop a chip names the computer in use, a pane browses its
   folders and starts sessions there, proposed commands get a Run
   button, and a settings page adds and tests computers. MCP servers
-  and Hermes' screen driver can run on the computer too. Disclosure —
+  can run on the computer too, and Hermes can see and drive its
+  screen, through Hermes' own driver or the screen sharing the
+  computer already has. Disclosure —
   runs model-authored shell commands and file edits on the SSH
   targets you name, with that account's full authority and no
   sandbox; Hermes' approval prompt is the only gate. Uses the system
   ssh client and the keys your SSH setup offers, and never reads or
-  stores a key. Keeps one ssh connection open per target in use, one
+  stores a key. Reads a VNC password from an environment variable you
+  name, if a target's screen sharing asks for one, and never writes
+  it down. Keeps one ssh connection open per target in use, one
   per MCP server you add and one per session that uses a target's
   screen. Files each target's host key in known_hosts on first
   contact. May hold a sleep lock on a target while a command runs.
@@ -58,7 +62,7 @@ known_issues:
   - "Imports private Hermes modules to reuse Hermes' own SSH, local and screen-driver code: 14 in compat.py and 4 in screenbackend.py. hermes plugins validate lists them as warnings. requires_hermes has an upper bound for that reason, so the plugin stops loading at Hermes 0.24 until it has been run against it."
   - "Needs plugins.isolation in_process (the default): Hermes cannot hand a terminal environment across the plugin-host boundary."
   - "Hermes only runs a session in a folder that exists on the host. The plugin keeps empty folders that mirror a target's folder names, so any folder can be opened, but the desktop app's own file tree shows those empty folders, not the target's files."
-  - "Screen control needs Hermes' screen driver installed on the target by its owner, and has been tested only on a Linux X11 desktop. The approval prompt for a screen action cannot name the computer."
+  - "Screen control needs either Hermes' screen driver installed on the target by its owner, or screen sharing (VNC) turned on there. Screen sharing sees pixels only: Hermes clicks by position and cannot name a button. Both have been tested only on a Linux X11 desktop. The approval prompt for a screen action cannot name the computer."
   - "Editors over ACP: Hermes leaves the screen tool out, and patch only works where the same path exists on both computers."
   - "In the desktop app's Bots tab the chip follows the app's active profile, which may not be the bot in view. It names the profile it asked."
   - "A real sleeping laptop, macOS as a target and the mobile apps have not been tested. See the repository's issues."
