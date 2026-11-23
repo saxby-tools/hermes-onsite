@@ -29,6 +29,8 @@ from .config import TargetSpec
 from .config import is_absolute
 from .config import parse_config
 from .health import Gate
+from .moves import Move
+from .moves import Moves
 from .pins import Folders
 from .pins import Pins
 from .pins import SOURCE_OVERRIDE
@@ -89,6 +91,7 @@ class Runtime:
             None if data_dir is None else data_dir / PROPOSALS_FILE
         )
 
+        self.moves = Moves()
         self.pins = Pins(JsonStore(pins_path))
         self.folders = Folders(JsonStore(folders_path))
         self.proposals = Proposals(JsonStore(proposals_path))
@@ -242,28 +245,64 @@ class Runtime:
             folder,
         )
 
+    def target_in_use(
+        self,
+        key: str,
+        cwd: str,
+        config: OnsiteConfig,
+    ) -> str:
+        """The target a session's next tool call would run on."""
+
+        pin = self.pins.get(key)
+
+        if pin is not None and pin.target in config.targets:
+            return pin.target
+
+        return routing.route(cwd, config).target
+
     def switch(
         self,
         key: str,
         target: str,
         cwd: str,
         session_id: str = "",
+        session_key: str = "",
     ) -> routing.Route:
-        """`/onsite <target>`: pin a session, or clear with `auto`."""
+        """`/onsite <target>`: pin a session, or clear with `auto`.
+
+        The move is also held for the session's agent, which is told
+        on its next turn. See `moves`.
+        """
 
         config = self.load_config()
+        cleared = target == CLEAR_OVERRIDE
 
-        if target == CLEAR_OVERRIDE:
-            self.pins.clear(key)
-
-            return routing.route(cwd, config)
-
-        if target not in config.targets:
+        if not cleared and target not in config.targets:
             raise UnknownTarget(target, list(config.targets))
 
-        self.pins.set(key, target, SOURCE_OVERRIDE, cwd, session_id)
+        before = self.target_in_use(key, cwd, config)
 
-        return routing.resolve(cwd, config, target, routing.REASON_OVERRIDE)
+        if cleared:
+            self.pins.clear(key)
+            route = routing.route(cwd, config)
+
+        if not cleared:
+            self.pins.set(key, target, SOURCE_OVERRIDE, cwd, session_id)
+            route = routing.resolve(
+                cwd,
+                config,
+                target,
+                routing.REASON_OVERRIDE,
+            )
+
+        self.moves.note(
+            Move(before, route.target, route.cwd, cleared),
+            key,
+            session_id,
+            session_key,
+        )
+
+        return route
 
     def find_pin(self, key: str = "", session_id: str = ""):
         return self.pins.get(key) or self.pins.find(session_id)
