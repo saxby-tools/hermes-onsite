@@ -552,6 +552,41 @@ Written Nov. 22, 2026, against Hermes v0.23.2.
   forwarded port, though the machine's SSH server still asks for a
   key.
 
+### 46. An MCP server on a target is started over SSH, not rerouted
+
+- **Owner's call, Nov. 22.** MCP tools should work on the user's
+  machine.
+- **Options.** Reroute MCP tool calls with tool middleware, as one
+  other plugin does. Or let Hermes start the server itself with
+  `ssh` as its command, so the server runs on the target.
+- **Pick.** The second. `hermes hands mcp TARGET NAME -- COMMAND`
+  builds the `ssh` call and, with `--apply`, hands it to Hermes' own
+  `hermes mcp add`.
+- **Why.** Middleware that reroutes a call runs before Hermes' own
+  gates and replaces them: other plugins' blocks, the guardrails and
+  the approval prompt never see the call. A server Hermes starts
+  itself is an ordinary MCP server behind every gate. No private
+  import was added.
+- **One session, one machine.** Hermes loads MCP servers for a whole
+  profile. So a server is named `<target>_<name>`, and the
+  `pre_tool_call` hook blocks its tools in a session on another
+  machine. A block keeps the gates; it only adds a refusal.
+- **PATH.** The server's command is found through the target's
+  interactive PATH, read with the shell's output captured and its
+  input closed, so a greeting cannot corrupt the MCP stream.
+- **Checked on the laptop.** A test server (`rig/mcp-where.py`) was
+  added to Buster through `--apply`. Hermes connected and listed its
+  tool. From a session on the laptop a real model called it and got
+  the laptop's node name and 15 PATH folders. From a session on the
+  Mac the same call came back refused, with the reason. 30 unit
+  tests.
+- **Cost.** Every session's tool list carries every target's MCP
+  tools, which costs prompt tokens. The servers are not tied to a
+  session's folder. A server whose link dies is restarted by Hermes
+  on the next call, with any state it held gone.
+- **Not checked.** A real third-party MCP server, and a key that
+  lives only in a key agent on a host that starts Hermes at boot.
+
 ## Open decisions from the brief
 
 | # | Decision | What the build did |
