@@ -51,6 +51,7 @@ tier: community
 category: tools
 requires_hermes: ">=0.23.2,<0.24"
 docs_url: https://saxby-tools.github.io/hermes-onsite/
+image: https://raw.githubusercontent.com/saxby-tools/hermes-onsite/<the same commit>/docs/brand/banner.png
 readme: true
 platforms: [linux, macos]
 known_issues:
@@ -81,13 +82,15 @@ capabilities:
 - [ ] If Hermes 0.24 has shipped, the plugin has been run on it and
       `requires_hermes` raised in `plugin.yaml` and here. An entry
       that cannot be installed on arrival will be declined.
-- [ ] A banner picture exists with the new name: 1200 by 600, the
-      subject on the right, because the listing lays the title over
-      the left. Add it as `image`, pinned to the same commit. The old
-      banner shows the old name and was taken out.
+- [x] A banner picture exists with the new name:
+      `docs/brand/banner.png`, 1200 by 600, the subject on the right,
+      because the listing lays the title over the left. It is in the
+      entry as `image`. Pin it to the same commit as `sha`.
 - [ ] Screenshots of the chip, the pane, an approval and the
       Machines page are in the repository, for `screenshots` and for
       the pull request. Up to six, each pinned to the same commit.
+      They must be taken in the real app. The guide's pictures are
+      drawings and must not be listed as screenshots.
 - [ ] The README's status line says what is true on the day.
 
 ## What the pull request should say
