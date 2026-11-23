@@ -223,6 +223,15 @@ Read these before trusting it with real work.
   on the host. In an editor such as Zed, `patch` only works where the
   same path exists on both machines, as in a shared folder.
   `write_file` and the terminal work everywhere.
+- **The folder must exist on the host.** Hermes will not run a turn
+  in a folder the host cannot see, and the desktop app's folder
+  picker and file tree read the host's disk. To work in a folder on
+  an SSH target, the host needs its own view of that folder, such as
+  a network mount, with a `path_map` entry for it.
+- **The Bots tab in Hermes Desktop.** The app sends the chip's
+  requests to its active profile, which is set in the Sessions tab.
+  With a bot's chat open in the Bots tab, the chip can describe a
+  different profile. It names the one it asked.
 - **Before the first message,** `/hands` cannot know a session's
   folder and says so.
 - **After `/hands <target>`,** the agent is not told. Say so in your
@@ -269,7 +278,9 @@ Not yet tested by anyone:
   fakes both by cutting a relay in front of the laptop's SSH port.
 - A person approving a real command in the TUI, the desktop app and
   an editor.
-- The desktop plugin inside the real Hermes Desktop app.
+- The run card and its Run button inside the real Hermes Desktop
+  app. The chip and the pane have been seen there, on a gateway that
+  serves several profiles, with the laptop shown as connected.
 - A macOS machine as an SSH target, and `caffeinate`.
 - `hermes plugins install` from the Git URL.
 
