@@ -64,17 +64,27 @@ TELEMETRY_VARIABLE = "CUA_DRIVER_RS_TELEMETRY_ENABLED"
 
 # Each line prints `name=value` and a zero byte. A value may hold
 # anything but a zero byte, so nothing needs quoting on the way back.
+#
+# A desktop is made of many processes and not all of them carry every
+# variable: the display server itself starts before the session bus
+# exists. So the process that knows the most about the desktop wins.
+SEAT_PATTERN = "^(" + "|".join(SEAT_VARIABLES) + ")="
 PROBE_SCRIPT = (
     "printf 'os=%s\\0' \"$(uname -s)\"\n"
     "printf 'user=%s\\0' \"$(id -un)\"\n"
+    "best=0\n"
+    "seat=\n"
     "for p in /proc/[0-9]*; do\n"
     "  [ -O \"$p\" ] || continue\n"
     "  e=$(tr '\\0' '\\n' < \"$p/environ\" 2>/dev/null) || continue\n"
     "  case \"$e\" in *DISPLAY=*) ;; *) continue ;; esac\n"
-    "  printf '%s\\n' \"$e\" | grep -E '^(" + "|".join(SEAT_VARIABLES) + ")=' "
-    "| tr '\\n' '\\0'\n"
-    "  break\n"
+    f"  m=$(printf '%s\\n' \"$e\" | grep -E '{SEAT_PATTERN}')\n"
+    "  n=$(printf '%s\\n' \"$m\" | grep -c .)\n"
+    "  [ \"$n\" -gt \"$best\" ] || continue\n"
+    "  best=$n\n"
+    "  seat=$m\n"
     "done\n"
+    "[ -n \"$seat\" ] && printf '%s\\n' \"$seat\" | tr '\\n' '\\0'\n"
     "[ \"$(uname -s)\" = Darwin ] && "
     "printf 'console=%s\\0' \"$(stat -f %Su /dev/console 2>/dev/null)\"\n"
     + QUIET_PATH_LINES + "\n"
