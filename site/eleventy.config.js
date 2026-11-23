@@ -11,7 +11,8 @@
 // draws it and `name.js` turns the block into the template's data.
 // A comment block such as `<!-- onsite:name {...} -->` picks one.
 //
-// The repo's root is the plugin itself, so everything the site needs
+// The plugin is the `onsite/` folder, which a user installs by
+// itself. The site is not part of it, so everything the site needs
 // stays in this folder. Run it from here with `npm run build`; the
 // script steps up to the repo root, which is Eleventy's input.
 
