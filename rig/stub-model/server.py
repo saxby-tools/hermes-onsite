@@ -31,7 +31,7 @@ DEFAULT_PORT = 11499
 DEFAULT_SCRIPTS_DIR = Path(__file__).parent / "scripts"
 
 MODEL_ID = "stub"
-LOG_PREVIEW_CHARS = 160
+LOG_PREVIEW_CHARS = 400
 SCRIPT_PREFIX = "script:"
 SCRIPT_NAME_RE = re.compile(r"script:([a-z0-9][a-z0-9-]*)")
 
