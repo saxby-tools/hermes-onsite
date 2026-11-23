@@ -5,7 +5,7 @@
   | terminal result
   | - **output:** /home/dev/Development/sample
   | dev
-  | 6469661a6cfa
+  | 9b356d6bf908
   | - **exit_code:** 0
   | - **cwd:** /home/dev/Development/sample
   PASS  pwd is the laptop path
@@ -13,7 +13,7 @@
   PASS  the machine name is the laptop's
 
 == Phase 1.2: PATH from the interactive shell
-  --- terminal: echo "PATH=$PATH" + 1 command [completed, 0.08s]
+  --- terminal: echo "PATH=$PATH" + 1 command [completed, 0.04s]
   | terminal result
   | - **output:** PATH=/home/dev/.local/tools/bin:/usr/local/bin:/usr/bin:/bin:/usr/games
   | handstool ok
@@ -21,17 +21,17 @@
   PASS  a tool that only .zshrc adds to PATH is found
 
 == Phase 1.3: file tools act on the laptop's files
-  --- write_file: rig-note.txt [completed, 0.12s]
+  --- write_file: rig-note.txt [completed, 0.11s]
   | ✅ write_file completed for `rig-note.txt`
   | Files: `/home/dev/Development/sample/rig-note.txt`
-  --- read_file: rig-note.txt [completed, 0.03s]
+  --- read_file: rig-note.txt [completed, 0.06s]
   | Read rig-note.txt — 2 total lines
   | 
   | ```
   | 1|alpha
   | 2|bravo
   | ```
-  --- search_files: bravo [completed, 0.11s]
+  --- search_files: bravo [completed, 0.10s]
   | Search results
   | Found 2 matches; showing 2.
   | 
@@ -39,11 +39,11 @@
   |   bravo
   | - ./rig-note.txt:2
   |   bravo
-  --- terminal: cat rig-note.txt + 1 command [completed, 0.03s]
+  --- terminal: cat rig-note.txt + 1 command [completed, 0.04s]
   | terminal result
   | - **output:** alpha
   | bravo
-  | 6469661a6cfa
+  | 9b356d6bf908
   | - **exit_code:** 0
   --- approval prompt: Approve edit: /home/dev/rig-note.txt
   | options: Allow once / Deny
@@ -61,7 +61,7 @@
         content: 'alpha\ncharlie\n'
 
 == Phase 1.4: a session in a Mac path runs on the Mac
-  --- terminal: pwd + 2 commands [completed, 0.22s]
+  --- terminal: pwd + 2 commands [completed, 0.18s]
   | terminal result
   | - **output:** <repo>/.rig/mac-work
   | <this-user>
@@ -73,11 +73,11 @@
   PASS  the machine name is the host's
 
 == Phase 1.5: a denied approval stops the command
-  --- terminal: mkdir -p hands-rig-victim + 1 command [completed, 0.08s]
+  --- terminal: mkdir -p hands-rig-victim + 1 command [completed, 0.10s]
   | terminal result
   | - **exit_code:** 0
   | - **cwd:** /home/dev/Development/sample
-  --- terminal: rm -rf hands-rig-victim [failed, 0.02s]
+  --- terminal: rm -rf hands-rig-victim [failed, 0.03s]
   | terminal failed: BLOCKED: Command denied by user. The user has NOT consented to this action. Do NOT retry this command, do NOT rephrase it, and do NOT attempt the same outcome via a different command. Stop the current workflow and wait for the user to respond before taking any further destructive or irreversible action.
   --- terminal: test -e hands-rig-victim/keep + 2 commands [completed, 0.04s]
   | terminal result
@@ -92,11 +92,11 @@
   PASS  the folder is still on the laptop
 
 == Phase 1.6: an allowed approval runs the command
-  --- terminal: mkdir -p hands-rig-victim + 1 command [completed, 0.06s]
+  --- terminal: mkdir -p hands-rig-victim + 1 command [completed, 0.07s]
   | terminal result
   | - **exit_code:** 0
   | - **cwd:** /home/dev/Development/sample
-  --- terminal: rm -rf hands-rig-victim [completed, 0.04s]
+  --- terminal: rm -rf hands-rig-victim [completed, 0.05s]
   | terminal result
   | - **exit_code:** 0
   | - **approval:** Command required approval (recursive delete) and was approved by the user.
