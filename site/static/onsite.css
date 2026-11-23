@@ -114,6 +114,14 @@
   font-display: swap;
 }
 
+/* The Medium weight is for the wordmark and the mark only. */
+@font-face {
+  font-family: "Geist Mono";
+  src: url("fonts/geist-mono-latin-500-normal.woff2") format("woff2");
+  font-weight: 500;
+  font-display: swap;
+}
+
 /* ---- Base ----------------------------------------------------------- */
 
 *,
@@ -247,12 +255,9 @@ code {
 
 /* ---- Wordmark ------------------------------------------------------- */
 
-/* The name, set in type: the word onsite in Geist Mono, with the o
- * lit in yellow. It is drawn for the blue field and for dark grounds.
- *
- * The wordmark is specified at weight 500. Only the 400 file is in
- * site/static/fonts so far, so it draws in Regular until the Medium
- * file is added. */
+/* The name, set in type: the word onsite in Geist Mono Medium, with
+ * the o lit in yellow. It is drawn for the blue field and for dark
+ * grounds. */
 
 .wordmark {
   color: var(--color-field-text);
@@ -269,13 +274,10 @@ code {
 /* ---- Mark ----------------------------------------------------------- */
 
 /* "On, lit": the letters o and n on a blue tile of 64 units, with the
- * o lit in yellow. Both letters are Geist Mono at one size, 52.39
- * units, on a baseline at 46.25. The o starts at x 3 and the n at
- * x 30.92. That sets the gap between them at half what the font
- * gives, and centres the pair on the n.
- *
- * Like the wordmark it is specified at weight 500 and draws in
- * Regular until the Medium file is added. */
+ * o lit in yellow. Both letters are Geist Mono Medium at one size,
+ * 52.39 units, on a baseline at 46.25. The o starts at x 3 and the n
+ * at x 30.92. That sets the gap between them at half what the font
+ * gives, and centres the pair on the n. */
 
 .mark text {
   font-family: var(--font-mono);
