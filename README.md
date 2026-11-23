@@ -20,6 +20,9 @@ Hermes that lives somewhere else.
 
 It is a Hermes plugin. Hermes itself is not patched.
 
+New to it? The [guide](docs/guide.md) shows each screen in plain
+words.
+
 **Status: v0.1.0, built in one pass and not yet accepted.** Phases 0
 to 4 of the build pass on a test rig, against a container and against
 a real laptop. The last step, a person using it from the real clients,
