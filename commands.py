@@ -6,6 +6,7 @@ import logging
 import os
 import sys
 
+from . import dialout
 from . import messages
 from . import mirror
 from . import wizard
@@ -342,6 +343,35 @@ def cli_open(runtime: Runtime, args) -> int:
     return EXIT_OK
 
 
+def cli_dial_out(ctx, args) -> int:
+    name = args.target
+    mode = MODE_LIVE if args.apply else MODE_DRY
+
+    try:
+        command = dialout.tunnel_command(args.server, args.port)
+        unit = dialout.service_unit(args.server, args.port)
+        block = dialout.target_settings(args.user, args.port)
+        wizard.validate({"default": name, "targets": {name: block}})
+    except (dialout.DialOutError, ConfigError) as error:
+        print(error)
+        return EXIT_USAGE
+
+    if args.apply:
+        ctx.set_config("targets", {name: block})
+
+    print(messages.format_dial_out(
+        mode,
+        name,
+        args.port,
+        command,
+        unit,
+        wizard.render_yaml({"targets": {name: block}}),
+        args.apply,
+    ))
+
+    return EXIT_OK
+
+
 def setup_cli(parser) -> None:
     actions = parser.add_subparsers(dest="hands_action")
 
@@ -452,6 +482,36 @@ def setup_cli(parser) -> None:
         help="make the folder. Without it, its place is only shown.",
     )
 
+    dialed = actions.add_parser(
+        "dial-out",
+        help="set up a machine this host cannot reach, which dials "
+        "out to it. A dry run unless --apply is given.",
+    )
+    dialed.add_argument("target", help="a name for the machine.")
+    dialed.add_argument(
+        "--server",
+        required=True,
+        metavar="USER@ADDRESS",
+        help="this host, as the machine logs in to it.",
+    )
+    dialed.add_argument(
+        "--user",
+        required=True,
+        help="the account on the machine that tool calls run as.",
+    )
+    dialed.add_argument(
+        "--port",
+        type=int,
+        default=dialout.DEFAULT_PORT,
+        help="the port on this host that leads to the machine. "
+        f"Default: {dialout.DEFAULT_PORT}.",
+    )
+    dialed.add_argument(
+        "--apply",
+        action="store_true",
+        help="write the target's settings. Without it, they are shown.",
+    )
+
 
 def build_cli_handler(ctx, runtime: Runtime):
     def handle_cli(args) -> int:
@@ -465,6 +525,9 @@ def build_cli_handler(ctx, runtime: Runtime):
 
         if action == "open":
             return cli_open(runtime, args)
+
+        if action == "dial-out":
+            return cli_dial_out(ctx, args)
 
         return cli_status(runtime, args)
 
