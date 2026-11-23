@@ -427,3 +427,47 @@ def format_dial_out(
 
     return "\n".join(lines)
 
+
+def format_mcp_refused(tool_name: str, owner: str, current: str) -> str:
+    """What the model is told when it reaches for another machine."""
+
+    return (
+        f"`{tool_name}` runs on `{owner}`, and this session runs on "
+        f"`{current}`. Nothing was run. Do not work around this. Tell "
+        f"the user that they can move the session with `/hands {owner}`."
+    )
+
+
+def format_mcp_add(
+    mode: str,
+    spec: TargetSpec,
+    server: str,
+    started_by: str,
+    command: str,
+    apply: bool,
+) -> str:
+    """The output of `hermes hands mcp`."""
+
+    lines = [
+        f"{mode} MCP server `{server}` on {spec.label}.",
+        f"{mode} started there by: {started_by}",
+        f"{mode} its tools are listed as `mcp__{server}__...`. They "
+        "run on that machine,",
+        f"{mode} behind Hermes' own approval prompts, and only in a "
+        f"session on `{spec.name}`.",
+    ]
+
+    if apply:
+        lines.append(f"{mode} handing over to `hermes mcp add`:")
+        return "\n".join(lines)
+
+    lines += [
+        "",
+        f"{mode} the call that adds it:",
+        command,
+        "",
+        f"{mode} nothing was added. Add --apply before `--` to add it.",
+    ]
+
+    return "\n".join(lines)
+
