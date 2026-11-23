@@ -1,20 +1,24 @@
 <%#
-  The footer, included by every layout. It says who made this and who
-  did not, names the license, and links the pages the masthead leaves
-  out, with the page's own Markdown on GitHub last.
+  The footer, included by every layout. It shows the mark, says who
+  made this and who did not, names the license, and links the pages
+  the masthead leaves out, with the page's own Markdown on GitHub
+  last. The mark's numbers are explained beside its styles.
 -%>
 <footer class="foot">
   <div class="foot__inner">
-    <img
-      class="foot__mark"
-      src="<%= root %>docs/brand/mark.svg"
-      alt=""
-      width="48"
-      height="48"
+    <svg
+      class="foot__mark mark"
+      viewBox="0 0 64 64"
+      role="img"
+      aria-label="onsite"
     >
+      <rect class="mark__tile" width="64" height="64" />
+      <text class="mark__lit" x="3" y="46.25">o</text>
+      <text class="mark__rest" x="30.92" y="46.25">n</text>
+    </svg>
     <div class="foot__text">
       <p>
-        hermes-hands is a community plugin. It is not made or endorsed
+        onsite is a community plugin. It is not made or endorsed
         by Nous Research, and it is not part of Hermes.
       </p>
       <p>

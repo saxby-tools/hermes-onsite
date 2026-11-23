@@ -266,6 +266,35 @@ code {
   color: var(--color-signal);
 }
 
+/* ---- Mark ----------------------------------------------------------- */
+
+/* "On, lit": the letters o and n on a blue tile of 64 units, with the
+ * o lit in yellow. Both letters are Geist Mono at one size, 52.39
+ * units, on a baseline at 46.25. The o starts at x 3 and the n at
+ * x 30.92. That sets the gap between them at half what the font
+ * gives, and centres the pair on the n.
+ *
+ * Like the wordmark it is specified at weight 500 and draws in
+ * Regular until the Medium file is added. */
+
+.mark text {
+  font-family: var(--font-mono);
+  font-size: 52.39px;
+  font-weight: 500;
+}
+
+.mark__tile {
+  fill: var(--color-field);
+}
+
+.mark__lit {
+  fill: var(--color-signal);
+}
+
+.mark__rest {
+  fill: var(--color-field-text);
+}
+
 /* ---- Masthead ------------------------------------------------------- */
 
 .top {
