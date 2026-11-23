@@ -36,6 +36,17 @@ DEFAULT_MIRROR_DEPTH = 3
 MIN_MIRROR_DEPTH = 1
 MAX_MIRROR_DEPTH = 6
 
+# The two ways to a target's screen. `auto` uses Hermes' driver when
+# the target has one, and the target's own screen sharing when not.
+SCREEN_AUTO = "auto"
+SCREEN_DRIVER = "driver"
+SCREEN_SHARING = "sharing"
+VALID_SCREEN_ROUTES = (SCREEN_AUTO, SCREEN_DRIVER, SCREEN_SHARING)
+
+# Where screen sharing listens on nearly every machine that has it.
+DEFAULT_SCREEN_PORT = 5900
+ENV_NAME_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
+
 # `/onsite auto` clears an override, so no target may take the name.
 RESERVED_TARGET_NAMES = ("auto",)
 
@@ -64,6 +75,9 @@ KNOWN_TARGET_KEYS = frozenset({
     "connect_timeout",
     "mirror",
     "mirror_depth",
+    "screen",
+    "screen_port",
+    "screen_password_env",
 })
 
 
@@ -98,6 +112,9 @@ class TargetSpec:
     connect_timeout: int = DEFAULT_CONNECT_TIMEOUT
     mirror: str = ""
     mirror_depth: int = DEFAULT_MIRROR_DEPTH
+    screen: str = SCREEN_AUTO
+    screen_port: int = DEFAULT_SCREEN_PORT
+    screen_password_env: str = ""
 
     @property
     def host_key_alias(self) -> str:
@@ -219,25 +236,31 @@ def read_path_map(name: str, raw: Any, problems: list[str]) -> tuple:
     return tuple(pairs)
 
 
-def read_port(name: str, raw: Any, problems: list[str]) -> int:
+def read_port(
+    name: str,
+    raw: Any,
+    problems: list[str],
+    key: str = "port",
+    default: int = DEFAULT_SSH_PORT,
+) -> int:
     if raw is None:
-        return DEFAULT_SSH_PORT
+        return default
 
     if isinstance(raw, bool):
-        problems.append(f"`{name}.port` must be a number")
-        return DEFAULT_SSH_PORT
+        problems.append(f"`{name}.{key}` must be a number")
+        return default
 
     if not isinstance(raw, int):
-        problems.append(f"`{name}.port` must be a number")
-        return DEFAULT_SSH_PORT
+        problems.append(f"`{name}.{key}` must be a number")
+        return default
 
     if raw < 1:
-        problems.append(f"`{name}.port` must be between 1 and 65535")
-        return DEFAULT_SSH_PORT
+        problems.append(f"`{name}.{key}` must be between 1 and 65535")
+        return default
 
     if raw > 65535:
-        problems.append(f"`{name}.port` must be between 1 and 65535")
-        return DEFAULT_SSH_PORT
+        problems.append(f"`{name}.{key}` must be between 1 and 65535")
+        return default
 
     return raw
 
@@ -348,6 +371,45 @@ def read_path_mode(name: str, raw: Any, problems: list[str]) -> str:
     return raw
 
 
+def read_screen(name: str, raw: Any, problems: list[str]) -> str:
+    if raw is None:
+        return SCREEN_AUTO
+
+    if raw not in VALID_SCREEN_ROUTES:
+        choices = ", ".join(VALID_SCREEN_ROUTES)
+        problems.append(f"`{name}.screen` must be one of: {choices}")
+        return SCREEN_AUTO
+
+    return raw
+
+
+def read_env_name(
+    name: str,
+    key: str,
+    raw: Any,
+    problems: list[str],
+) -> str:
+    """The name of an environment variable, never its value.
+
+    A password written here would sit in config.yaml in the clear.
+    A name that could not be a variable is most likely one.
+    """
+
+    value = read_text(name, key, raw, problems)
+
+    if not value:
+        return ""
+
+    if not ENV_NAME_RE.match(value):
+        problems.append(
+            f"`{name}.{key}` must be the name of an environment "
+            "variable, not the password itself"
+        )
+        return ""
+
+    return value
+
+
 def read_flag(
     name: str,
     key: str,
@@ -422,6 +484,20 @@ def read_target(name: str, raw: Any, problems: list[str]) -> TargetSpec | None:
         mirror_depth=read_mirror_depth(
             name,
             raw.get("mirror_depth"),
+            problems,
+        ),
+        screen=read_screen(name, raw.get("screen"), problems),
+        screen_port=read_port(
+            name,
+            raw.get("screen_port"),
+            problems,
+            key="screen_port",
+            default=DEFAULT_SCREEN_PORT,
+        ),
+        screen_password_env=read_env_name(
+            name,
+            "screen_password_env",
+            raw.get("screen_password_env"),
             problems,
         ),
     )
@@ -502,6 +578,15 @@ def target_to_settings(spec: TargetSpec) -> dict:
 
     if spec.mirror and spec.mirror_depth != DEFAULT_MIRROR_DEPTH:
         block["mirror_depth"] = spec.mirror_depth
+
+    if spec.screen != SCREEN_AUTO:
+        block["screen"] = spec.screen
+
+    if spec.screen_port != DEFAULT_SCREEN_PORT:
+        block["screen_port"] = spec.screen_port
+
+    if spec.screen_password_env:
+        block["screen_password_env"] = spec.screen_password_env
 
     return block
 
