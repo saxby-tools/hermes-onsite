@@ -78,6 +78,12 @@ PLUGIN_API = f"http://127.0.0.1:{SERVE_PORT}/api/plugins/{PLUGIN_ID}"
 
 BACKUP_SUFFIX = ".hands-rig-backup"
 STUB_PID_FILE = "stub-model.pid"
+STUB_LOG_FILE = "stub-model.log"
+
+# The words that open the note an agent gets after `/onsite` moves its
+# session. The stub model logs the start of each user message, so the
+# rig can tell whether the note reached the model.
+MOVE_NOTE_MARK = "Note from the onsite plugin"
 DEFAULT_PROFILE = "buster"
 DEFAULT_HERMES = "hermes"
 
@@ -254,7 +260,7 @@ def make_dirs() -> None:
 
 
 def start_stub() -> subprocess.Popen:
-    log = open(LOG_DIR / "stub-model.log", "w")
+    log = open(LOG_DIR / STUB_LOG_FILE, "w")
 
     process = subprocess.Popen(
         [
@@ -831,6 +837,24 @@ def wait_for_file(hands, path: str, seconds: float) -> str:
     return ""
 
 
+def stub_log_size() -> int:
+    try:
+        return (LOG_DIR / STUB_LOG_FILE).stat().st_size
+    except OSError:
+        return 0
+
+
+def stub_log_since(offset: int) -> str:
+    """What the stub model was asked after `offset` bytes of its log."""
+
+    try:
+        data = (LOG_DIR / STUB_LOG_FILE).read_bytes()
+    except OSError:
+        return ""
+
+    return data[offset:].decode(errors="replace")
+
+
 def phase_three_slash(report: Report, profile: Profile, hands) -> None:
     report.section("Phase 3.3: /onsite shows and switches the target")
     client = profile.session(LAPTOP_SESSION_DIR, "slash")
@@ -856,11 +880,26 @@ def phase_three_slash(report: Report, profile: Profile, hands) -> None:
             "now runs on mac" in turn.message,
         )
 
+        asked_from = stub_log_size()
         turn = client.prompt("script:where")
         show_turn(report, turn)
         report.check(
             "the next tool call runs on the Mac, in the session folder",
             str(LAPTOP_SESSION_DIR.resolve()) in turn.tool_text(),
+        )
+
+        asked = stub_log_since(asked_from)
+        report.check(
+            "the model is told that the session moved to the Mac",
+            MOVE_NOTE_MARK in asked and "session to `mac`" in asked,
+        )
+
+        asked_from = stub_log_size()
+        turn = client.prompt("script:where")
+        report.check(
+            "it is told once, not on every turn after",
+            "script:where" in stub_log_since(asked_from)
+            and MOVE_NOTE_MARK not in stub_log_since(asked_from),
         )
 
         turn = client.prompt("/onsite auto")
@@ -869,11 +908,18 @@ def phase_three_slash(report: Report, profile: Profile, hands) -> None:
             "The folder rules pick laptop" in turn.message,
         )
 
+        asked_from = stub_log_size()
         turn = client.prompt("script:where")
         show_turn(report, turn)
         report.check(
             "the next tool call runs on the laptop again",
             hands.sample_dir in turn.tool_text(),
+        )
+
+        asked = stub_log_since(asked_from)
+        report.check(
+            "the model is told that the session moved back",
+            MOVE_NOTE_MARK in asked and "back to `laptop`" in asked,
         )
 
         turn = client.prompt("/onsite nowhere")
