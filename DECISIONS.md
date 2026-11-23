@@ -769,6 +769,11 @@ Written Nov. 22, 2026, against Hermes v0.23.2.
 - **Limit.** The move is held in memory. If Hermes restarts between
   `/onsite` and the next message, the agent is not told. The pin
   itself is on disk, so the tools still run on the right machine.
+- **The screen does not move.** Hermes keeps a session's screen
+  backend once it is built (entry 47). An agent told that its tools
+  moved would assume its screen did too, and click on the wrong
+  machine. When this profile uses the plugin's screen backend, the
+  note says so and tells the agent to ask for a new chat.
 - **Checked.** The rig reads what its stub model was asked: the note
   is there on the turn after `/onsite mac`, gone on the turn after
   that, and there again after `/onsite auto`.
