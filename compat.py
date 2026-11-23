@@ -66,6 +66,7 @@ __all__ = [
     "environment_key",
     "load_settings",
     "plugins_dir",
+    "save_settings",
     "terminal_persistence",
 ]
 
@@ -95,6 +96,39 @@ def load_settings() -> Any:
         return config["plugins"]["entries"][PLUGIN_ID]["settings"]
     except (KeyError, TypeError):
         return None
+
+
+class SettingsLocked(RuntimeError):
+    """This install's settings are managed by something else."""
+
+
+def save_settings(settings: dict) -> None:
+    """Write the plugin's whole settings block.
+
+    Hermes' own writer for plugin settings merges what it is given
+    into what is there, so a target taken out of the block would
+    stay in the file. The block is replaced whole here, through the
+    same public reader and writer Hermes' bundled plugins use.
+    """
+
+    from hermes_cli.config import is_managed
+    from hermes_cli.config import read_user_config_raw
+    from hermes_cli.config import save_config
+
+    if is_managed():
+        raise SettingsLocked(
+            "this Hermes install is managed by a package manager, so "
+            "its settings are changed there"
+        )
+
+    raw = read_user_config_raw()
+    plugins = raw.setdefault("plugins", {})
+    entries = plugins.setdefault("entries", {})
+    entry = entries.setdefault(PLUGIN_ID, {})
+
+    entry["settings"] = settings
+
+    save_config(raw)
 
 
 def current_session_cwd() -> str:
