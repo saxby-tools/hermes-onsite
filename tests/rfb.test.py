@@ -507,6 +507,16 @@ def test_a_screen_too_large_to_be_real_is_refused():
     assert "60000 wide" in str(caught.value)
 
 
+def test_a_screen_with_too_many_pixels_is_refused():
+    # Each side is allowed, but together they ask for a gigabyte.
+    server = FakeServer(size=(16000, 16000))
+
+    with pytest.raises(rfb.RfbError) as caught:
+        rfb.Client(server.link).handshake()
+
+    assert "too large to be real" in str(caught.value)
+
+
 # ---- input ------------------------------------------------------------
 
 
