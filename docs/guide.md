@@ -214,14 +214,18 @@ also type the number yourself:
 
 ## Add or change a computer
 
-Open Settings, then Plugins, then **Machines**. You see each computer
-onsite knows.
+Open Settings, then Plugins, then **Onsite**. That page lists each
+computer onsite knows. To add or change one, open **Machines**, right
+under Onsite in the list on the left.
 
 <!-- onsite:screen {"shows": "machines"} -->
 
 The Machines page in Settings. A line at the top says "The machines a
 session can run on. A session picks one from the folder it is opened
-in." Two rows follow. The first is "laptop", "you@laptop.example
+in." A second line says whose settings these are: "These are the
+settings of the "home" profile, the one picked in the Sessions tab.
+The "Applies to" row above does not change this page." Two rows
+follow. The first is "laptop", "you@laptop.example
 (default)", with an Edit button and a Remove button that is greyed
 out. The second is "mac", "this machine", with Edit and Remove. At
 the bottom is a button, "Add a machine".
@@ -285,7 +289,7 @@ computer first.
 | "That folder could not be listed." | The computer did not answer, or the folder cannot be read. | Check the chip's dot. Click Browse again. |
 | "More folders than fit here. Go deeper to narrow it." | The folder has more than 500 folders in it. | Click into a folder closer to the one you want. |
 | "Could not reach the chat box. Type /run 3." | The Run button could not type for you. | Type `/run 3` in the chat yourself. |
-| No Machines page in Settings | Your version of the app cannot show a plugin's settings page. | Use the commands in the [README](../README.md#set-up). |
+| No Onsite entry in Settings | Your version of the app cannot show a plugin's settings page. | Use the commands in the [README](../README.md#set-up). |
 
 ## What to type
 
