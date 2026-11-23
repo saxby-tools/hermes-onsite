@@ -370,6 +370,24 @@ test('the chip names the profile that has no plugin', { skip: SKIP }, async () =
   assert.match(title, /no onsite plugin enabled/)
 })
 
+test('the chip says when the chat in view is another profile\'s', { skip: SKIP }, async () => {
+  const { backend, host, made, mount, settle } = await setup()
+  const box = await mount(made.contributions.chip.render())
+
+  // The Bots tab: the chat is the test profile's, but the app's
+  // requests still go to the default one.
+  host.state.profile = atom('default')
+  host.state.focusedSessionProfile = atom('buster')
+  backend.fail = 'HTTP 404'
+  await settle(made.intervals[0])
+
+  const title = box.querySelector('[data-onsite-chip]').getAttribute('title')
+
+  assert.match(title, /This chat belongs to the "buster" profile/)
+  assert.match(title, /asked the "default" profile/)
+  assert.match(title, /Pick "buster" in the Sessions tab/)
+})
+
 test('clicking the chip opens the pane', { skip: SKIP }, async () => {
   const { calls, click, made, mount } = await setup()
   const box = await mount(made.contributions.chip.render())
