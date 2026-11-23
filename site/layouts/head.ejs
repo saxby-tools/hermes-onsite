@@ -6,7 +6,8 @@
   and `siteUrl`. Nothing here loads from another origin.
 
   The short script sets a saved theme before the page paints, so a
-  reader who picked one never sees the other flash by.
+  reader who picked light or dark never sees the other flash by. With
+  nothing saved the page follows the system.
 -%>
 <meta name="viewport"
   content="width=device-width, initial-scale=1, viewport-fit=cover">
@@ -35,9 +36,13 @@ on your machine. A marble head and a marble hand, drawn in blue.">
 <link rel="stylesheet" href="<%= root %>onsite.css">
 <script>
   try {
-    const saved = localStorage.getItem("hands-theme");
+    const saved = localStorage.getItem("onsite-theme");
 
-    if (saved) {
+    if (saved === "light") {
+      document.documentElement.dataset.theme = saved;
+    }
+
+    if (saved === "dark") {
       document.documentElement.dataset.theme = saved;
     }
   } catch {

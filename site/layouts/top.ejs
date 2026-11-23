@@ -1,8 +1,10 @@
 <%#
   The masthead, included by every layout: the lockup, the links to
-  the front page's main sections, and the theme button. The button is
-  hidden until the script is running, because it does nothing
-  without it. Its styles are under "Masthead" in site/static/onsite.css.
+  the front page's main sections, and the theme toggle. The toggle
+  has three choices and is boxed, so it reads as a control and not as
+  one more link. It is hidden until the script is running, because it
+  does nothing without it. Its styles are under "Masthead" in
+  site/static/onsite.css.
 -%>
 <a class="skip" href="#main">Skip to the page</a>
 <header class="top">
@@ -23,9 +25,32 @@
       <a class="top__link" href="<%= root %>#what-is-tested">Tested</a>
       <a class="top__link" href="<%= root %>DECISIONS.html">Decisions</a>
     </nav>
-    <button class="top__theme" type="button" data-theme-toggle hidden>
-      Theme
-    </button>
+    <div
+      class="theme-toggle"
+      role="group"
+      aria-label="Theme"
+      data-theme-toggle
+      hidden
+    >
+      <button
+        class="theme-toggle__option"
+        type="button"
+        data-theme-choice="system"
+        aria-pressed="true"
+      >System</button>
+      <button
+        class="theme-toggle__option"
+        type="button"
+        data-theme-choice="light"
+        aria-pressed="false"
+      >Light</button>
+      <button
+        class="theme-toggle__option"
+        type="button"
+        data-theme-choice="dark"
+        aria-pressed="false"
+      >Dark</button>
+    </div>
     <a
       class="top__link top__link-button"
       href="https://github.com/saxby-tools/hermes-hands"

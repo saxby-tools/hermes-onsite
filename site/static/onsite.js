@@ -3,8 +3,8 @@
 // extras:
 //
 // - A Copy button on shell and YAML code blocks.
-// - The Theme button in the masthead, which switches between light
-//   and dark and remembers the choice.
+// - The theme toggle in the masthead. It has three choices: follow
+//   the system, light, or dark. Light and dark are remembered.
 
 // ---- Constants --------------------------------------------------------
 
@@ -16,9 +16,11 @@ const FAILED_LABEL = "Select and copy";
 
 const RESET_AFTER_MS = 2400;
 
-const THEME_KEY = "hands-theme";
+const THEME_KEY = "onsite-theme";
 
-const DARK_QUERY = "(prefers-color-scheme: dark)";
+const THEME_SYSTEM = "system";
+
+const THEME_PICKS = ["light", "dark"];
 
 // ---- Copy buttons -----------------------------------------------------
 
@@ -63,44 +65,72 @@ function addCopyButton(block) {
 
 // ---- Theme ------------------------------------------------------------
 
-function currentTheme() {
-  const picked = document.documentElement.dataset.theme;
+// What the reader last picked. Anything else, or nothing, means the
+// page follows the system.
+function savedTheme() {
+  try {
+    const saved = localStorage.getItem(THEME_KEY);
 
-  if (picked) {
-    return picked;
+    if (THEME_PICKS.includes(saved)) {
+      return saved;
+    }
+  } catch {
+    // No storage: fall through to the system's theme.
   }
 
-  return matchMedia(DARK_QUERY).matches ? "dark" : "light";
+  return THEME_SYSTEM;
 }
 
-function describe(button) {
-  const next = currentTheme() === "dark" ? "light" : "dark";
-
-  button.setAttribute("aria-label", `Switch to the ${next} theme`);
-}
-
-function saveTheme(theme) {
+function saveTheme(choice) {
   try {
-    localStorage.setItem(THEME_KEY, theme);
+    if (choice === THEME_SYSTEM) {
+      localStorage.removeItem(THEME_KEY);
+
+      return;
+    }
+
+    localStorage.setItem(THEME_KEY, choice);
   } catch {
     // No storage: the choice lasts for this page only.
   }
 }
 
-function switchTheme(button) {
-  const next = currentTheme() === "dark" ? "light" : "dark";
+// Light and dark set `data-theme`. System removes it, and the
+// stylesheet's light-dark() colours follow the device again.
+function applyTheme(choice) {
+  if (choice === THEME_SYSTEM) {
+    delete document.documentElement.dataset.theme;
 
-  document.documentElement.dataset.theme = next;
+    return;
+  }
 
-  saveTheme(next);
-  describe(button);
+  document.documentElement.dataset.theme = choice;
 }
 
-function showThemeButton(button) {
-  describe(button);
+function markPressed(toggle, choice) {
+  for (const option of toggle.querySelectorAll("[data-theme-choice]")) {
+    const pressed = option.dataset.themeChoice === choice;
 
-  button.hidden = false;
-  button.addEventListener("click", () => switchTheme(button));
+    option.setAttribute("aria-pressed", String(pressed));
+  }
+}
+
+function pickTheme(toggle, choice) {
+  applyTheme(choice);
+  saveTheme(choice);
+  markPressed(toggle, choice);
+}
+
+function showThemeToggle(toggle) {
+  markPressed(toggle, savedTheme());
+
+  toggle.hidden = false;
+
+  for (const option of toggle.querySelectorAll("[data-theme-choice]")) {
+    const choice = option.dataset.themeChoice;
+
+    option.addEventListener("click", () => pickTheme(toggle, choice));
+  }
 }
 
 // ---- Run --------------------------------------------------------------
@@ -109,6 +139,6 @@ for (const block of document.querySelectorAll(".code[data-copy]")) {
   addCopyButton(block);
 }
 
-for (const button of document.querySelectorAll("[data-theme-toggle]")) {
-  showThemeButton(button);
+for (const toggle of document.querySelectorAll("[data-theme-toggle]")) {
+  showThemeToggle(toggle);
 }
