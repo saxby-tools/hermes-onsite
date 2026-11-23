@@ -295,9 +295,13 @@ class Runtime:
                 routing.REASON_OVERRIDE,
             )
 
+        # Sessionless work shares one key. A move filed under it would
+        # be told to whichever job spoke next.
+        own_key = key if is_session_key(key) else ""
+
         self.moves.note(
             Move(before, route.target, route.cwd, cleared),
-            key,
+            own_key,
             session_id,
             session_key,
         )
