@@ -19,11 +19,12 @@ from __future__ import annotations
 import re
 import shlex
 
-from .config import DEFAULT_SSH_PORT
 from .config import HandsConfig
 from .config import KIND_SSH
 from .config import PATH_MODE_INTERACTIVE
 from .config import TargetSpec
+from .remote import QUIET_PATH_LINES
+from .remote import build_stdio_arguments
 
 
 HERMES_BINARY = "hermes"
@@ -33,24 +34,6 @@ TOOL_SEPARATOR = "__"
 SERVER_SEPARATOR = "_"
 
 SERVER_NAME_RE = re.compile(r"^[a-z][a-z0-9_]{0,31}$")
-
-# A dead link is noticed in 45 seconds, and Hermes then restarts the
-# server on the next call.
-ALIVE_INTERVAL = 15
-ALIVE_COUNT = 3
-
-PATH_MARK = "__HANDS_MCP_PATH__"
-
-# Many people build PATH in a file only an interactive shell reads,
-# so `npx` or `uvx` would not be found. The interactive shell is asked
-# for PATH with its output captured and its input closed. Nothing it
-# prints can reach the server's own input or output.
-PATH_LINES = (
-    "p=$(\"${SHELL:-sh}\" -ic "
-    f"'printf \"\\n{PATH_MARK}%s\\n\" \"$PATH\"' 2>/dev/null </dev/null "
-    f"| sed -n 's/^{PATH_MARK}//p' | tail -n 1); "
-    '[ -n "$p" ] && PATH="$p" && export PATH; '
-)
 
 # Hermes passes a short list of variables to a server it starts. The
 # key agent's socket is not on it, so it is asked for by name.
@@ -83,7 +66,7 @@ def build_remote_script(spec: TargetSpec, words: list[str]) -> str:
     lines = ""
 
     if spec.path_mode == PATH_MODE_INTERACTIVE:
-        lines = PATH_LINES
+        lines = QUIET_PATH_LINES
 
     return lines + "exec " + shlex.join(words)
 
@@ -100,34 +83,7 @@ def build_ssh_arguments(spec: TargetSpec, words: list[str]) -> list[str]:
     if not words:
         raise McpError("name the server's command after `--`")
 
-    arguments = [
-        "-T",
-        "-o", "BatchMode=yes",
-        "-o", f"ConnectTimeout={spec.connect_timeout}",
-        "-o", f"ServerAliveInterval={ALIVE_INTERVAL}",
-        "-o", f"ServerAliveCountMax={ALIVE_COUNT}",
-        "-o", "StrictHostKeyChecking=accept-new",
-        "-o", "LogLevel=ERROR",
-    ]
-
-    if spec.port != DEFAULT_SSH_PORT:
-        arguments += ["-p", str(spec.port)]
-
-    if spec.key:
-        arguments += ["-i", spec.key]
-
-    if spec.known_hosts:
-        arguments += ["-o", f"UserKnownHostsFile={spec.known_hosts}"]
-
-    if spec.host_key_alias:
-        arguments += ["-o", f"HostKeyAlias={spec.host_key_alias}"]
-
-    script = build_remote_script(spec, words)
-
-    # The login shell on a target may not be POSIX. `sh` always is.
-    arguments += [f"{spec.user}@{spec.host}", "sh -c " + shlex.quote(script)]
-
-    return arguments
+    return build_stdio_arguments(spec, build_remote_script(spec, words))
 
 
 def add_command(spec: TargetSpec, name: str, words: list[str]) -> list[str]:
