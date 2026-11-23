@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import io
+import sys
 
 import pytest
 
@@ -149,6 +150,16 @@ def test_a_picture_of_a_large_screen_is_made_smaller():
 
     assert (picture.width, picture.height) == (100, 50)
     assert image.size == (100, 50)
+
+
+def test_a_hermes_without_the_picture_package_says_so(monkeypatch):
+    # A None entry makes Python refuse the import, as if it were gone.
+    monkeypatch.setitem(sys.modules, "PIL", None)
+
+    with pytest.raises(screenshare.SharingError) as caught:
+        screenshare.encode_picture(bytes(4), 1, 1, 0)
+
+    assert "Pillow" in str(caught.value)
 
 
 # ---- pointer and keyboard ---------------------------------------------
