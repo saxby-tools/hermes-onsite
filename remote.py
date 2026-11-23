@@ -101,6 +101,9 @@ def build_ssh_options(spec: TargetSpec) -> list[str]:
     if spec.known_hosts:
         options += ["-o", f"UserKnownHostsFile={spec.known_hosts}"]
 
+    if spec.host_key_alias:
+        options += ["-o", f"HostKeyAlias={spec.host_key_alias}"]
+
     return options
 
 
