@@ -301,7 +301,7 @@ rig, with Hermes' pinned driver. See [What is tested](#what-is-tested).
 | What | CLI and TUI | Hermes Desktop |
 | --- | --- | --- |
 | See where tools run | `/onsite`, or `hermes onsite status` | A chip on the right of the status bar. |
-| Move this session | `/onsite <target>`, back with `/onsite auto` | Same, typed in the chat. |
+| Move this session | `/onsite <target>`, back with `/onsite auto`. The agent is told with your next message. | Same, typed in the chat. |
 | Approve a risky command | Hermes' own prompt | Hermes' own prompt. |
 | Run a command the agent proposed | `/run <number>` | Run and Copy buttons, in a pane and in the transcript. |
 | Open a folder on a machine | `hermes onsite open laptop:~/work --apply` | Browse the machine in the pane and start a session there. |
@@ -371,13 +371,16 @@ and nothing else. It sends no telemetry and calls no other service.
 It does not update itself.
 
 **Inside Hermes.** It registers a terminal backend, one tool
-(`propose_command`), one hook that runs before each tool call, two
-slash commands and one CLI command. The hook can refuse an MCP tool
-that belongs to another machine; it never approves anything. `/run`
-puts a message into the chat for the agent, which needs
-`allow_gateway_injection: true`. It serves two routes to the desktop
-app under `/api/plugins/onsite/`. The desktop half adds a status
-chip, a pane and a run card.
+(`propose_command`), two hooks, two slash commands and one CLI
+command. One hook runs before each tool call. It can refuse an MCP
+tool that belongs to another machine; it never approves anything. The
+other runs before each turn. After `/onsite` moves a session, it adds
+one note to your next message that tells the agent which machine its
+tools now run on. `/run` puts a message into the chat for the agent,
+which needs `allow_gateway_injection: true`. It serves eight routes
+to the desktop app under `/api/plugins/onsite/`. Two of them write
+the plugin's own settings and one makes mirror folders. The desktop
+half adds a status chip, a pane, a run card and a settings page.
 
 **Private Hermes code.** It imports Hermes modules that are not
 plugin API, to reuse Hermes' own SSH, local and screen code. They are
@@ -413,8 +416,6 @@ Read these before trusting it with real work.
   different profile. It names the one it asked.
 - **Before the first message,** `/onsite` cannot know a session's
   folder and says so.
-- **After `/onsite <target>`,** the agent is not told. Say so in your
-  next message if it matters.
 - **One slow case.** A target that freezes in the few seconds before
   a call can take about seven seconds to report, not three.
 - **Host-only guards.** Hermes guards keyed on the backend name
@@ -538,7 +539,8 @@ onsite/              the plugin: all that an install puts on a host
   onsite-screen/     the folder Hermes finds that backend by
   exits.py           the four ways a command can end
   hooks.py           file tools on the right folder, MCP tools on
-                     the right machine
+                     the right machine, a note after a move
+  moves.py           a session's move, held until its agent is told
   commands.py        /onsite, /run, hermes onsite
   tools.py           propose_command
   prompt.py          the per-session note in the system prompt
