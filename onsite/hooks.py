@@ -149,6 +149,13 @@ def screen_is_ours() -> bool:
 
 def build_turn_hook(runtime: Runtime):
     def before_turn(session_id: str = "", task_id: str = "", **kwargs):
+        # Read first. A move is handed over once, and settings that
+        # are broken for one turn must not use that once up.
+        try:
+            config = runtime.load_config()
+        except ConfigError:
+            return None
+
         move = runtime.moves.take(
             task_id or "",
             session_id or "",
@@ -156,11 +163,6 @@ def build_turn_hook(runtime: Runtime):
         )
 
         if move is None:
-            return None
-
-        try:
-            config = runtime.load_config()
-        except ConfigError:
             return None
 
         # The target can be removed between the move and the turn.
