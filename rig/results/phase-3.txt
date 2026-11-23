@@ -4,12 +4,12 @@
   --- in a laptop folder
   | Folder    <repo>/.rig/work/sample
   | Target    laptop (dev@127.0.0.1)
-  | State     connected (56 ms)
+  | State     connected (54 ms)
   | Start in  /home/dev/Development/sample
   | Why       the session folder is in its path map
   | 
   | Targets
-  |    laptop  ssh    up (50 ms)  dev@127.0.0.1
+  |    laptop  ssh    up (53 ms)  dev@127.0.0.1
   |  * mac     local  up
   | 
   | * is the default target.
@@ -67,7 +67,7 @@
 == Phase 3.3: /onsite shows and switches the target
   --- /onsite
   | Onsite:  laptop (dev@127.0.0.1)
-  | State:   connected (68 ms)
+  | State:   connected (65 ms)
   | Folder:  /home/dev/Development/sample
   | Why:     this session started there
   | Targets: laptop, mac (default)
@@ -76,9 +76,9 @@
   --- /onsite mac
   | This session now runs on mac (this machine).
   | The next tool call starts in <repo>/.rig/work/sample.
-  | The agent was not told. Say so in your next message if it matters, since paths differ between machines.
+  | The agent is told with your next message.
   PASS  /onsite mac moves the session
-  --- terminal: pwd + 2 commands [completed, 0.29s]
+  --- terminal: pwd + 2 commands [completed, 0.26s]
   | terminal result
   | - **output:** <repo>/.rig/work/sample
   | <this-user>
@@ -86,20 +86,23 @@
   | - **exit_code:** 0
   | - **cwd:** <repo>/.rig/work/sample
   PASS  the next tool call runs on the Mac, in the session folder
+  PASS  the model is told that the session moved to the Mac
+  PASS  it is told once, not on every turn after
   PASS  /onsite auto goes back to the folder rules
-  --- terminal: pwd + 2 commands [completed, 0.20s]
+  --- terminal: pwd + 2 commands [completed, 0.23s]
   | terminal result
   | - **output:** /home/dev/Development/sample
   | dev
-  | 35beffa072ba
+  | c573e390c6d7
   | - **exit_code:** 0
   | - **cwd:** /home/dev/Development/sample
   PASS  the next tool call runs on the laptop again
+  PASS  the model is told that the session moved back
   PASS  an unknown target is refused with the choices
         `nowhere` is not a target. Targets: laptop, mac.
 
 == Phase 3.4: propose_command and /run
-  --- propose_command: echo proposed-ran > proposed.txt [completed, 0.00s]
+  --- propose_command: echo proposed-ran > proposed.txt [completed, 0.01s]
   | Proposed command #1 is saved. It has NOT run.
   | Show the user the block below as it is, then stop and wait.
   | 
