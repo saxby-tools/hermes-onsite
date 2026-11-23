@@ -15,9 +15,12 @@ profile.
 
 ## Before you start
 
-- [ ] Restart the Hermes gateway on the host. The plugin was reloaded
-      many times while it was built, and each reload leaves an old
-      copy of its hook behind until a restart.
+- [ ] Restart the Hermes gateway on the host. This is required. The
+      gateway has run since before the plugin was renamed and moved
+      into its own folder, and it still holds what it loaded from the
+      old place: old copies of the hooks, and a screen backend that
+      looks for a file that is gone. Until the restart, the screen
+      tool is missing from every session and journey 12 fails.
 - [ ] On the host, this prints a table with `laptop` marked `up`:
 
 ```bash
@@ -83,8 +86,12 @@ cd /Users/you/Development && hermes -p buster --tui
 - [ ] Quit. Start the TUI from `/Users/you/Workspaces`. The same
       question now prints the Mac's folder and the Mac's name.
 - [ ] In that Mac session, after one message, type `/onsite laptop`.
-      The next command runs on the laptop. `/onsite auto` sends the
-      session back to the folder's own answer.
+      The reply ends "The agent is told with your next message."
+- [ ] Ask: "Which machine do your tools run on now? Then run
+      `uname -n`." The agent names the laptop without being told by
+      you, and the command prints `laptop.example`.
+- [ ] `/onsite auto` sends the session back to the folder's own
+      answer, and the agent knows that too.
 
 ## 4. Approvals stay Hermes' own
 
@@ -292,7 +299,7 @@ Never tested.
 
 ## 15. The automatic tests
 
-- [ ] Unit tests: 250 pass.
+- [ ] Unit tests: 273 pass.
 
 ```bash
 cd /Users/you/Workspaces/hermes-hands && uv run --no-project --with pytest python -m pytest -q
