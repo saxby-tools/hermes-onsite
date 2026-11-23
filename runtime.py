@@ -10,16 +10,20 @@ pinning rules testable without Hermes installed.
 
 from __future__ import annotations
 
+import copy
 import logging
 import threading
 
+from collections.abc import Mapping
 from dataclasses import dataclass
+from dataclasses import replace
 from pathlib import Path
 from typing import Any
 from typing import Callable
 
 from . import routing
 from .config import ConfigError
+from .config import KIND_SSH
 from .config import OnsiteConfig
 from .config import TargetSpec
 from .config import is_absolute
@@ -39,6 +43,7 @@ logger = logging.getLogger(__name__)
 PINS_FILE = "pins.json"
 FOLDERS_FILE = "folders.json"
 PROPOSALS_FILE = "proposals.json"
+MIRRORS_DIR = "mirror"
 
 CLEAR_OVERRIDE = "auto"
 
@@ -68,8 +73,11 @@ class Runtime:
         data_dir: Path | None,
         session: SessionReader,
         build_environment: Callable[..., Any],
+        save_settings: Callable[[dict], None] | None = None,
     ):
         self._load_settings = load_settings
+        self._save_settings = save_settings
+        self._data_dir = data_dir
         self._session = session
         self._build_environment = build_environment
         self._gates: dict[tuple, Gate] = {}
@@ -85,11 +93,61 @@ class Runtime:
         self.folders = Folders(JsonStore(folders_path))
         self.proposals = Proposals(JsonStore(proposals_path))
 
+    def default_mirror(self, name: str) -> str:
+        """Where a target's folder names are kept when no place is set."""
+
+        if self._data_dir is None:
+            return ""
+
+        return str(self._data_dir / MIRRORS_DIR / name)
+
+    def with_default_mirrors(self, config: OnsiteConfig) -> OnsiteConfig:
+        """Give every SSH target a mirror, so any of its folders can
+        be opened with no set-up. A mirror named in the settings is
+        kept as it is."""
+
+        targets = {}
+
+        for name, spec in config.targets.items():
+            if spec.kind == KIND_SSH and not spec.mirror:
+                spec = replace(spec, mirror=self.default_mirror(name))
+
+            targets[name] = spec
+
+        return OnsiteConfig(default=config.default, targets=targets)
+
     def load_config(self) -> OnsiteConfig:
         """Read the settings fresh, so an edit applies to the next
         session with no restart."""
 
-        return parse_config(self._load_settings())
+        return self.with_default_mirrors(parse_config(self._load_settings()))
+
+    def raw_settings(self) -> dict:
+        """The settings as written, for a form that edits them."""
+
+        raw = self._load_settings()
+
+        if not isinstance(raw, Mapping):
+            return {"default": None, "targets": {}}
+
+        settings = copy.deepcopy(dict(raw))
+
+        if not isinstance(settings.get("targets"), Mapping):
+            settings["targets"] = {}
+
+        settings["targets"] = dict(settings["targets"])
+
+        return settings
+
+    def save_settings(self, settings: dict) -> None:
+        """Check a whole settings block, then write it."""
+
+        parse_config(settings)
+
+        if self._save_settings is None:
+            raise RuntimeError("these settings cannot be written from here")
+
+        self._save_settings(settings)
 
     def config_problem(self) -> str | None:
         try:
@@ -291,4 +349,5 @@ def build_runtime() -> Runtime:
         data_dir=compat.data_dir(),
         session=session,
         build_environment=build_environment,
+        save_settings=compat.save_settings,
     )
