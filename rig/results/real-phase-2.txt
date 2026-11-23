@@ -2,24 +2,24 @@
 
 == Phase 2.1: the target stops under a live session
   PASS  the session works before the outage
-  --- terminal: pwd + 2 commands [failed, 0.03s]
+  --- terminal: pwd + 2 commands [failed, 0.04s]
   | terminal result
   | - **output:** ssh: connect to host 127.0.0.1 port 2223: Connection refused
-  | [hands: no exit status from laptop (<laptop-user>@127.0.0.1): ssh: connect to host 127.0.0.1 port 2223: Connection refused. The command may have run, may still be running, or may not have started. It was not retried.]
+  | [onsite: no exit status from laptop (<laptop-user>@127.0.0.1): ssh: connect to host 127.0.0.1 port 2223: Connection refused. The command may have run, may still be running, or may not have started. It was not retried.]
   | - **exit_code:** 255
   PASS  the error names the target
   PASS  it arrives within 5 seconds
-        took 0.03s
+        took 0.04s
   PASS  it says the command was not retried
   --- terminal: pwd + 2 commands [failed, 0.01s]
   | terminal result
-  | - **output:** [hands: hands target laptop (<laptop-user>@127.0.0.1) is unreachable: ssh: connect to host 127.0.0.1 port 2223: Connection refused. No command was run and nothing was retried. The target is checked again in about 10s.]
+  | - **output:** [onsite: onsite target laptop (<laptop-user>@127.0.0.1) is unreachable: ssh: connect to host 127.0.0.1 port 2223: Connection refused. No command was run and nothing was retried. The target is checked again in about 10s.]
   | - **exit_code:** 255
   PASS  the next call fails at once
         took 0.01s
   PASS  it still names the target
   waiting 11s for the cooldown
-  --- terminal: pwd + 2 commands [completed, 0.50s]
+  --- terminal: pwd + 2 commands [completed, 0.51s]
   | terminal result
   | - **output:** <laptop-rig>/sample
   | <this-user>
@@ -29,7 +29,7 @@
 
 == Phase 2.2: a new session while the target is down
   --- terminal: pwd + 2 commands [failed, 0.00s]
-  | terminal failed: Terminal backend degraded: hands target laptop (<laptop-user>@127.0.0.1) is unreachable: ssh: connect to host 127.0.0.1 port 2223: Connection refused. No command was run and nothing was retried. The target is checked again in about 10s.
+  | terminal failed: Terminal backend degraded: onsite target laptop (<laptop-user>@127.0.0.1) is unreachable: ssh: connect to host 127.0.0.1 port 2223: Connection refused. No command was run and nothing was retried. The target is checked again in about 10s.
   PASS  the error names the target
   PASS  it arrives within 5 seconds
         took 0.00s
@@ -38,18 +38,18 @@
 == Phase 2.3: the target freezes, as a sleeping laptop
   PASS  the session works before the freeze
   idle for 6s, then a tool call
-  --- terminal: pwd + 2 commands [failed, 3.11s]
+  --- terminal: pwd + 2 commands [failed, 3.18s]
   | terminal result
-  | - **output:** [hands: hands target laptop (<laptop-user>@127.0.0.1) is unreachable: Connection timed out during banner exchange. No command was run and nothing was retried. The target is checked again in about 10s.]
+  | - **output:** [onsite: onsite target laptop (<laptop-user>@127.0.0.1) is unreachable: Connection timed out during banner exchange. No command was run and nothing was retried. The target is checked again in about 10s.]
   | - **exit_code:** 255
   PASS  the error names the target
   PASS  it arrives within 5 seconds
-        took 3.11s
+        took 3.18s
   PASS  the command was never sent
   PASS  the next call fails at once
-        took 0.02s
+        took 0.01s
   waiting 11s for the cooldown
-  --- terminal: pwd + 2 commands [completed, 0.42s]
+  --- terminal: pwd + 2 commands [completed, 0.51s]
   | terminal result
   | - **output:** <laptop-rig>/sample
   | <this-user>
@@ -59,14 +59,14 @@
 
 == Phase 2.4: the target freezes just before a call
   PASS  the session works before the freeze
-  --- terminal: pwd + 2 commands [failed, 7.04s]
+  --- terminal: pwd + 2 commands [failed, 6.63s]
   | terminal result
   | - **output:** mux_client_request_session: read from master failed: Broken pipe
   | Connection timed out during banner exchange
   | Connection to 127.0.0.1 port 2223 timed out
-  | [hands: no exit status from laptop (<laptop-user>@127.0.0.1): Connection to 127.0.0.1 port 2223 timed out. The command may have run, may still be running, or may not have started. It was not retried.]
+  | [onsite: no exit status from laptop (<laptop-user>@127.0.0.1): Connection to 127.0.0.1 port 2223 timed out. The command may have run, may still be running, or may not have started. It was not retried.]
   | - **exit_code:** 255
   PASS  the error names the target
   PASS  it says the command may have run and was not retried
   PASS  it arrives within 10 seconds
-        took 7.04s (the five-second bar is missed here; see DECISIONS.md)
+        took 6.63s (the five-second bar is missed here; see DECISIONS.md)
