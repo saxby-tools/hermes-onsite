@@ -22,6 +22,20 @@ as in on your computer.
 The wordmark is the word onsite in the same face, with the o lit.
 This site's masthead shows the wordmark. Its footer shows the mark.
 
+<!-- hands:marks -->
+
+| File | Ground | Use |
+| --- | --- | --- |
+| ![The mark on its tile](brand/mark.svg) | any | Tab icon, avatar, anywhere the ground is unknown |
+| ![The mark in blue](brand/mark-blue.svg) | light | One colour, on light pages and in print |
+| ![The mark in pale](brand/mark-pale.svg) | blue | One colour, on blue and dark grounds |
+| ![The wordmark](brand/wordmark.svg) | blue | The name, with the o lit in yellow |
+| ![The wordmark for pale grounds](brand/wordmark-paper.svg) | light | The name, with the o lit in blue |
+| ![The wordmark in blue](brand/wordmark-blue.svg) | light | The name, one colour |
+| ![The wordmark in pale](brand/wordmark-pale.svg) | blue | The name, one colour |
+
+<!-- /hands:marks -->
+
 | Piece | Ground | The o | The rest |
 | --- | --- | --- | --- |
 | The mark | Its own blue tile, on any ground | `--color-signal` | `--color-field-text` |
@@ -40,14 +54,11 @@ Rules for the mark and the wordmark:
   The wordmark goes where a name is needed.
 - Do not redraw, tilt, outline or recolour either one.
 
-Both are set in type for now, at weight 500 of Geist Mono. The site
-carries only the regular weight so far, so here they draw a little
-lighter than they should. Image files that need no font are not made
-yet.
-
-The files in `brand/` named `mark`, `wordmark`, `lockup`, `banner`
-and `social` were drawn for the old name, hermes-hands. They are kept
-for the record and are not used.
+On this site both are set in type, at weight 500 of Geist Mono. The
+files above hold the same letters as outlines, so they need no font
+installed. `brand/make-brand.py` draws them from the font files, and
+fails if its numbers and the stylesheet's drift apart.
+`brand/make-icons.sh` turns the mark into the site's icons.
 
 ### Plate
 
@@ -116,7 +127,7 @@ page around it from paper to navy.
 | Token | Face | Cost |
 | --- | --- | --- |
 | `--font-display` | Oswald, weights 200 to 700 | 28 KB, self-hosted |
-| `--font-mono` | Geist Mono, weight 400 | 10 KB, self-hosted |
+| `--font-mono` | Geist Mono, weights 400 and 500 | 20 KB, self-hosted |
 | `--font-body` | The system's sans | Nothing |
 | `--font-plate` | The system's serif, in italic | Nothing |
 
@@ -281,6 +292,6 @@ the catalog entry pins.
 
 | Asset | File | The catalog's rule |
 | --- | --- | --- |
-| `image` | none yet | 2 to 1, such as 1200 by 600. The listing lays the title over its left side. The old banner has the old name drawn in |
+| `image` | `docs/brand/banner.png` | 2 to 1, here 1200 by 600. The listing lays the title over its left side, so the herm stands on the right. The ground is paper, because the catalog draws a blue halftone for entries with no picture |
 | `screenshots` | none yet | Up to six. They wait for a person at the real clients |
 | README | `README.md` | Shown as Markdown. Raw HTML is dropped, so it uses none |
