@@ -145,22 +145,36 @@ uses a block repeats it, so it changes in one pass of its own.
 
 ##  Brand files
 
-The mark and the wordmark are set in type, in `layouts/foot.ejs` and
-`layouts/top.ejs`, with their styles in `static/onsite.css`. They have
-no image files yet.
+The site sets the mark and the wordmark in type, in `layouts/foot.ejs`
+and `layouts/top.ejs`, with their styles in `static/onsite.css`.
 
-The plate on the front page is `docs/brand/plate-head.png`. It comes
-from a museum photo, by way of `docs/brand/make-plates.sh`.
+The same letters, as outlines that need no font, are in `docs/brand/`
+with the banner and the plate, because the README and the plugin
+catalog point at them there. Two scripts make them. Run both from the
+repo's root, in this order:
 
-Everything else in `docs/brand/`, and the icons and `social.png` in
-`static/`, were drawn for the old name, hermes-hands. They show the
-old mark, a cut h, and some have the old name drawn in. They are
-kept until new ones are made:
+```bash
+uv run --no-project --with fonttools --with brotli --with uharfbuzz python docs/brand/make-brand.py
+```
 
-- The icons in `static/` are still the old mark, so a browser tab
-  shows it.
-- `static/social.png` is not linked from any page.
-- `docs/brand/banner.png` is not linked from the README.
+```bash
+docs/brand/make-icons.sh
+```
+
+The first draws the mark, the wordmark, `banner.svg` and `social.svg`
+from the two font files. It stops if the mark's numbers no longer
+match the ones in `static/onsite.css` and `layouts/foot.ejs`. The
+second turns them into `docs/brand/banner.png`, `static/social.png`
+and the icons in `static/`: the mark at 16, 32, 48, 180, 192 and 512
+pixels. It needs `rsvg-convert` and ImageMagick.
+
+The plate, `docs/brand/plate-head.png`, comes from a museum photo by
+way of `docs/brand/make-plates.sh`. That script and
+`docs/brand/plate-hand.png` also hold a second plate, a marble hand,
+which is no longer used.
+
+The icon in the masthead's Source button is GitHub's own mark, from
+its Octicons set. Its license is in `static/icons/`.
 
 ##  Files
 
