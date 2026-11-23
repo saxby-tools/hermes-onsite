@@ -587,6 +587,61 @@ Written Nov. 22, 2026, against Hermes v0.23.2.
 - **Not checked.** A real third-party MCP server, and a key that
   lives only in a key agent on a host that starts Hermes at boot.
 
+### 47. Screen control runs Hermes' own driver on the target
+
+- **Owner's call, Nov. 22.** Screen control should work on the
+  user's machine, done properly, by more than one route where that
+  is possible.
+- **This entry is the first route.** Hermes' screen driver runs on
+  the target and Hermes talks to it over the SSH link. The second
+  route, a machine's own screen sharing, is not built yet.
+- **How it is picked.** Hermes chooses one screen backend for a
+  whole profile, but builds one backend object per session, on the
+  thread of the tool call. There the session is in scope, so the
+  backend is built for that session's machine. A session on the
+  host gets Hermes' own backend, unchanged.
+- **What is reused.** Hermes' backend and driver session are
+  subclassed, not rewritten: about 580 lines of window picking,
+  element naming and action checks stay Hermes' own. Three things
+  are replaced because they assume a driver on the host: how it is
+  started, the command-line fallback, and the install checks.
+- **The fallback is refused, on purpose.** Hermes' fallback reads a
+  file the driver names. From a target that would let another
+  machine name any file on the host to be handed to the model.
+- **A second folder.** Hermes finds a screen backend by the name of
+  its folder and loads it with a stand-in context that has no
+  terminal-backend call. So the backend ships as
+  `hermes-hands-screen/`, linked into place by
+  `hermes hands screen-install`.
+- **The plugin installs no driver.** `hermes hands screen TARGET`
+  reads the target's desktop session and looks for the driver, and
+  says what to run there. Run on the owner's laptop it reported
+  GNOME on Wayland with no driver.
+- **Private code.** Four more imports from Hermes' private screen
+  modules, all in `screenbackend.py`, which is imported only when a
+  session first uses its screen. `check_internals` names each
+  member it needs and stops with a plain message if one moves.
+- **Tested on a real screen that nobody uses.** `rig/desk/` is the
+  hands container plus an X display, a terminal and the driver at
+  the version and checksum Hermes pins. Through the plugin's SSH
+  route the real driver listed 60 tools. Through the backend it
+  captured the terminal window, clicked, and typed a line that
+  landed in a file on the container. A real-model session opened in
+  the desk's mirrored folder used the stock `computer_use` tool and
+  named the window. A session on the host got Hermes' own class.
+- **Found on the way.** Typing into a terminal needs Hermes'
+  foreground mode; the default mode is refused by the driver with a
+  reason, which is the ladder Hermes expects the model to climb.
+- **Not tested.** macOS, Wayland, a desktop someone is using, an
+  approval answered by a person, and Hermes' other permission
+  modes. `bounded` is refused on a target, because it reads a file
+  on the host.
+- **Limits that come from Hermes.** The approval prompt cannot name
+  the machine: it is built before any backend exists. Grants for
+  screen actions are shared with the host's own screen. After
+  `/hands <target>` the session keeps its old screen until Hermes
+  rebuilds the backend.
+
 ## Open decisions from the brief
 
 | # | Decision | What the build did |
