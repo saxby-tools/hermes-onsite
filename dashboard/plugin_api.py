@@ -86,3 +86,46 @@ def proposals(body: Any = Body(default=None)) -> dict:
     package, runtime = find_runtime()
 
     return load_api(package).proposals_payload(runtime, body)
+
+
+@router.post("/targets")
+def targets(body: Any = Body(default=None)) -> dict:
+    package, runtime = find_runtime()
+
+    return load_api(package).targets_payload(runtime)
+
+
+@router.post("/targets/save")
+def save_target(body: Any = Body(default=None)) -> dict:
+    package, runtime = find_runtime()
+
+    return load_api(package).save_target_payload(runtime, body)
+
+
+@router.post("/targets/remove")
+def remove_target(body: Any = Body(default=None)) -> dict:
+    package, runtime = find_runtime()
+
+    return load_api(package).remove_target_payload(runtime, body)
+
+
+@router.post("/targets/test")
+def test_target(body: Any = Body(default=None)) -> dict:
+    package, runtime = find_runtime()
+
+    return load_api(package).test_target_payload(runtime, body)
+
+
+@router.post("/browse")
+def browse(body: Any = Body(default=None)) -> dict:
+    package, runtime = find_runtime()
+
+    return load_api(package).browse_payload(runtime, body)
+
+
+@router.post("/open")
+def open_folder(body: Any = Body(default=None)) -> dict:
+    package, runtime = find_runtime()
+
+    return load_api(package).open_payload(runtime, body)
+
