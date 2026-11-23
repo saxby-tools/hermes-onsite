@@ -129,7 +129,7 @@ Written Nov. 22, 2026, against Hermes v0.23.2.
 - **Options.** Guess the same path, fail, or start in home.
 - **Pick.** Start in home, and log a warning.
 - **Why.** Guessing fails at `cd` on every call. Failing would make
-  `/hands <target>` useless from most folders.
+  `/onsite <target>` useless from most folders.
 
 ### 11. Pins are keyed by the environment's cache key
 
@@ -140,7 +140,7 @@ Written Nov. 22, 2026, against Hermes v0.23.2.
   Hermes. Sessionless work, such as cron, shares one key, and a pin
   on it would send the next job wherever the last one ran.
 
-### 12. `/hands <target>` drops the environment and the folder record
+### 12. `/onsite <target>` drops the environment and the folder record
 
 - **Question.** How does a switch take effect?
 - **Pick.** Save the pin, discard the session's environment, and
@@ -148,7 +148,7 @@ Written Nov. 22, 2026, against Hermes v0.23.2.
 - **Why.** Found by test: without the last step Hermes hands the old
   machine's working directory to the new machine.
 - **Limit.** The agent is not told about the switch. The reply to
-  `/hands` says so.
+  `/onsite` says so.
 
 ## The backend
 
@@ -168,8 +168,8 @@ Written Nov. 22, 2026, against Hermes v0.23.2.
 
 - **Question.** On a macOS host, Hermes rewrote `/home/...` paths
   before sending them to the target.
-- **Pick.** Name the classes `HandsSshEnvironment` and
-  `HandsLocalEnvironment`.
+- **Pick.** Name the classes `OnsiteSshEnvironment` and
+  `OnsiteLocalEnvironment`.
 - **Why.** Hermes picks its file-path rules from the environment's
   class name. `ssh` in the name gets remote rules. This is the only
   per-environment switch there is.
@@ -216,10 +216,10 @@ Written Nov. 22, 2026, against Hermes v0.23.2.
   cache into `~/.hermes` on the remote. The remote here is the user's
   own workstation.
 
-### 19. Settings live under `plugins.entries.hermes-hands.settings`
+### 19. Settings live under `plugins.entries.onsite.settings`
 
 - **Why.** That is where Hermes' own plugin config API reads and
-  writes. `hermes hands init` uses that API.
+  writes. `hermes onsite init` uses that API.
 
 ## Resilience
 
@@ -302,7 +302,7 @@ Written Nov. 22, 2026, against Hermes v0.23.2.
 - **Pick.** `/run` sends the agent a message. It runs nothing.
 - **Why.** The command then goes through the terminal tool, where
   Hermes' approval gate is.
-- **Needs.** `plugins.entries.hermes-hands.allow_gateway_injection:
+- **Needs.** `plugins.entries.onsite.allow_gateway_injection:
   true` on gateway surfaces. Without it `/run` explains the setting.
 
 ### 30. Both the run card and the pane ship
@@ -324,7 +324,7 @@ Written Nov. 22, 2026, against Hermes v0.23.2.
 
 - **Why.** It was meant to learn a session's folder before its first
   message. Hermes fires it without the folder in scope.
-- **Limit.** Before a session's first message, `/hands` cannot know
+- **Limit.** Before a session's first message, `/onsite` cannot know
   the folder and says so.
 
 ### 33. The editor protocol's edit preview was not worked around
@@ -403,25 +403,25 @@ Written Nov. 22, 2026, against Hermes v0.23.2.
 - **Limit.** `--keep` and `--setup-only` are refused with `--real`.
   The relay lives in the rig's own process.
 - **On the laptop.** The rig writes only under
-  `~/.cache/hermes-hands-rig` and removes it at the end.
+  `~/.cache/onsite-rig` and removes it at the end.
 
 ### 41. The test profile is left set up for Gate 2
 
 - **Pick.** After the laptop run, Buster keeps the plugin enabled,
-  `terminal.backend: hands`, a `laptop` target at the real laptop
+  `terminal.backend: onsite`, a `laptop` target at the real laptop
   and a `mac` target. The map sends the host's mount of the shared
   folder to the laptop's own copy.
 - **Why.** Gate 2 is a person trying the real clients on Buster. It
   cannot start until Buster points at the laptop.
-- **Checked.** `hermes hands status` shows the laptop connected, and
+- **Checked.** `hermes onsite status` shows the laptop connected, and
   one real-model command ran there.
 - **Held back at first.** `desktop/plugin.js` was not copied to the
   laptop. The desktop app there may be attached to a profile that is
   off limits until Gate 4, and Gate 3 is the owner's to open.
 - **Since.** The owner said to copy it on Nov. 22. It is at
-  `~/.hermes/desktop-plugins/hermes-hands/plugin.js` on the laptop,
+  `~/.hermes/desktop-plugins/onsite/plugin.js` on the laptop,
   and its checksum matches the repo's. On a profile without the
-  plugin, the chip says the host has no hermes-hands plugin enabled.
+  plugin, the chip says the host has no onsite plugin enabled.
 - **Seen in the app, Nov. 22.** The owner's screenshot shows the
   chip and the pane on Buster: `laptop`, connected, 181 ms, the
   folder and the reason. His gateway starts as another profile, so
@@ -441,7 +441,7 @@ Written Nov. 22, 2026, against Hermes v0.23.2.
 - **Reverse the copy.** Delete that one folder on the laptop and
   run "Reload desktop plugins".
 - **Reverse.** `hermes -p buster config set terminal.backend local`
-  and `hermes -p buster plugins disable hermes-hands`. A copy of the
+  and `hermes -p buster plugins disable onsite`. A copy of the
   config from before is in `.rig/buster-config.before-gate-2.yaml`.
 
 ### 42. Hermes' own validator is run on a clean copy of the tree
@@ -485,8 +485,8 @@ Written Nov. 22, 2026, against Hermes v0.23.2.
   host, names only. No mount and no share, because a plugin in the
   catalog cannot ask its users for either.
 - **Pick.** A target's `mirror` setting names a folder on the host.
-  `hermes hands mirror` copies folder names under the target's home
-  into it. `hermes hands open TARGET:FOLDER` adds one folder at any
+  `hermes onsite mirror` copies folder names under the target's home
+  into it. `hermes onsite open TARGET:FOLDER` adds one folder at any
   depth. Routing treats the mirror as a map to the target's root, so
   nothing else in the plugin changed.
 - **Measured on the laptop.** The whole home has 499,461 folders.
@@ -497,8 +497,8 @@ Written Nov. 22, 2026, against Hermes v0.23.2.
   made outside the mirror, even through a link planted in it. A name
   the target sends that could climb out is dropped.
 - **Checked.** 34 unit tests. On Buster: 262 folders made under
-  `/Users/you/Hands/laptop`, no files; a laptop-only clone opened;
-  `hermes hands status` there says `laptop` and the real folder; a
+  `/Users/you/Onsite/laptop`, no files; a laptop-only clone opened;
+  `hermes onsite status` there says `laptop` and the real folder; a
   real-model command run from it printed the laptop's path and files.
 - **Cost.** The app's file tree shows the mirror's empty folders,
   not the target's files. Names go stale until the next run. What
@@ -526,7 +526,7 @@ Written Nov. 22, 2026, against Hermes v0.23.2.
   to a listener on the host, as two other plugins do. Or OpenSSH's
   own remote forward: the machine opens one connection out and
   offers its SSH server back through it.
-- **Pick.** The remote forward. `hermes hands dial-out` prints the
+- **Pick.** The remote forward. `hermes onsite dial-out` prints the
   `ssh -R` command, a service file and the target's settings. The
   target is an ordinary SSH target at `127.0.0.1` and a port.
 - **Why.** Nothing new to secure: no second protocol, no listener of
@@ -534,7 +534,7 @@ Written Nov. 22, 2026, against Hermes v0.23.2.
   the breaker, the mirror and the approval path are untouched,
   because the host still speaks plain SSH to the machine.
 - **Host keys.** Every such machine shares the address 127.0.0.1.
-  So a loopback target's key is filed under `hermes-hands-<name>`
+  So a loopback target's key is filed under `onsite-<name>`
   with `HostKeyAlias`. A port handed to another machine then fails
   closed against the first machine's key.
 - **Checked on the laptop.** With a stand-in tunnel from the host to
@@ -559,7 +559,7 @@ Written Nov. 22, 2026, against Hermes v0.23.2.
 - **Options.** Reroute MCP tool calls with tool middleware, as one
   other plugin does. Or let Hermes start the server itself with
   `ssh` as its command, so the server runs on the target.
-- **Pick.** The second. `hermes hands mcp TARGET NAME -- COMMAND`
+- **Pick.** The second. `hermes onsite mcp TARGET NAME -- COMMAND`
   builds the `ssh` call and, with `--apply`, hands it to Hermes' own
   `hermes mcp add`.
 - **Why.** Middleware that reroutes a call runs before Hermes' own
@@ -611,9 +611,9 @@ Written Nov. 22, 2026, against Hermes v0.23.2.
 - **A second folder.** Hermes finds a screen backend by the name of
   its folder and loads it with a stand-in context that has no
   terminal-backend call. So the backend ships as
-  `hermes-hands-screen/`, linked into place by
-  `hermes hands screen-install`.
-- **The plugin installs no driver.** `hermes hands screen TARGET`
+  `onsite-screen/`, linked into place by
+  `hermes onsite screen-install`.
+- **The plugin installs no driver.** `hermes onsite screen TARGET`
   reads the target's desktop session and looks for the driver, and
   says what to run there. Run on the owner's laptop it reported
   GNOME on Wayland with no driver.
@@ -653,8 +653,37 @@ Written Nov. 22, 2026, against Hermes v0.23.2.
 - **Limits that come from Hermes.** The approval prompt cannot name
   the machine: it is built before any backend exists. Grants for
   screen actions are shared with the host's own screen. After
-  `/hands <target>` the session keeps its old screen until Hermes
+  `/onsite <target>` the session keeps its old screen until Hermes
   rebuilds the backend.
+
+### 48. The plugin is renamed to onsite
+
+- **Why.** It was built as hermes-hands. The Hermes plugin catalog
+  already lists several plugins with "hands" in the name, and one of
+  them uses the same backend name and the same command. "Hands" is
+  also insider talk that a person scanning a list does not know.
+- **Owner's call, Nov. 22.** The name is `onsite`. The repository is
+  `saxby-tools/hermes-onsite`.
+- **What changed.** The plugin's id, its backend name, the CLI
+  command `hermes onsite`, the slash command `/onsite`, the settings
+  key `plugins.entries.onsite`, the desktop plugin's id and folder,
+  the screen backend's folder `onsite-screen`, the host key alias,
+  the service name for dial-out, and the marks in command output.
+- **What did not.** `/run` and the `propose_command` tool keep their
+  names. The rig still calls its test machine "the hands"; that is
+  test code and is listed as a gap.
+- **This file.** Commands and names in older entries were updated so
+  they still work when copied. The history they record is unchanged:
+  entries before this one describe work done under the old name.
+- **Moving an install.** Rename the plugin's folder to `onsite`,
+  change `plugins.entries.hermes-hands` and the name in
+  `plugins.enabled` to `onsite`, and set `terminal.backend: onsite`.
+  On the app's machine, the desktop file moves to
+  `~/.hermes/desktop-plugins/onsite/plugin.js`. Saved pins start
+  fresh, because the plugin's data folder is named for its id.
+- **Checked.** 224 unit tests and 13 desktop tests pass under the
+  new name. The test profile was moved by hand and reports the
+  laptop as connected through `hermes onsite status`.
 
 ## Open decisions from the brief
 
