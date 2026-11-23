@@ -65,6 +65,7 @@ const REASONS = {
   pinned: 'this session started there',
   prefix: 'the folder is under one of its prefixes',
   path_map: 'the folder is in its path map',
+  mirror: 'the folder is in its mirror',
   default: 'no folder rule matched'
 }
 
