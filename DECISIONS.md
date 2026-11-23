@@ -806,8 +806,13 @@ Written Nov. 22, 2026, against Hermes v0.23.2.
   Neither is imported until a session uses screen sharing, and no
   cipher was written by hand.
 - **The password.** VNC's password scheme is weak: eight characters
-  and DES. The settings take the name of an environment variable,
-  never the password, and refuse a value that could not be a name.
+  and DES. It is one declared secret, `ONSITE_SCREEN_PASSWORD`, read
+  through Hermes' own lookup for the profile in use. The first
+  version let each target name any environment variable and read it
+  from the process. The catalog's rules forbid that, for a good
+  reason: one gateway can serve several profiles, and a plain read
+  can return another profile's value. The cost is one password for
+  every target that asks.
 - **What Hermes is told.** Screen sharing has no list of buttons. A
   request by element is turned down with what to do instead. Every
   action is reported as "unverifiable", which makes Hermes tell the
@@ -836,6 +841,16 @@ Written Nov. 22, 2026, against Hermes v0.23.2.
   click, a typed line and a key landed on the desk. The password
   sign-in was run by hand against x11vnc: the right password in, a
   wrong one refused with the server's reason.
+- **A second reader found eight things.** The code was handed to a
+  fresh reviewer with no account of how it worked. The worst: `cmd`
+  and `win` are one key over VNC, so a combination Hermes hard-blocks
+  under one name went through under the other. The block is now
+  repeated after names become keys. Also fixed: a server that talked
+  for ever without showing the screen could hold a tool call open; a
+  screen was called whole when its rectangles added up, not when
+  they covered it; a first scroll with no place went to the
+  top-left corner; and an `ssh` process could be left behind by a
+  failure nobody planned for.
 - **Not checked.** The screen phase over this route
   (`--desk --share --phase screen`), for the reason in entry 53. A
   Mac. Any server but x11vnc. A screen larger than the picture limit
