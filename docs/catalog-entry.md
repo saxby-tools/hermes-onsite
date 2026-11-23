@@ -17,6 +17,7 @@ README and the picture as they were at that commit.
 name: onsite
 title: Onsite
 repo: https://github.com/saxby-tools/hermes-onsite
+subdir: onsite
 sha: <the 40-character commit being listed>
 version: "0.1.0"
 description: >-
