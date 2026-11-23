@@ -37,6 +37,7 @@ REASON_TEXT = {
 }
 
 MAX_SKIPPED_SHOWN = 5
+SCREEN_PLUGIN = "hermes-hands-screen"
 
 MIRROR_NOT_SET = (
     "No target has a `mirror` folder. Set one in config.yaml, or "
@@ -499,6 +500,48 @@ def format_screen_report(spec: TargetSpec, seat, problems, notes) -> str:
         lines.append("")
         lines.append("Know before you rely on it:")
         lines += [f"  - {note}" for note in notes]
+
+    return "\n".join(lines)
+
+
+def format_screen_install(
+    mode: str,
+    link: str,
+    source: str,
+    in_place: bool,
+    blocked: bool,
+    apply: bool,
+) -> str:
+    """The output of `hermes hands screen-install`."""
+
+    if blocked:
+        return (
+            f"{mode} {link} is already there and is something else. "
+            "Move it aside first. Nothing was changed."
+        )
+
+    lines = []
+
+    if in_place:
+        lines.append(f"{mode} the screen backend is already at {link}.")
+    elif apply:
+        lines.append(f"{mode} linked {link}")
+        lines.append(f"{mode}     to {source}.")
+    else:
+        lines.append(f"{mode} would link {link}")
+        lines.append(f"{mode}         to {source}.")
+        lines.append(f"{mode} nothing was changed. Add --apply to link it.")
+
+    lines += [
+        "",
+        "Then choose it as this profile's screen backend:",
+        f"  hermes config set computer_use.backend {SCREEN_PLUGIN}",
+        "",
+        "A session on this machine keeps this machine's screen. A "
+        "session on a target",
+        "gets that target's screen. Check a target with "
+        "`hermes hands screen <target>`.",
+    ]
 
     return "\n".join(lines)
 
