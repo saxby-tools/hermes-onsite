@@ -12,9 +12,10 @@ The setup is adapted from the
 
 ##  Why it lives in this folder
 
-The repo's root is the plugin. A user installs it by cloning the repo
-into a Hermes plugins folder, so the root stays free of site tooling.
-The config, the packages and the build output are all in `site/`.
+The plugin is the `onsite/` folder. A user installs that folder by
+itself, so nothing the site needs may live in it. The config, the
+packages and the build output are all in `site/`, and the pages come
+from the Markdown at the repo's root and in `docs/`.
 The one file outside it is `.github/workflows/pages.yml`, which
 GitHub only reads from there.
 
