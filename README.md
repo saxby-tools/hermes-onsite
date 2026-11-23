@@ -227,6 +227,26 @@ target's files, and anything the app itself writes there stays on the
 host. The plugin never deletes from a mirror and never makes one
 outside the folder you named.
 
+### MCP servers on a target
+
+An MCP server can run on a target, so its tools act there. Hermes
+starts a local MCP server by running a command, and that command can
+be `ssh`. This shows the call, and adds the server with `--apply`:
+
+```bash
+hermes hands mcp laptop files --apply -- npx -y @modelcontextprotocol/server-filesystem /home/you
+```
+
+The server is named for its target, here `laptop_files`, and Hermes
+lists its tools as `mcp__laptop_files__...`. To Hermes it is an
+ordinary MCP server, so its own approval prompts apply. No tool call
+is rerouted.
+
+Hermes loads MCP servers for a whole profile, so every session sees
+these tools. The plugin refuses one in a session that runs on another
+machine, and tells the agent to say so. A session never acts on a
+second machine by itself.
+
 ## Use
 
 | What | CLI and TUI | Hermes Desktop |
@@ -400,8 +420,10 @@ health.py            probe and circuit breaker
 remote.py            SSH options, PATH, sleep inhibitor
 mirror.py            a names-only copy of a target's folders
 dialout.py           set-up text for a machine that dials out
+mcptools.py          MCP servers that run on a target
 exits.py             the four ways a command can end
-hooks.py             keeps the file tools on the right folder
+hooks.py             file tools on the right folder, MCP tools
+                     on the right machine
 commands.py          /hands, /run, hermes hands
 tools.py             propose_command
 prompt.py            the per-session note in the system prompt
