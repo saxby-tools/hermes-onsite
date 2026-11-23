@@ -159,6 +159,10 @@ On the laptop, in the desktop app, connected to the gateway.
       runs on" and save. It appears in the list. Remove it. It is
       gone, and gone from the profile's `config.yaml`.
 - [ ] The Remove button for the default machine is greyed out.
+- [ ] Click Edit on `laptop`. A field named "Its screen is reached
+      by" offers three choices. Pick the screen sharing one, save,
+      and see `screen: sharing` under the laptop in `config.yaml`.
+      Set it back to the first choice and the line is gone.
 - [ ] Switch to the **Bots** tab and open the test profile's chat.
       If the app's active profile is another one, the pane says which
       profile this chat belongs to and which one it asked. That
@@ -326,13 +330,13 @@ Never tested.
 Run these from a clone of the repository, on the host. The rig uses a
 profile named `buster` unless you pass `--profile`.
 
-- [ ] Unit tests: 378 pass.
+- [ ] Unit tests: 379 pass.
 
 ```bash
 uv run --no-project --with pytest --with pillow --with cryptography python -m pytest -q
 ```
 
-- [ ] Desktop tests: 29 pass.
+- [ ] Desktop tests: 31 pass.
 
 ```bash
 node --test tests/desktop.test.mjs
