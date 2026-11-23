@@ -238,10 +238,11 @@ The form for a machine. From the top: "Name", filled with "laptop".
 "Where it is", set to "Another machine, over SSH". "Address", filled
 with "laptop.example". "Log in as", filled with "you". "Port (leave
 empty for 22)", empty. "Key file (leave empty to use your SSH
-setup)", empty. "Folders that belong to it, one a line", filled with
-"/home/you/". A ticked box, "Use it when no folder rule matches". A
-line that reads "Connected in 42 ms." Then three buttons: Save, Test
-connection and Cancel.
+setup)", empty. "Its screen is reached by", set to "Hermes' driver if
+it is installed there, else screen sharing". "Folders that belong to
+it, one a line", filled with "/home/you/". A ticked box, "Use it when
+no folder rule matches". A line that reads "Connected in 42 ms." Then
+three buttons: Save, Test connection and Cancel.
 
 <!-- /onsite:screen -->
 
@@ -253,6 +254,7 @@ connection and Cancel.
 | Log in as | Your user name on that computer. |
 | Port | Leave it empty unless you were told a number. |
 | Key file | Leave it empty unless you were told a file. |
+| Its screen is reached by | Leave it as it is. It only matters if you let Hermes see and use this computer's screen. |
 | Folders that belong to it | Folders whose work should happen on this computer, one on each line. |
 | Use it when no folder rule matches | Tick it for the computer you use most. |
 
