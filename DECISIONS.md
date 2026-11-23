@@ -629,9 +629,23 @@ Written Nov. 22, 2026, against Hermes v0.23.2.
   landed in a file on the container. A real-model session opened in
   the desk's mirrored folder used the stock `computer_use` tool and
   named the window. A session on the host got Hermes' own class.
+- **In the rig.** `rig/run.py --desk --phase screen` drives the
+  desk through Hermes' plain CLI with the stub model: 8 checks. A
+  look needs no approval. Three gated steps each raise Hermes' own
+  prompt; all denied, nothing is typed on the desk; all approved,
+  the typed line runs there.
+- **Not in an editor.** Hermes leaves the screen tool out of editor
+  sessions by design, so the phase cannot use the editor protocol
+  the other phases use.
 - **Found on the way.** Typing into a terminal needs Hermes'
   foreground mode; the default mode is refused by the driver with a
   reason, which is the ladder Hermes expects the model to climb.
+- **A flaw in the rig, found here.** In Hermes' CLI one digit
+  answers a prompt, and Enter accepts its first choice, "Allow
+  once". The rig used to send both. With one prompt that was
+  harmless. With three in a row, the stray Enter approved the next
+  step of a test that was meant to deny it. The screen phase sends
+  one key and waits for Hermes to say how the prompt ended.
 - **Not tested.** macOS, Wayland, a desktop someone is using, an
   approval answered by a person, and Hermes' other permission
   modes. `bounded` is refused on a target, because it reads a file
