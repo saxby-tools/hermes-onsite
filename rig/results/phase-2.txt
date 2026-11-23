@@ -19,11 +19,11 @@
         took 0.01s
   PASS  it still names the target
   waiting 11s for the cooldown
-  --- terminal: pwd + 2 commands [completed, 0.16s]
+  --- terminal: pwd + 2 commands [completed, 0.15s]
   | terminal result
   | - **output:** /home/dev/Development/sample
   | dev
-  | 6450437cf83a
+  | 3ec071c07dbf
   | - **exit_code:** 0
   PASS  service resumes with no restart once the target is back
 
@@ -49,17 +49,17 @@
   PASS  the next call fails at once
         took 0.01s
   waiting 11s for the cooldown
-  --- terminal: pwd + 2 commands [completed, 0.16s]
+  --- terminal: pwd + 2 commands [completed, 0.17s]
   | terminal result
   | - **output:** /home/dev/Development/sample
   | dev
-  | 6450437cf83a
+  | 3ec071c07dbf
   | - **exit_code:** 0
   PASS  service resumes with no restart once the target wakes
 
 == Phase 2.4: the target freezes just before a call
   PASS  the session works before the freeze
-  --- terminal: pwd + 2 commands [failed, 7.17s]
+  --- terminal: pwd + 2 commands [failed, 6.66s]
   | terminal result
   | - **output:** mux_client_request_session: read from master failed: Broken pipe
   | Connection timed out during banner exchange
@@ -69,4 +69,4 @@
   PASS  the error names the target
   PASS  it says the command may have run and was not retried
   PASS  it arrives within 10 seconds
-        took 7.17s (the five-second bar is missed here; see DECISIONS.md)
+        took 6.66s (the five-second bar is missed here; see DECISIONS.md)
