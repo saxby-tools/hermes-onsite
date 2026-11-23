@@ -226,7 +226,7 @@ def gather_settings(args) -> dict:
     )
 
 
-def cli_init(ctx, args) -> int:
+def cli_init(runtime: Runtime, args) -> int:
     try:
         settings = gather_settings(args)
         wizard.validate(settings)
@@ -245,8 +245,13 @@ def cli_init(ctx, args) -> int:
         print(f"{mode} nothing was written. Add --apply to write it.")
         return EXIT_OK
 
-    ctx.set_config("default", settings["default"])
-    ctx.set_config("targets", settings["targets"])
+    # The whole block is written, so a target left out this time is
+    # gone from the file and not merged back in.
+    try:
+        runtime.save_settings(settings)
+    except RuntimeError as error:
+        print(f"{mode} {error}")
+        return EXIT_USAGE
 
     print(f"{mode} written.")
     print()
@@ -666,7 +671,7 @@ def build_cli_handler(ctx, runtime: Runtime):
         action = getattr(args, "onsite_action", None)
 
         if action == "init":
-            return cli_init(ctx, args)
+            return cli_init(runtime, args)
 
         if action == "mirror":
             return cli_mirror(runtime, args)
