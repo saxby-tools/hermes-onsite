@@ -2,7 +2,7 @@
 
 The rules, in order:
 
-1. A target set with `/hands <target>` wins for that session.
+1. A target set with `/onsite <target>` wins for that session.
 2. Otherwise the longest matching path wins. A path matches through a
    target's `prefixes` or through the left side of its `path_map`.
 3. Otherwise the default target is used.
@@ -19,7 +19,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from .config import HandsConfig
+from .config import OnsiteConfig
 from .config import KIND_LOCAL
 from .config import TargetSpec
 from .config import is_absolute
@@ -141,7 +141,7 @@ def translate(cwd: str, spec: TargetSpec) -> str:
     return HOME
 
 
-def collect_candidates(path: str, config: HandsConfig) -> list[Candidate]:
+def collect_candidates(path: str, config: OnsiteConfig) -> list[Candidate]:
     candidates = []
 
     for order, spec in enumerate(config.targets.values()):
@@ -172,7 +172,7 @@ def collect_candidates(path: str, config: HandsConfig) -> list[Candidate]:
     return candidates
 
 
-def route(cwd: str, config: HandsConfig) -> Route:
+def route(cwd: str, config: OnsiteConfig) -> Route:
     """Rules 2 and 3: the longest match, else the default target."""
 
     default = config.target(config.default)
@@ -195,7 +195,7 @@ def route(cwd: str, config: HandsConfig) -> Route:
 
 def resolve(
     cwd: str,
-    config: HandsConfig,
+    config: OnsiteConfig,
     pinned: str | None = None,
     pin_reason: str = REASON_PINNED,
 ) -> Route:

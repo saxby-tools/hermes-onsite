@@ -1,4 +1,4 @@
-"""The `hands` terminal backend: one provider, many named targets."""
+"""The `onsite` terminal backend: one provider, many named targets."""
 
 from __future__ import annotations
 
@@ -19,17 +19,17 @@ from .runtime import Runtime
 
 logger = logging.getLogger(__name__)
 
-DISPLAY_NAME = "Hands"
+DISPLAY_NAME = "Onsite"
 DESCRIPTION = (
     "Run each session on a named machine picked from its folder: "
     "this one, or the one you sit at over SSH."
 )
 ENV_DESCRIPTION = (
-    "the machine hermes-hands picked for this session, named in the "
-    "Hands section of this prompt"
+    "the machine onsite picked for this session, named in the "
+    "Onsite section of this prompt"
 )
 SSH_MISSING = (
-    "hermes-hands: an ssh target is configured but no `ssh` program "
+    "onsite: an ssh target is configured but no `ssh` program "
     "is on PATH."
 )
 PROBE_DECLINED_EXIT = 1
@@ -42,7 +42,7 @@ class DeclinedProbe:
     Hermes caches that description across sessions. With per-session
     targets, one session's machine would be described to the next. So
     the probe is declined, Hermes falls back to `env_description`,
-    and the Hands prompt section names the real target per session.
+    and the Onsite prompt section names the real target per session.
     """
 
     cwd = HOME
@@ -54,7 +54,7 @@ class DeclinedProbe:
         return
 
 
-class HandsProvider(TerminalEnvironmentProvider):
+class OnsiteProvider(TerminalEnvironmentProvider):
     # Some targets are remote, so the host's OS, home and folder must
     # not be presented to the model as facts about where tools run.
     is_remote = True
@@ -126,20 +126,20 @@ class HandsProvider(TerminalEnvironmentProvider):
 
     def setup_instructions(self) -> list[str]:
         return [
-            "Run `hermes hands init` to name your targets.",
-            "Then `hermes hands status` to check them.",
+            "Run `hermes onsite init` to name your targets.",
+            "Then `hermes onsite status` to check them.",
         ]
 
     def doctor_checks(self) -> list[tuple[bool, str, str]]:
         problem = self._runtime.config_problem()
 
         if problem is not None:
-            return [(False, "Hands backend", "(settings need fixing)")]
+            return [(False, "Onsite backend", "(settings need fixing)")]
 
         config = self._runtime.load_config()
         names = ", ".join(config.targets)
 
-        return [(True, "Hands backend", f"(targets: {names})")]
+        return [(True, "Onsite backend", f"(targets: {names})")]
 
     def create_environment(
         self,
@@ -157,5 +157,5 @@ class HandsProvider(TerminalEnvironmentProvider):
         return self._runtime.create_environment(cwd, timeout, task_id)
 
 
-def build_provider(runtime: Runtime) -> HandsProvider:
-    return HandsProvider(runtime)
+def build_provider(runtime: Runtime) -> OnsiteProvider:
+    return OnsiteProvider(runtime)

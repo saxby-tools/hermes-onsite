@@ -4,10 +4,10 @@ from __future__ import annotations
 
 import pytest
 
-from hermes_hands import config
-from hermes_hands import dialout
-from hermes_hands import health
-from hermes_hands import remote
+from onsite import config
+from onsite import dialout
+from onsite import health
+from onsite import remote
 
 
 def spec_for(host: str, port: int = 22022) -> config.TargetSpec:
@@ -87,7 +87,7 @@ def test_the_target_points_at_the_forwarded_port():
 
 @pytest.mark.parametrize("host", ["127.0.0.1", "::1", "localhost"])
 def test_a_loopback_target_files_its_key_under_its_own_name(host):
-    assert spec_for(host).host_key_alias == "hermes-hands-laptop"
+    assert spec_for(host).host_key_alias == "onsite-laptop"
 
 
 def test_a_target_with_a_real_address_keeps_its_own_host_key_name():
@@ -105,7 +105,7 @@ def test_a_local_target_has_no_host_key():
 
 def test_the_alias_reaches_both_ssh_command_lines():
     spec = spec_for("127.0.0.1")
-    wanted = "HostKeyAlias=hermes-hands-laptop"
+    wanted = "HostKeyAlias=onsite-laptop"
 
     assert wanted in remote.build_ssh_options(spec)
     assert wanted in health.build_probe_command(spec)

@@ -1,10 +1,10 @@
 {
-  "name": "hermes-hands",
-  "label": "Hands",
-  "description": "Status and proposed commands for hermes-hands.",
+  "name": "onsite",
+  "label": "Onsite",
+  "description": "Status and proposed commands for onsite.",
   "version": "0.1.0",
   "tab": {
-    "path": "/hermes-hands",
+    "path": "/onsite",
     "hidden": true
   },
   "entry": "dist/index.js",

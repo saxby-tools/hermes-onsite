@@ -20,7 +20,7 @@ from typing import Callable
 
 from . import routing
 from .config import ConfigError
-from .config import HandsConfig
+from .config import OnsiteConfig
 from .config import TargetSpec
 from .config import is_absolute
 from .config import parse_config
@@ -85,7 +85,7 @@ class Runtime:
         self.folders = Folders(JsonStore(folders_path))
         self.proposals = Proposals(JsonStore(proposals_path))
 
-    def load_config(self) -> HandsConfig:
+    def load_config(self) -> OnsiteConfig:
         """Read the settings fresh, so an edit applies to the next
         session with no restart."""
 
@@ -125,7 +125,7 @@ class Runtime:
         self,
         key: str,
         cwd: str,
-        config: HandsConfig,
+        config: OnsiteConfig,
         session_id: str = "",
     ) -> routing.Route:
         """Pick the target for an environment and pin a new session."""
@@ -169,7 +169,7 @@ class Runtime:
         spec = config.target(route.target)
 
         logger.info(
-            "hands: %s runs on %s in %s (%s)",
+            "onsite: %s runs on %s in %s (%s)",
             task_id,
             spec.label,
             route.cwd,
@@ -191,7 +191,7 @@ class Runtime:
         cwd: str,
         session_id: str = "",
     ) -> routing.Route:
-        """`/hands <target>`: pin a session, or clear with `auto`."""
+        """`/onsite <target>`: pin a session, or clear with `auto`."""
 
         config = self.load_config()
 
@@ -212,7 +212,7 @@ class Runtime:
 
     def locate(
         self,
-        config: HandsConfig,
+        config: OnsiteConfig,
         key: str = "",
         session_id: str = "",
         cwd: str = "",

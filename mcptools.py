@@ -19,7 +19,7 @@ from __future__ import annotations
 import re
 import shlex
 
-from .config import HandsConfig
+from .config import OnsiteConfig
 from .config import KIND_SSH
 from .config import PATH_MODE_INTERACTIVE
 from .config import TargetSpec
@@ -113,7 +113,7 @@ def server_of(tool_name: str) -> str:
     return server
 
 
-def owner_of(tool_name: str, config: HandsConfig) -> str | None:
+def owner_of(tool_name: str, config: OnsiteConfig) -> str | None:
     """The target an MCP tool runs on, if its server is named for one."""
 
     server = server_of(tool_name)

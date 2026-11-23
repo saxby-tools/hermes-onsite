@@ -1,7 +1,0 @@
-name: hermes-hands-screen
-version: 0.1.0
-description: >-
-  Screen control on the machine a hermes-hands session runs on. Select
-  it with computer_use.backend: hermes-hands-screen. A session on the
-  host keeps the host's screen. Needs the hermes-hands plugin enabled.
-author: Claude Code, for saxby-tools

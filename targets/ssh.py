@@ -38,7 +38,7 @@ MASTER_EXIT_TIMEOUT_SECONDS = 2
 IDLE_PROBE_SECONDS = 5.0
 
 
-class HandsSshEnvironment(SSHEnvironment):
+class OnsiteSshEnvironment(SSHEnvironment):
     """Hermes' own SSH environment, fitted for a personal workstation.
 
     The class name must keep `ssh` in it. See targets/__init__.py.
@@ -53,15 +53,15 @@ class HandsSshEnvironment(SSHEnvironment):
         timeout: int,
         persistent: bool,
     ):
-        self.hands_spec = spec
-        self.hands_start_cwd = start_cwd
-        self.hands_host_cwd = host_cwd
+        self.onsite_spec = spec
+        self.onsite_start_cwd = start_cwd
+        self.onsite_host_cwd = host_cwd
 
-        self._hands_gate = gate
-        self._hands_path = ""
-        self._hands_inhibit = remote.INHIBIT_NONE
-        self._hands_ready = False
-        self._hands_last_ok = time.monotonic()
+        self._onsite_gate = gate
+        self._onsite_path = ""
+        self._onsite_inhibit = remote.INHIBIT_NONE
+        self._onsite_ready = False
+        self._onsite_last_ok = time.monotonic()
 
         super().__init__(
             host=spec.host,
@@ -76,8 +76,8 @@ class HandsSshEnvironment(SSHEnvironment):
             persistent=persistent,
         )
 
-        self._hands_ready = True
-        self._hands_last_ok = time.monotonic()
+        self._onsite_ready = True
+        self._onsite_last_ok = time.monotonic()
 
     @property
     def _hermes_sandbox_home(self) -> str | None:
@@ -91,18 +91,18 @@ class HandsSshEnvironment(SSHEnvironment):
 
     def _build_ssh_command(self, extra_args=None, send_env=()) -> list:
         command = super()._build_ssh_command(extra_args, send_env)
-        options = remote.build_ssh_options(self.hands_spec)
+        options = remote.build_ssh_options(self.onsite_spec)
 
         return [command[0], *options, *command[1:]]
 
-    def _hands_run_setup(self, script: str) -> str:
+    def _onsite_run_setup(self, script: str) -> str:
         for attempt in range(SETUP_ATTEMPTS):
             try:
                 done = self._run_ssh(script, timeout=SETUP_TIMEOUT_SECONDS)
             except subprocess.TimeoutExpired:
                 logger.warning(
-                    "hands: setup of %s timed out (attempt %d)",
-                    self.hands_spec.label,
+                    "onsite: setup of %s timed out (attempt %d)",
+                    self.onsite_spec.label,
                     attempt + 1,
                 )
                 continue
@@ -112,41 +112,41 @@ class HandsSshEnvironment(SSHEnvironment):
 
         return ""
 
-    def _hands_prepare(self) -> None:
-        script = remote.build_setup_script(self.hands_spec)
+    def _onsite_prepare(self) -> None:
+        script = remote.build_setup_script(self.onsite_spec)
 
         if not script:
             return
 
-        found = remote.parse_setup(self._hands_run_setup(script))
+        found = remote.parse_setup(self._onsite_run_setup(script))
 
-        self._hands_path = found.path
-        self._hands_inhibit = found.inhibit
+        self._onsite_path = found.path
+        self._onsite_inhibit = found.inhibit
 
         if not found.path:
             logger.warning(
-                "hands: no PATH could be read from an interactive shell "
+                "onsite: no PATH could be read from an interactive shell "
                 "on %s. Tools set up in a shell rc file may be missing.",
-                self.hands_spec.label,
+                self.onsite_spec.label,
             )
 
     def init_session(self):
         # This has to happen before Hermes snapshots the login shell,
         # because the borrowed PATH is carried by that snapshot.
-        self._hands_prepare()
+        self._onsite_prepare()
 
         super().init_session()
 
-        if self.hands_start_cwd in ("", HOME):
+        if self.onsite_start_cwd in ("", HOME):
             return
 
-        if self.cwd == self.hands_start_cwd:
+        if self.cwd == self.onsite_start_cwd:
             return
 
         logger.warning(
-            "hands: %s is not a folder on %s. The session starts in %s.",
-            self.hands_start_cwd,
-            self.hands_spec.label,
+            "onsite: %s is not a folder on %s. The session starts in %s.",
+            self.onsite_start_cwd,
+            self.onsite_spec.label,
             self.cwd,
         )
 
@@ -159,12 +159,12 @@ class HandsSshEnvironment(SSHEnvironment):
         stdin_data: str | None = None,
     ):
         if login:
-            cmd_string = remote.prefix_path(cmd_string, self._hands_path)
+            cmd_string = remote.prefix_path(cmd_string, self._onsite_path)
 
-        if not login and self._hands_ready:
+        if not login and self._onsite_ready:
             cmd_string = remote.wrap_with_inhibitor(
                 cmd_string,
-                self._hands_inhibit,
+                self._onsite_inhibit,
             )
 
         return super()._run_bash(
@@ -174,12 +174,12 @@ class HandsSshEnvironment(SSHEnvironment):
             stdin_data=stdin_data,
         )
 
-    def _hands_is_host_only(self, path: str) -> bool:
+    def _onsite_is_host_only(self, path: str) -> bool:
         """True for the session's host folder when the target has no
         folder that stands for it. Running there would fail at `cd`
         on every call, so the target's own start folder is used."""
 
-        host = self.hands_host_cwd
+        host = self.onsite_host_cwd
 
         if not host:
             return False
@@ -187,9 +187,9 @@ class HandsSshEnvironment(SSHEnvironment):
         if not is_under(path, normalize_path(host)):
             return False
 
-        return not has_prefix_for(path, self.hands_spec)
+        return not has_prefix_for(path, self.onsite_spec)
 
-    def _hands_cwd(self, cwd: str) -> str:
+    def _onsite_cwd(self, cwd: str) -> str:
         """Turn the folder Hermes passes into one that exists here."""
 
         # Until a session has run a command, Hermes passes the
@@ -204,17 +204,17 @@ class HandsSshEnvironment(SSHEnvironment):
         # Desktop and editors send the folder the user picked, which
         # is a path on the host.
         path = normalize_path(cwd)
-        mapped = map_path(path, self.hands_spec)
+        mapped = map_path(path, self.onsite_spec)
 
         if mapped is not None:
             return mapped
 
-        if self._hands_is_host_only(path):
+        if self._onsite_is_host_only(path):
             return ""
 
         return cwd
 
-    def _hands_drop_masters(self) -> None:
+    def _onsite_drop_masters(self) -> None:
         """Close shared connections that point at a dead peer, so the
         next call opens a new one instead of hanging on the old."""
 
@@ -235,9 +235,9 @@ class HandsSshEnvironment(SSHEnvironment):
                     check=False,
                 )
             except (OSError, subprocess.SubprocessError):
-                logger.debug("hands: closing %s failed", socket)
+                logger.debug("onsite: closing %s failed", socket)
 
-    def _hands_link_lost(self, result: dict) -> str | None:
+    def _onsite_link_lost(self, result: dict) -> str | None:
         """The reason the link was lost, or None when it was not."""
 
         verdict = exits.transport_verdict(result)
@@ -247,53 +247,53 @@ class HandsSshEnvironment(SSHEnvironment):
 
         if verdict == exits.VERDICT_LOST:
             detail = last_line(str(result.get("output") or ""))
-            self._hands_gate.trip(detail)
+            self._onsite_gate.trip(detail)
 
             return detail or "the connection was lost"
 
         # A command can exit 255 on its own. A live probe settles it.
-        probe = self._hands_gate.check()
+        probe = self._onsite_gate.check()
 
         if probe.ok:
             return None
 
         return probe.detail or "the connection was lost"
 
-    def _hands_admit(self) -> None:
-        idle = time.monotonic() - self._hands_last_ok
+    def _onsite_admit(self) -> None:
+        idle = time.monotonic() - self._onsite_last_ok
 
         if idle > IDLE_PROBE_SECONDS:
-            self._hands_gate.admit_fresh()
+            self._onsite_gate.admit_fresh()
             return
 
-        self._hands_gate.admit()
+        self._onsite_gate.admit()
 
     def execute(self, command: str, cwd: str = "", **kwargs) -> dict:
-        name = self.hands_spec.name
+        name = self.onsite_spec.name
 
         # A refusal is returned, not raised. The terminal tool retries
         # any exception three times, and a command must never be
         # retried.
         try:
-            self._hands_admit()
+            self._onsite_admit()
         except TargetDown as down:
-            self._hands_drop_masters()
+            self._onsite_drop_masters()
 
             return exits.refusal(name, str(down))
 
-        result = super().execute(command, self._hands_cwd(cwd), **kwargs)
-        lost = self._hands_link_lost(result)
+        result = super().execute(command, self._onsite_cwd(cwd), **kwargs)
+        lost = self._onsite_link_lost(result)
 
         if lost is None:
-            self._hands_last_ok = time.monotonic()
+            self._onsite_last_ok = time.monotonic()
 
             return exits.annotate(result, name, exits.classify(result))
 
-        self._hands_drop_masters()
+        self._onsite_drop_masters()
 
         return exits.annotate(
             result,
             name,
             exits.STATE_NO_STATUS,
-            exits.no_status_note(self.hands_spec.label, lost),
+            exits.no_status_note(self.onsite_spec.label, lost),
         )

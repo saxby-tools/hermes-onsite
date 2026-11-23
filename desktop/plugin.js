@@ -1,5 +1,5 @@
 /**
- * hermes-hands: the Hermes Desktop half.
+ * onsite: the Hermes Desktop half.
  *
  * Three features, each in its own labeled section so one can be
  * dropped without touching the others:
@@ -17,9 +17,9 @@
  * not export would stop the whole file from loading.
  *
  * Install: copy this file to
- *   <hermes home>/desktop-plugins/hermes-hands/plugin.js
+ *   <hermes home>/desktop-plugins/onsite/plugin.js
  * on the machine that runs Hermes Desktop. The folder name must stay
- * `hermes-hands`, because the app uses it to reach the plugin's
+ * `onsite`, because the app uses it to reach the plugin's
  * routes on the host.
  */
 
@@ -31,9 +31,9 @@ import { jsx, jsxs } from 'react/jsx-runtime'
 /* Constants                                                           */
 /* ------------------------------------------------------------------ */
 
-const ID = 'hermes-hands'
-const NAME = 'Hands'
-const DIRECTIVE = 'hands-run'
+const ID = 'onsite'
+const NAME = 'Onsite'
+const DIRECTIVE = 'onsite-run'
 const PANE_ID = 'pane'
 
 const POLL_MS = 5000
@@ -61,7 +61,7 @@ const TONE_COLORS = {
 }
 
 const REASONS = {
-  override: 'set with /hands',
+  override: 'set with /onsite',
   pinned: 'this session started there',
   prefix: 'the folder is under one of its prefixes',
   path_map: 'the folder is in its path map',
@@ -184,12 +184,12 @@ function describeMissingPlugin() {
   const profile = activeProfile()
 
   if (profile === '') {
-    return 'The host has no hermes-hands plugin enabled.'
+    return 'The host has no onsite plugin enabled.'
   }
 
   return (
     `The app asked the "${profile}" profile, ` +
-    'which has no hermes-hands plugin enabled.'
+    'which has no onsite plugin enabled.'
   )
 }
 
@@ -419,23 +419,23 @@ function CommandBlock({ number, command, why, sessionId }) {
 
 function chipLabel(status) {
   if (!status) {
-    return 'hands'
+    return 'onsite'
   }
 
   if (!status.ok) {
-    return 'hands: not set up'
+    return 'onsite: not set up'
   }
 
-  return `hands: ${status.target}`
+  return `onsite: ${status.target}`
 }
 
 function chipTip(status) {
   if (!status) {
-    return 'hermes-hands: checking where this session runs'
+    return 'onsite: checking where this session runs'
   }
 
   if (!status.ok) {
-    return status.error || 'hermes-hands is not set up on the host.'
+    return status.error || 'onsite is not set up on the host.'
   }
 
   return [
@@ -446,7 +446,7 @@ function chipTip(status) {
   ].join('\n')
 }
 
-function HandsChip() {
+function OnsiteChip() {
   const status = useStore(statusStore)
   const tone = toneOf(status)
 
@@ -457,7 +457,7 @@ function HandsChip() {
       TEXT_MUTED,
       'hover:bg-(--chrome-action-hover) hover:text-foreground'
     ),
-    'data-hands-chip': tone,
+    'data-onsite-chip': tone,
     onClick: () => {
       sdk.host?.revealPane?.(`${ID}:${PANE_ID}`)
       refresh()
@@ -490,7 +490,7 @@ function StatusLines({ status }) {
   if (!status.ok) {
     return jsx('div', {
       className: 'whitespace-pre-wrap',
-      children: status.error || 'hermes-hands is not set up on the host.'
+      children: status.error || 'onsite is not set up on the host.'
     })
   }
 
@@ -534,7 +534,7 @@ function TargetList({ rows }) {
   })
 }
 
-function HandsPane() {
+function OnsitePane() {
   const status = useStore(statusStore)
   const proposals = useStore(proposalsStore)
   const pending = proposals.filter(item => item.status === 'pending')
@@ -542,14 +542,14 @@ function HandsPane() {
 
   return jsxs('div', {
     className: 'flex h-full flex-col gap-3 overflow-y-auto p-3 text-[0.8125rem]',
-    'data-hands-pane': true,
+    'data-onsite-pane': true,
     children: [
-      jsx('div', { className: 'font-medium', children: 'Hands' }),
+      jsx('div', { className: 'font-medium', children: 'Onsite' }),
       jsx(StatusLines, { status }),
       jsx(TargetList, { rows: status?.rows }),
       jsx('div', {
         className: joinClasses(TEXT_SMALL, TEXT_MUTED),
-        children: 'Move this session with /hands <target>.'
+        children: 'Move this session with /onsite <target>.'
       }),
       jsx('div', { className: 'font-medium', children: 'Proposed commands' }),
       pending.length === 0
@@ -635,16 +635,16 @@ export default {
       id: 'chip',
       area: AREA_CHIP,
       order: CHIP_ORDER,
-      render: () => jsx(HandsChip, {})
+      render: () => jsx(OnsiteChip, {})
     })
 
     // 2. COMMANDS PANE
     ctx.register({
       id: PANE_ID,
       area: AREA_PANES,
-      title: 'hands',
+      title: 'onsite',
       data: { placement: 'right', width: PANE_WIDTH },
-      render: () => jsx(HandsPane, {})
+      render: () => jsx(OnsitePane, {})
     })
 
     // 3. RUN CARD

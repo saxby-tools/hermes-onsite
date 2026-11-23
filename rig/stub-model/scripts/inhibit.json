@@ -4,7 +4,7 @@
     {
       "tool": "terminal",
       "args": {
-        "command": "systemd-inhibit --list --no-pager | grep hermes-hands"
+        "command": "systemd-inhibit --list --no-pager | grep onsite"
       }
     },
     {

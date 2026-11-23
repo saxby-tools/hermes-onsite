@@ -10,7 +10,7 @@
 # - a VNC server bound to loopback, as a machine's built-in screen
 #   sharing would be.
 
-ARG BASE_IMAGE=hermes-hands-rig/hands:dev
+ARG BASE_IMAGE=onsite-rig/hands:dev
 
 FROM ${BASE_IMAGE}
 

@@ -132,15 +132,15 @@ function createHost() {
 // Writes the plugin beside its stand-ins and imports it from there,
 // which is what the real loader does with blob URLs.
 async function loadPlugin(require, host) {
-  const folder = fs.mkdtempSync(path.join(os.tmpdir(), 'hands-desktop-'))
+  const folder = fs.mkdtempSync(path.join(os.tmpdir(), 'onsite-desktop-'))
   const reactPath = require.resolve('react')
   const jsxPath = require.resolve('react/jsx-runtime')
 
-  globalThis.__HANDS_TEST_HOST__ = host
+  globalThis.__ONSITE_TEST_HOST__ = host
 
   const shims = {
     '@hermes/plugin-sdk': [
-      'export const host = globalThis.__HANDS_TEST_HOST__',
+      'export const host = globalThis.__ONSITE_TEST_HOST__',
       "export const cn = (...parts) => parts.filter(Boolean).join(' ')",
       ''
     ].join('\n'),
@@ -282,11 +282,11 @@ test('the file imports only what the desktop loader allows', () => {
 test('it registers a chip, a pane and a run card', { skip: SKIP }, async () => {
   const { made, plugin } = await setup()
 
-  assert.equal(plugin.id, 'hermes-hands')
+  assert.equal(plugin.id, 'onsite')
   assert.equal(made.contributions.chip.area, 'statusBar.right')
   assert.equal(made.contributions.pane.area, 'panes')
   assert.equal(made.contributions['run-card'].area, 'transcript.directives')
-  assert.equal(made.contributions['run-card'].data.name, 'hands-run')
+  assert.equal(made.contributions['run-card'].data.name, 'onsite-run')
   assert.equal(made.intervals.length, 1)
 })
 
@@ -303,23 +303,23 @@ test('it asks the host with a POST body, not a query string', { skip: SKIP }, as
 test('the chip changes state when the target goes down and comes back', { skip: SKIP }, async () => {
   const { backend, made, mount, settle } = await setup()
   const box = await mount(made.contributions.chip.render())
-  const chip = () => box.querySelector('[data-hands-chip]')
+  const chip = () => box.querySelector('[data-onsite-chip]')
 
-  assert.equal(chip().getAttribute('data-hands-chip'), 'up')
-  assert.match(chip().textContent, /hands: laptop/)
+  assert.equal(chip().getAttribute('data-onsite-chip'), 'up')
+  assert.match(chip().textContent, /onsite: laptop/)
   assert.match(chip().textContent, /Development\/app/)
   assert.match(chip().getAttribute('title'), /connected \(41 ms\)/)
 
   backend.status = DOWN
   await settle(made.intervals[0])
 
-  assert.equal(chip().getAttribute('data-hands-chip'), 'down')
+  assert.equal(chip().getAttribute('data-onsite-chip'), 'down')
   assert.match(chip().getAttribute('title'), /not reachable \(connection refused\)/)
 
   backend.status = UP
   await settle(made.intervals[0])
 
-  assert.equal(chip().getAttribute('data-hands-chip'), 'up')
+  assert.equal(chip().getAttribute('data-onsite-chip'), 'up')
 })
 
 test('the chip says so when the host has no plugin', { skip: SKIP }, async () => {
@@ -329,11 +329,11 @@ test('the chip says so when the host has no plugin', { skip: SKIP }, async () =>
   backend.fail = 'HTTP 404'
   await settle(made.intervals[0])
 
-  const chip = box.querySelector('[data-hands-chip]')
+  const chip = box.querySelector('[data-onsite-chip]')
 
-  assert.equal(chip.getAttribute('data-hands-chip'), 'down')
+  assert.equal(chip.getAttribute('data-onsite-chip'), 'down')
   assert.match(chip.textContent, /not set up/)
-  assert.match(chip.getAttribute('title'), /no hermes-hands plugin enabled/)
+  assert.match(chip.getAttribute('title'), /no onsite plugin enabled/)
 })
 
 test('the chip names the profile that has no plugin', { skip: SKIP }, async () => {
@@ -346,19 +346,19 @@ test('the chip names the profile that has no plugin', { skip: SKIP }, async () =
   backend.fail = 'HTTP 404'
   await settle(made.intervals[0])
 
-  const title = box.querySelector('[data-hands-chip]').getAttribute('title')
+  const title = box.querySelector('[data-onsite-chip]').getAttribute('title')
 
   assert.match(title, /asked the "default" profile/)
-  assert.match(title, /no hermes-hands plugin enabled/)
+  assert.match(title, /no onsite plugin enabled/)
 })
 
 test('clicking the chip opens the pane', { skip: SKIP }, async () => {
   const { calls, click, made, mount } = await setup()
   const box = await mount(made.contributions.chip.render())
 
-  await click(box.querySelector('[data-hands-chip]'))
+  await click(box.querySelector('[data-onsite-chip]'))
 
-  assert.deepEqual(calls.reveal, ['hermes-hands:pane'])
+  assert.deepEqual(calls.reveal, ['onsite:pane'])
 })
 
 test('the pane lists proposed commands and Run sends /run N', { skip: SKIP }, async () => {
@@ -449,7 +449,7 @@ test('a failed send tells the user what to type instead', { skip: SKIP }, async 
   const render = made.contributions['run-card'].data.render
   const box = await mount(render({ attrs: { n: '4' }, sessionId: 'gone', streaming: false }))
 
-  globalThis.__HANDS_TEST_HOST__.composer.submit = () => false
+  globalThis.__ONSITE_TEST_HOST__.composer.submit = () => false
 
   const run = box.querySelector('[data-action="run"]')
 

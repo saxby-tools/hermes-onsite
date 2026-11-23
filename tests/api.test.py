@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-from hermes_hands import api
-from hermes_hands import health
-from hermes_hands import runtime
+from onsite import api
+from onsite import health
+from onsite import runtime
 
 
 SETTINGS = {
@@ -102,7 +102,7 @@ def test_status_passes_broken_settings_through(tmp_path):
     payload = api.status_payload(build(tmp_path, settings=None), {})
 
     assert payload["ok"] is False
-    assert "hermes hands init" in payload["error"]
+    assert "hermes onsite init" in payload["error"]
 
 
 def test_proposals_are_found_by_any_session_id(tmp_path):

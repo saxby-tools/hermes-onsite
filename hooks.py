@@ -46,7 +46,7 @@ def anchor(tool_name: str, task_id: str) -> None:
     except Exception:
         # A target that is down is reported by the tool call itself,
         # with the target's name. Failing here would hide that.
-        logger.debug("hands: could not anchor %s", tool_name, exc_info=True)
+        logger.debug("onsite: could not anchor %s", tool_name, exc_info=True)
 
 
 def session_target(runtime: Runtime, config) -> str:
@@ -83,7 +83,7 @@ def refuse_foreign_mcp(runtime: Runtime, tool_name: str):
     try:
         current = session_target(runtime, config)
     except Exception:
-        logger.debug("hands: no session target for %s", tool_name,
+        logger.debug("onsite: no session target for %s", tool_name,
                      exc_info=True)
         return None
 

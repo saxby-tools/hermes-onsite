@@ -4,9 +4,9 @@ from __future__ import annotations
 
 import pytest
 
-from hermes_hands import config
-from hermes_hands import mirror
-from hermes_hands import routing
+from onsite import config
+from onsite import mirror
+from onsite import routing
 
 
 HOME = "/home/dev"
@@ -49,25 +49,25 @@ def files_under(folder) -> list:
 
 
 def test_a_mirror_is_read_and_written_back():
-    spec = laptop("/Users/dev/Hands/laptop/", mirror_depth=4)
+    spec = laptop("/Users/dev/Onsite/laptop/", mirror_depth=4)
 
-    assert spec.mirror == "/Users/dev/Hands/laptop"
+    assert spec.mirror == "/Users/dev/Onsite/laptop"
     assert spec.mirror_depth == 4
 
     block = config.target_to_settings(spec)
 
-    assert block["mirror"] == "/Users/dev/Hands/laptop"
+    assert block["mirror"] == "/Users/dev/Onsite/laptop"
     assert block["mirror_depth"] == 4
 
 
 def test_the_default_depth_is_not_written_back():
-    block = config.target_to_settings(laptop("/Users/dev/Hands/laptop"))
+    block = config.target_to_settings(laptop("/Users/dev/Onsite/laptop"))
 
     assert "mirror_depth" not in block
 
 
 @pytest.mark.parametrize("value, problem", [
-    ("Hands/laptop", "must be an absolute path"),
+    ("Onsite/laptop", "must be an absolute path"),
     ("/", "cannot be the root folder"),
 ])
 def test_a_bad_mirror_folder_is_refused(value, problem):
@@ -78,11 +78,11 @@ def test_a_bad_mirror_folder_is_refused(value, problem):
 @pytest.mark.parametrize("depth", [0, 7, "3", True])
 def test_a_bad_depth_is_refused(depth):
     with pytest.raises(config.ConfigError, match="mirror_depth"):
-        config.parse_config(settings("/Users/dev/Hands", mirror_depth=depth))
+        config.parse_config(settings("/Users/dev/Onsite", mirror_depth=depth))
 
 
 def test_a_local_target_cannot_have_a_mirror():
-    raw = settings("/Users/dev/Hands")
+    raw = settings("/Users/dev/Onsite")
     raw["targets"]["mac"]["mirror"] = "/Users/dev/Other"
 
     with pytest.raises(config.ConfigError, match="only for an ssh target"):
@@ -93,9 +93,9 @@ def test_a_local_target_cannot_have_a_mirror():
 
 
 def test_a_folder_in_the_mirror_runs_on_the_target():
-    parsed = config.parse_config(settings("/Users/dev/Hands/laptop"))
+    parsed = config.parse_config(settings("/Users/dev/Onsite/laptop"))
     found = routing.route(
-        "/Users/dev/Hands/laptop/home/dev/Downloads/site",
+        "/Users/dev/Onsite/laptop/home/dev/Downloads/site",
         parsed,
     )
 
@@ -105,26 +105,26 @@ def test_a_folder_in_the_mirror_runs_on_the_target():
 
 
 def test_the_mirror_folder_itself_is_the_root_of_the_target():
-    parsed = config.parse_config(settings("/Users/dev/Hands/laptop"))
-    found = routing.route("/Users/dev/Hands/laptop", parsed)
+    parsed = config.parse_config(settings("/Users/dev/Onsite/laptop"))
+    found = routing.route("/Users/dev/Onsite/laptop", parsed)
 
     assert found.target == "laptop"
     assert found.cwd == "/"
 
 
 def test_a_folder_beside_the_mirror_is_not_in_it():
-    parsed = config.parse_config(settings("/Users/dev/Hands/laptop"))
-    found = routing.route("/Users/dev/Hands/laptop-old/x", parsed)
+    parsed = config.parse_config(settings("/Users/dev/Onsite/laptop"))
+    found = routing.route("/Users/dev/Onsite/laptop-old/x", parsed)
 
     assert found.target == "mac"
 
 
 def test_a_longer_path_map_entry_beats_the_mirror():
     parsed = config.parse_config(settings(
-        "/Users/dev/Hands/laptop",
-        path_map={"/Users/dev/Hands/laptop/mnt": "/media/disk"},
+        "/Users/dev/Onsite/laptop",
+        path_map={"/Users/dev/Onsite/laptop/mnt": "/media/disk"},
     ))
-    found = routing.route("/Users/dev/Hands/laptop/mnt/photos", parsed)
+    found = routing.route("/Users/dev/Onsite/laptop/mnt/photos", parsed)
 
     assert found.cwd == "/media/disk/photos"
     assert found.reason == routing.REASON_PATH_MAP

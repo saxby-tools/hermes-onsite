@@ -1,4 +1,4 @@
-"""hermes-hands: a remote Hermes agent acts on the machine you sit at.
+"""onsite: a remote Hermes agent acts on the machine you sit at.
 
 The agent's loop, memory and skills stay on the host. Shell commands
 and file edits run on a named target, picked per session from the
@@ -53,7 +53,7 @@ def register(ctx) -> None:
     RUNTIME = runtime
 
     # The provider is registered even when the settings are broken.
-    # Otherwise `hermes hands init`, which fixes them, would not load.
+    # Otherwise `hermes onsite init`, which fixes them, would not load.
     ctx.register_terminal_environment_provider(build_provider(runtime))
 
     hooks.register(ctx, runtime)

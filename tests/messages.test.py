@@ -2,10 +2,10 @@
 
 from __future__ import annotations
 
-from hermes_hands import config
-from hermes_hands import messages
-from hermes_hands import proposals
-from hermes_hands import routing
+from onsite import config
+from onsite import messages
+from onsite import proposals
+from onsite import routing
 
 
 PARSED = config.parse_config({
@@ -48,7 +48,7 @@ PROPOSAL = proposals.Proposal(
 def test_status_names_the_target_state_folder_and_reason():
     text = messages.format_status(UP)
 
-    assert "Hands:   laptop (dev@laptop.example)" in text
+    assert "Onsite:  laptop (dev@laptop.example)" in text
     assert "State:   connected (41 ms)" in text
     assert "Folder:  /home/dev/app" in text
     assert "under one of its prefixes" in text
@@ -116,13 +116,13 @@ def test_the_tool_result_says_the_command_has_not_run():
     text = messages.format_proposal_result(PROPOSAL, with_card=False)
 
     assert "It has NOT run." in text
-    assert "::hands-run" not in text
+    assert "::onsite-run" not in text
 
 
 def test_only_the_desktop_gets_the_card_directive():
     text = messages.format_proposal_result(PROPOSAL, with_card=True)
 
-    assert '::hands-run{n="3"}' in text
+    assert '::onsite-run{n="3"}' in text
 
 
 def test_the_run_request_carries_the_exact_command():
@@ -151,7 +151,7 @@ def test_the_prompt_note_names_a_remote_target():
     assert "`laptop`, a remote machine reached over SSH" in text
     assert "as user `dev`" in text
     assert "`/home/dev/app`" in text
-    assert "[hands:" in text
+    assert "[onsite:" in text
     assert "propose_command" in text
 
 

@@ -29,7 +29,7 @@ SSH_TRANSPORT_EXIT = 255
 SIGNAL_EXIT_FLOOR = 129
 SIGNAL_EXIT_CEILING = 192
 
-RESULT_KEY = "hands"
+RESULT_KEY = "onsite"
 
 VERDICT_LOST = "lost"
 VERDICT_UNSURE = "unsure"
@@ -124,7 +124,7 @@ def no_status_note(label: str, detail: str) -> str:
     reason = detail or "the connection was lost"
 
     return (
-        f"[hands: no exit status from {label}: {reason}. "
+        f"[onsite: no exit status from {label}: {reason}. "
         "The command may have run, may still be running, or may not "
         "have started. It was not retried.]"
     )
@@ -154,7 +154,7 @@ def refusal(target: str, message: str) -> dict[str, Any]:
     """The result for a command that was never sent to its target."""
 
     result = {
-        "output": f"[hands: {message}]",
+        "output": f"[onsite: {message}]",
         "returncode": SSH_TRANSPORT_EXIT,
     }
 

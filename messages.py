@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from .config import HandsConfig
+from .config import OnsiteConfig
 from .config import KIND_LOCAL
 from .config import TargetSpec
 from .dialout import SERVICE_NAME
@@ -24,11 +24,11 @@ from .routing import REASON_PREFIX
 from .routing import Route
 
 
-PROMPT_SECTION_ID = "hands"
-DIRECTIVE_NAME = "hands-run"
+PROMPT_SECTION_ID = "onsite"
+DIRECTIVE_NAME = "onsite-run"
 
 REASON_TEXT = {
-    REASON_OVERRIDE: "you set it with /hands",
+    REASON_OVERRIDE: "you set it with /onsite",
     REASON_PINNED: "this session started there",
     REASON_PREFIX: "the session folder is under one of its prefixes",
     REASON_PATH_MAP: "the session folder is in its path map",
@@ -37,18 +37,18 @@ REASON_TEXT = {
 }
 
 MAX_SKIPPED_SHOWN = 5
-SCREEN_PLUGIN = "hermes-hands-screen"
+SCREEN_PLUGIN = "onsite-screen"
 
 MIRROR_NOT_SET = (
     "No target has a `mirror` folder. Set one in config.yaml, or "
-    "run `hermes hands init` with `--mirror NAME=FOLDER`."
+    "run `hermes onsite init` with `--mirror NAME=FOLDER`."
 )
 OPEN_USAGE = (
     "Name the folder as TARGET:FOLDER, such as laptop:~/work."
 )
 
 SWITCH_HINT = (
-    "Switch with /hands <target>. Go back to the rules with /hands auto."
+    "Switch with /onsite <target>. Go back to the rules with /onsite auto."
 )
 
 FOLDER_UNKNOWN = (
@@ -58,7 +58,7 @@ FOLDER_UNKNOWN = (
 
 INJECTION_HINT = (
     "This client does not let a plugin hand the agent a message. To "
-    "allow it, set `plugins.entries.hermes-hands.allow_gateway_injection: "
+    "allow it, set `plugins.entries.onsite.allow_gateway_injection: "
     "true` in config.yaml. Until then, ask the agent to run it:"
 )
 
@@ -76,10 +76,10 @@ def describe_state(status: dict[str, Any]) -> str:
 
 
 def format_status(status: dict[str, Any]) -> str:
-    """The reply to `/hands` with no argument."""
+    """The reply to `/onsite` with no argument."""
 
     if not status.get("ok"):
-        return str(status.get("error") or "hermes-hands is not set up.")
+        return str(status.get("error") or "onsite is not set up.")
 
     reason = REASON_TEXT.get(status.get("reason", ""), "")
     names = []
@@ -92,7 +92,7 @@ def format_status(status: dict[str, Any]) -> str:
         names.append(name)
 
     lines = [
-        f"Hands:   {status['label']}",
+        f"Onsite:  {status['label']}",
         f"State:   {describe_state(status)}",
         f"Folder:  {status['cwd']}",
         f"Why:     {reason}",
@@ -113,7 +113,7 @@ def format_switch(
     status: dict[str, Any],
     cleared: bool,
 ) -> str:
-    """The reply to `/hands <target>`."""
+    """The reply to `/onsite <target>`."""
 
     lead = f"This session now runs on {spec.label}."
 
@@ -243,7 +243,7 @@ def describe_target(spec: TargetSpec) -> str:
     )
 
 
-def format_prompt_section(route: Route, config: HandsConfig) -> str:
+def format_prompt_section(route: Route, config: OnsiteConfig) -> str:
     """The per-session note in the system prompt.
 
     Hermes' own backend note is cached across sessions and cannot say
@@ -254,17 +254,17 @@ def format_prompt_section(route: Route, config: HandsConfig) -> str:
     start = "its home folder" if route.cwd == "~" else f"`{route.cwd}`"
 
     return "\n".join([
-        "## Hands",
+        "## Onsite",
         "",
         "Your `terminal`, `read_file`, `write_file`, `patch` and "
         f"`search_files` tools run on {describe_target(spec)}.",
         f"They start in {start}. Paths you pass must be paths on that "
         "machine.",
         "",
-        "A tool result that starts with `[hands:` means the machine "
+        "A tool result that starts with `[onsite:` means the machine "
         "could not be reached. Tell the user. Do not retry in a loop "
         "and do not work around it. The user can move the session "
-        "with `/hands <target>`.",
+        "with `/onsite <target>`.",
         "",
         "When a command should be the user's call, use "
         "`propose_command` instead of running it. The user runs it "
@@ -277,10 +277,10 @@ def format_cli_status(
     status: dict[str, Any],
     rows: list[dict[str, Any]],
 ) -> str:
-    """The output of `hermes hands status`."""
+    """The output of `hermes onsite status`."""
 
     if not status.get("ok"):
-        return str(status.get("error") or "hermes-hands is not set up.")
+        return str(status.get("error") or "onsite is not set up.")
 
     reason = REASON_TEXT.get(status.get("reason", ""), "")
 
@@ -335,7 +335,7 @@ def format_mirror_result(
     result,
     apply: bool,
 ) -> str:
-    """The output of `hermes hands mirror` for one target."""
+    """The output of `hermes onsite mirror` for one target."""
 
     verb = "made" if apply else "would make"
 
@@ -362,7 +362,7 @@ def format_open_result(
     result,
     apply: bool,
 ) -> str:
-    """The output of `hermes hands open`."""
+    """The output of `hermes onsite open`."""
 
     if result.skipped:
         return "\n".join(format_skipped(mode, result.skipped))
@@ -390,7 +390,7 @@ def format_dial_out(
     settings_yaml: str,
     apply: bool,
 ) -> str:
-    """The output of `hermes hands dial-out`."""
+    """The output of `hermes onsite dial-out`."""
 
     lines = [
         f"{mode} `{name}` will reach this host by dialing out.",
@@ -435,7 +435,7 @@ def format_mcp_refused(tool_name: str, owner: str, current: str) -> str:
     return (
         f"`{tool_name}` runs on `{owner}`, and this session runs on "
         f"`{current}`. Nothing was run. Do not work around this. Tell "
-        f"the user that they can move the session with `/hands {owner}`."
+        f"the user that they can move the session with `/onsite {owner}`."
     )
 
 
@@ -447,7 +447,7 @@ def format_mcp_add(
     command: str,
     apply: bool,
 ) -> str:
-    """The output of `hermes hands mcp`."""
+    """The output of `hermes onsite mcp`."""
 
     lines = [
         f"{mode} MCP server `{server}` on {spec.label}.",
@@ -474,7 +474,7 @@ def format_mcp_add(
 
 
 def format_screen_report(spec: TargetSpec, seat, problems, notes) -> str:
-    """The output of `hermes hands screen`."""
+    """The output of `hermes onsite screen`."""
 
     desktop = seat.variables.get("XDG_CURRENT_DESKTOP", "")
     described = seat.kind
@@ -512,7 +512,7 @@ def format_screen_install(
     blocked: bool,
     apply: bool,
 ) -> str:
-    """The output of `hermes hands screen-install`."""
+    """The output of `hermes onsite screen-install`."""
 
     if blocked:
         return (
@@ -540,7 +540,7 @@ def format_screen_install(
         "A session on this machine keeps this machine's screen. A "
         "session on a target",
         "gets that target's screen. Check a target with "
-        "`hermes hands screen <target>`.",
+        "`hermes onsite screen <target>`.",
     ]
 
     return "\n".join(lines)

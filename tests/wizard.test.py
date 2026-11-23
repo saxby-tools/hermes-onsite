@@ -1,11 +1,11 @@
-"""`hermes hands init` builds only settings that will load."""
+"""`hermes onsite init` builds only settings that will load."""
 
 from __future__ import annotations
 
 import pytest
 
-from hermes_hands import config
-from hermes_hands import wizard
+from onsite import config
+from onsite import wizard
 
 
 def build(**overrides):
@@ -112,6 +112,6 @@ def test_the_interview_builds_the_common_setup():
 def test_the_block_is_shown_where_it_will_live():
     text = wizard.render_yaml(build())
 
-    assert text.startswith("plugins:\n  entries:\n    hermes-hands:")
+    assert text.startswith("plugins:\n  entries:\n    onsite:")
     assert "          laptop:\n            kind: ssh" in text
     assert "            prefixes:\n              - /home/dev/" in text

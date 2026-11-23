@@ -32,7 +32,7 @@ ALIVE_INTERVAL = 15
 ALIVE_COUNT = 3
 RETRY_SECONDS = 5
 
-SERVICE_NAME = "hermes-hands-dial-out"
+SERVICE_NAME = "onsite-dial-out"
 
 UNIT_TEMPLATE = """\
 [Unit]

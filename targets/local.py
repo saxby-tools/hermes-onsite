@@ -10,7 +10,7 @@ from ..config import TargetSpec
 from ..routing import HOME
 
 
-class HandsLocalEnvironment(LocalEnvironment):
+class OnsiteLocalEnvironment(LocalEnvironment):
     """Hermes' own local environment, started in the session folder.
 
     The class name must keep `local` in it. See targets/__init__.py.
@@ -23,7 +23,7 @@ class HandsLocalEnvironment(LocalEnvironment):
         timeout: int,
         persistent: bool,
     ):
-        self.hands_spec = spec
+        self.onsite_spec = spec
 
         super().__init__(
             cwd=os.path.expanduser(start_cwd),
@@ -52,6 +52,6 @@ class HandsLocalEnvironment(LocalEnvironment):
 
         return exits.annotate(
             result,
-            self.hands_spec.name,
+            self.onsite_spec.name,
             exits.classify(result),
         )

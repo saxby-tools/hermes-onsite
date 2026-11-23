@@ -1,4 +1,4 @@
-"""HTTP routes for the desktop half, mounted at /api/plugins/hermes-hands/.
+"""HTTP routes for the desktop half, mounted at /api/plugins/onsite/.
 
 Hermes imports this file by path, on its own, so it cannot use a
 relative import. It finds the plugin package instead: the copy Hermes
@@ -26,8 +26,8 @@ from fastapi import Body
 
 
 PLUGIN_ROOT = Path(__file__).resolve().parent.parent
-LOADED_NAME = "hermes_plugins.hermes_hands"
-PRIVATE_NAME = "hermes_hands_dashboard"
+LOADED_NAME = "hermes_plugins.onsite"
+PRIVATE_NAME = "onsite_dashboard"
 
 router = APIRouter()
 

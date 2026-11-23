@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-from hermes_hands import pins
-from hermes_hands import proposals
-from hermes_hands import store
+from onsite import pins
+from onsite import proposals
+from onsite import store
 
 
 class FakeClock:

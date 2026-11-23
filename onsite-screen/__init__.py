@@ -1,9 +1,9 @@
-"""Screen control that follows a hermes-hands session to its machine.
+"""Screen control that follows an onsite session to its machine.
 
 Hermes picks one screen backend for a whole profile. This one hands
 each session the screen of the machine that session runs on: the
 host's own screen for a session on the host, a target's screen for a
-session on a target. The work is done in the hermes-hands plugin.
+session on a target. The work is done in the onsite plugin.
 This folder exists because Hermes finds a screen backend by the name
 of its folder, which must be the value of `computer_use.backend`.
 
@@ -22,29 +22,29 @@ from tools.computer_use.backend import ComputerUseBackend
 from tools.computer_use.backend import ComputerUseProvider
 
 
-NAME = "hermes-hands-screen"
-DISPLAY_NAME = "hermes-hands (the session's own machine)"
+NAME = "onsite-screen"
+DISPLAY_NAME = "onsite (the session's own machine)"
 
-MAIN_PLUGIN = "hermes_plugins.hermes_hands"
-# This folder ships inside the hermes-hands plugin and is linked
+MAIN_PLUGIN = "hermes_plugins.onsite"
+# This folder ships inside the onsite plugin and is linked
 # into place, so the plugin itself is one folder up.
 MAIN_MANIFEST = Path(__file__).resolve().parent.parent / "plugin.yaml"
 BACKEND_MODULE = "screenbackend"
 
 NOT_ENABLED = (
-    "the hermes-hands plugin is not enabled in this profile, so there "
+    "the onsite plugin is not enabled in this profile, so there "
     "is no machine to pick a screen for. Enable it, or set "
     "`computer_use.backend` back to `cua`."
 )
 
 
-class HandsScreenProvider(ComputerUseProvider):
+class OnsiteScreenProvider(ComputerUseProvider):
     name = NAME
     display_name = DISPLAY_NAME
 
     def is_available(self) -> bool:
         # Cheap, as Hermes asks: nothing is dialed until a session
-        # first uses its screen. Whether hermes-hands is enabled is
+        # first uses its screen. Whether onsite is enabled is
         # settled then, with a message that says what to do.
         return MAIN_MANIFEST.is_file()
 
@@ -60,4 +60,4 @@ class HandsScreenProvider(ComputerUseProvider):
 
 
 def register(ctx) -> None:
-    ctx.register_computer_use_provider(HandsScreenProvider())
+    ctx.register_computer_use_provider(OnsiteScreenProvider())

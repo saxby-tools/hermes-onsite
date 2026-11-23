@@ -1,4 +1,4 @@
-"""Parse and validate the hermes-hands settings.
+"""Parse and validate the onsite settings.
 
 Targets name real machines, so there are no defaults to fall back on.
 A missing or broken block is reported in full, with the fix, instead
@@ -16,8 +16,8 @@ from typing import Any
 from typing import Mapping
 
 
-PLUGIN_ID = "hermes-hands"
-BACKEND_NAME = "hands"
+PLUGIN_ID = "onsite"
+BACKEND_NAME = "onsite"
 
 KIND_LOCAL = "local"
 KIND_SSH = "ssh"
@@ -36,18 +36,18 @@ DEFAULT_MIRROR_DEPTH = 3
 MIN_MIRROR_DEPTH = 1
 MAX_MIRROR_DEPTH = 6
 
-# `/hands auto` clears an override, so no target may take the name.
+# `/onsite auto` clears an override, so no target may take the name.
 RESERVED_TARGET_NAMES = ("auto",)
 
 # A machine that dials out is reached at a port on the host's own
 # loopback address. See `dialout`.
 LOOPBACK_HOSTS = ("127.0.0.1", "::1", "localhost")
-HOST_KEY_ALIAS_PREFIX = "hermes-hands-"
+HOST_KEY_ALIAS_PREFIX = "onsite-"
 TARGET_NAME_RE = re.compile(r"^[a-z][a-z0-9-]{0,31}$")
 
 SETTINGS_PATH = f"plugins.entries.{PLUGIN_ID}.settings"
 FIX_HINT = (
-    f"Run `hermes hands init`, or edit `{SETTINGS_PATH}` in config.yaml."
+    f"Run `hermes onsite init`, or edit `{SETTINGS_PATH}` in config.yaml."
 )
 
 KNOWN_TARGET_KEYS = frozenset({
@@ -127,7 +127,7 @@ class TargetSpec:
 
 
 @dataclass(frozen=True)
-class HandsConfig:
+class OnsiteConfig:
     default: str
     targets: Mapping[str, TargetSpec]
 
@@ -452,7 +452,7 @@ def read_targets(raw: Any, problems: list[str]) -> dict[str, TargetSpec]:
     return targets
 
 
-def parse_config(raw: Any) -> HandsConfig:
+def parse_config(raw: Any) -> OnsiteConfig:
     """Return a validated config, or raise ConfigError listing it all."""
 
     if not isinstance(raw, Mapping):
@@ -472,7 +472,7 @@ def parse_config(raw: Any) -> HandsConfig:
     if problems:
         raise ConfigError(problems)
 
-    return HandsConfig(default=default, targets=targets)
+    return OnsiteConfig(default=default, targets=targets)
 
 
 def target_to_settings(spec: TargetSpec) -> dict:
@@ -506,8 +506,8 @@ def target_to_settings(spec: TargetSpec) -> dict:
     return block
 
 
-def config_to_settings(config: HandsConfig) -> dict:
-    """The plain block `hermes hands init` writes to config.yaml."""
+def config_to_settings(config: OnsiteConfig) -> dict:
+    """The plain block `hermes onsite init` writes to config.yaml."""
 
     targets = {
         name: target_to_settings(spec)

@@ -67,7 +67,7 @@ def describe_down(label: str, detail: str, retry_in: float) -> str:
     reason = detail or "no answer"
 
     return (
-        f"hands target {label} is unreachable: {reason}. "
+        f"onsite target {label} is unreachable: {reason}. "
         "No command was run and nothing was retried. "
         f"The target is checked again in about {wait}s."
     )

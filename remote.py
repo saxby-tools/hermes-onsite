@@ -46,12 +46,12 @@ VALID_INHIBIT_MODES = (
     INHIBIT_CAFFEINATE,
 )
 
-INHIBIT_WHO = "hermes-hands"
-INHIBIT_WHY = "A hermes-hands command is running"
+INHIBIT_WHO = "onsite"
+INHIBIT_WHY = "An onsite command is running"
 
-PATH_BEGIN = "__HANDS_PATH_BEGIN__"
-PATH_END = "__HANDS_PATH_END__"
-INHIBIT_MARK = "__HANDS_INHIBIT__="
+PATH_BEGIN = "__ONSITE_PATH_BEGIN__"
+PATH_END = "__ONSITE_PATH_END__"
+INHIBIT_MARK = "__ONSITE_INHIBIT__="
 
 # An interactive shell may print a greeting before the PATH line.
 # Everything between the markers is kept and the last line is used.
@@ -61,7 +61,7 @@ PATH_SCRIPT = (
     f"printf '%s\\n' {PATH_END}\n"
 )
 
-QUIET_PATH_MARK = "__HANDS_QUIET_PATH__"
+QUIET_PATH_MARK = "__ONSITE_QUIET_PATH__"
 
 # Many people build PATH in a file only an interactive shell reads,
 # so `npx` or `uvx` would not be found. The interactive shell is asked

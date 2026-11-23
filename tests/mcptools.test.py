@@ -5,9 +5,9 @@ from __future__ import annotations
 
 import pytest
 
-from hermes_hands import config
-from hermes_hands import hooks
-from hermes_hands import mcptools
+from onsite import config
+from onsite import hooks
+from onsite import mcptools
 
 
 SETTINGS = {
@@ -95,7 +95,7 @@ def test_port_key_and_host_key_alias_are_passed():
 
     assert arguments[arguments.index("-p") + 1] == "22022"
     assert arguments[arguments.index("-i") + 1] == "/keys/gpu"
-    assert "HostKeyAlias=hermes-hands-lab-gpu" in arguments
+    assert "HostKeyAlias=onsite-lab-gpu" in arguments
 
 
 def test_a_local_target_is_sent_to_the_ordinary_command():
@@ -156,7 +156,7 @@ def test_a_tool_on_another_machine_is_refused(monkeypatch):
     assert verdict["action"] == "block"
     assert "runs on `laptop`" in verdict["message"]
     assert "this session runs on `mac`" in verdict["message"]
-    assert "/hands laptop" in verdict["message"]
+    assert "/onsite laptop" in verdict["message"]
 
 
 def test_a_tool_on_the_sessions_own_machine_runs(monkeypatch):

@@ -14,14 +14,14 @@ from ..config import KIND_LOCAL
 from ..config import TargetSpec
 from ..health import Gate
 from ..health import TargetDown
-from .local import HandsLocalEnvironment
-from .ssh import HandsSshEnvironment
+from .local import OnsiteLocalEnvironment
+from .ssh import OnsiteSshEnvironment
 
 
 RETRY_HINT = (
     "The target machine is not reachable. No command was run. Wake or "
     "reconnect it and call the tool again. To use another machine for "
-    "this session, the user can type `/hands <target>`."
+    "this session, the user can type `/onsite <target>`."
 )
 
 
@@ -45,7 +45,7 @@ def build_ssh(
         ) from down
 
     try:
-        return HandsSshEnvironment(
+        return OnsiteSshEnvironment(
             spec=spec,
             gate=gate,
             start_cwd=cwd,
@@ -57,7 +57,7 @@ def build_ssh(
         gate.trip(error.reason)
 
         raise EnvironmentConnectionError(
-            f"hands target {spec.label}: {error.reason}",
+            f"onsite target {spec.label}: {error.reason}",
             retry_hint=RETRY_HINT,
         ) from error
 
@@ -72,7 +72,7 @@ def build_environment(
     if spec.kind == KIND_LOCAL:
         persistent, _ = terminal_persistence()
 
-        return HandsLocalEnvironment(
+        return OnsiteLocalEnvironment(
             spec=spec,
             start_cwd=cwd,
             timeout=timeout,

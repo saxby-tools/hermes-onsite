@@ -1,4 +1,4 @@
-"""Run the hermes-hands acceptance tests end to end.
+"""Run the onsite acceptance tests end to end.
 
 The rig is three parts:
 
@@ -55,14 +55,14 @@ MAC_SESSION_DIR = RIG_DIR / "mac-work"
 LOG_DIR = RIG_DIR / "logs"
 RESULTS_DIR = REPO / "rig" / "results"
 
-PLUGIN_ID = "hermes-hands"
+PLUGIN_ID = "onsite"
 HOST_NODE = os.uname().nodename
 
 # The folder the gated command removes. The name is the rig's own,
 # so a wrong working folder on a real machine could not hit anything.
 VICTIM = "hands-rig-victim"
 
-INHIBIT_WHO = "hermes-hands"
+INHIBIT_WHO = "onsite"
 INHIBIT_COUNT_COMMAND = (
     f"systemd-inhibit --list --no-pager | grep -c {INHIBIT_WHO} || true"
 )
@@ -111,12 +111,12 @@ APPROVAL_OUTCOMES = {
     APPROVAL_DENY_KEY: "denied",
 }
 
-SCREEN_PLUGIN_ID = "hermes-hands-screen"
+SCREEN_PLUGIN_ID = "onsite-screen"
 SCREEN_ALLOWED_FILE = "/tmp/hands-rig-allowed.txt"
 SCREEN_DENIED_FILE = "/tmp/hands-rig-denied.txt"
 SCREEN_TYPED_TEXT = "screen-rig"
 SCREEN_PROMPT_SUBJECT = "computer_use:"
-SCREEN_PICKED_LOG = "hands: screen control for this session is on"
+SCREEN_PICKED_LOG = "onsite: screen control for this session is on"
 SCREEN_FAILED_LOG = "computer_use backend unavailable"
 SCREEN_GATED_STEPS = 3
 SCREEN_SETTLE_SECONDS = 2.0
@@ -140,7 +140,7 @@ telemetry:
 approvals:
   mode: manual
 terminal:
-  backend: hands
+  backend: onsite
 plugins:
   enabled:
     - {plugin}
@@ -554,7 +554,7 @@ def phase_two(report: Report, profile: Profile, hands) -> None:
 
         report.check(
             "the error names the target",
-            "laptop" in first.text and "hands" in first.text,
+            "laptop" in first.text and "onsite" in first.text,
         )
         report.check(
             f"it arrives within {FAIL_FAST_SECONDS:.0f} seconds",
@@ -643,7 +643,7 @@ def phase_two_frozen(report: Report, profile: Profile, hands) -> None:
 
         report.check(
             "the error names the target",
-            "laptop" in first.text and "hands" in first.text,
+            "laptop" in first.text and "onsite" in first.text,
         )
         report.check(
             f"it arrives within {FAIL_FAST_SECONDS:.0f} seconds",
@@ -699,7 +699,7 @@ def phase_two_mid_flight(report: Report, profile: Profile, hands) -> None:
 
         report.check(
             "the error names the target",
-            "laptop" in first.text and "hands" in first.text,
+            "laptop" in first.text and "onsite" in first.text,
         )
         report.check(
             "it says the command may have run and was not retried",
@@ -745,8 +745,8 @@ def init_flags(hands) -> list[str]:
 
 
 def phase_three_cli(report: Report, profile: Profile, hands) -> None:
-    report.section("Phase 3.1: hermes hands status")
-    done = profile.cli(LAPTOP_SESSION_DIR, "hands", "status")
+    report.section("Phase 3.1: hermes onsite status")
+    done = profile.cli(LAPTOP_SESSION_DIR, "onsite", "status")
     report.quote("in a laptop folder", scrub(done.stdout))
 
     report.check(
@@ -759,7 +759,7 @@ def phase_three_cli(report: Report, profile: Profile, hands) -> None:
     )
     report.check("it exits 0 when the target is up", done.returncode == 0)
 
-    done = profile.cli(MAC_SESSION_DIR, "hands", "status")
+    done = profile.cli(MAC_SESSION_DIR, "onsite", "status")
 
     report.check(
         "a Mac folder shows the local target",
@@ -767,7 +767,7 @@ def phase_three_cli(report: Report, profile: Profile, hands) -> None:
     )
 
     hands.stop()
-    done = profile.cli(LAPTOP_SESSION_DIR, "hands", "status")
+    done = profile.cli(LAPTOP_SESSION_DIR, "onsite", "status")
     hands.resume()
     report.quote("with the laptop stopped", scrub(done.stdout))
 
@@ -777,9 +777,9 @@ def phase_three_cli(report: Report, profile: Profile, hands) -> None:
     )
     report.check("it exits 1 when the target is down", done.returncode == 1)
 
-    report.section("Phase 3.2: hermes hands init")
+    report.section("Phase 3.2: hermes onsite init")
     before = profile.config.read_bytes()
-    done = profile.cli(RIG_DIR, "hands", "init", *init_flags(hands))
+    done = profile.cli(RIG_DIR, "onsite", "init", *init_flags(hands))
     report.quote("without --apply", scrub(done.stdout))
 
     report.check(
@@ -791,7 +791,7 @@ def phase_three_cli(report: Report, profile: Profile, hands) -> None:
         profile.config.read_bytes() == before,
     )
 
-    done = profile.cli(RIG_DIR, "hands", "init", "--ssh", "laptop")
+    done = profile.cli(RIG_DIR, "onsite", "init", "--ssh", "laptop")
 
     report.check(
         "a malformed flag is refused with a reason",
@@ -799,14 +799,14 @@ def phase_three_cli(report: Report, profile: Profile, hands) -> None:
         scrub(done.stdout.strip()),
     )
 
-    done = profile.cli(RIG_DIR, "hands", "init", *init_flags(hands), "--apply")
+    done = profile.cli(RIG_DIR, "onsite", "init", *init_flags(hands), "--apply")
 
     report.check(
         "with --apply it writes and says so",
         "[LIVE] written." in done.stdout,
     )
 
-    done = profile.cli(LAPTOP_SESSION_DIR, "hands", "status")
+    done = profile.cli(LAPTOP_SESSION_DIR, "onsite", "status")
 
     report.check(
         "the written settings load and route as before",
@@ -829,27 +829,27 @@ def wait_for_file(hands, path: str, seconds: float) -> str:
 
 
 def phase_three_slash(report: Report, profile: Profile, hands) -> None:
-    report.section("Phase 3.3: /hands shows and switches the target")
+    report.section("Phase 3.3: /onsite shows and switches the target")
     client = profile.session(LAPTOP_SESSION_DIR, "slash")
 
     try:
         turn = client.prompt("script:where")
         require_rig_folder(hands, turn.tool_text())
 
-        turn = client.prompt("/hands")
-        report.quote("/hands", scrub(turn.message))
+        turn = client.prompt("/onsite")
+        report.quote("/onsite", scrub(turn.message))
 
         report.check(
-            "/hands names the target, its state and the folder",
-            "Hands:   laptop" in turn.message
+            "/onsite names the target, its state and the folder",
+            "Onsite:  laptop" in turn.message
             and "connected" in turn.message
             and hands.sample_dir in turn.message,
         )
 
-        turn = client.prompt("/hands mac")
-        report.quote("/hands mac", scrub(turn.message))
+        turn = client.prompt("/onsite mac")
+        report.quote("/onsite mac", scrub(turn.message))
         report.check(
-            "/hands mac moves the session",
+            "/onsite mac moves the session",
             "now runs on mac" in turn.message,
         )
 
@@ -860,9 +860,9 @@ def phase_three_slash(report: Report, profile: Profile, hands) -> None:
             str(LAPTOP_SESSION_DIR.resolve()) in turn.tool_text(),
         )
 
-        turn = client.prompt("/hands auto")
+        turn = client.prompt("/onsite auto")
         report.check(
-            "/hands auto goes back to the folder rules",
+            "/onsite auto goes back to the folder rules",
             "The folder rules pick laptop" in turn.message,
         )
 
@@ -873,7 +873,7 @@ def phase_three_slash(report: Report, profile: Profile, hands) -> None:
             hands.sample_dir in turn.tool_text(),
         )
 
-        turn = client.prompt("/hands nowhere")
+        turn = client.prompt("/onsite nowhere")
         report.check(
             "an unknown target is refused with the choices",
             "is not a target" in turn.message and "laptop, mac" in turn.message,
@@ -933,15 +933,15 @@ def terminal_checks(
         screen.expect("Done.", TERMINAL_TURN_SECONDS, since=start)
 
         start = screen.mark()
-        screen.enter("/hands")
+        screen.enter("/onsite")
         seen = screen.expect("Targets:", TERMINAL_TURN_SECONDS, since=start)
 
         report.check(
-            f"/hands works in the {name} client",
+            f"/onsite works in the {name} client",
             f"laptop({hands.user}@{hands.ssh_host})" in term.squash(seen),
         )
     except term.TermError as error:
-        report.check(f"/hands works in the {name} client", False, str(error))
+        report.check(f"/onsite works in the {name} client", False, str(error))
     finally:
         screen.close()
 
@@ -1156,7 +1156,7 @@ def phase_sleep(report: Report, profile: Profile, hands) -> None:
         row = held[0] if held else ""
 
         report.check(
-            "the running command holds a hermes-hands sleep lock",
+            "the running command holds an onsite sleep lock",
             bool(held),
         )
         report.check(
@@ -1265,8 +1265,8 @@ def phase_screen(report: Report, profile: Profile, hands) -> None:
         report.write(f"  skipped: {hands.label} has no screen.")
         return
 
-    done = profile.cli(LAPTOP_SESSION_DIR, "hands", "screen", "laptop")
-    report.quote("hermes hands screen laptop", scrub(done.stdout))
+    done = profile.cli(LAPTOP_SESSION_DIR, "onsite", "screen", "laptop")
+    report.quote("hermes onsite screen laptop", scrub(done.stdout))
     report.check(
         "the check finds a desktop and a driver",
         "It can be driven." in done.stdout,
@@ -1391,7 +1391,7 @@ def parse_args() -> argparse.Namespace:
         metavar="USER@HOST",
         help="use a real machine as the hands, not the container. It "
              "must take your SSH key with no prompt. The rig writes "
-             "only under ~/.cache/hermes-hands-rig there.",
+             "only under ~/.cache/onsite-rig there.",
     )
     parser.add_argument("--hermes", default=DEFAULT_HERMES)
     parser.add_argument("--profile", default=DEFAULT_PROFILE)

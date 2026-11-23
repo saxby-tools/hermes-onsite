@@ -1,4 +1,4 @@
-"""Load the plugin as a package named `hermes_hands` for the tests.
+"""Load the plugin as a package named `onsite` for the tests.
 
 The repository root is the plugin folder, and its name has a hyphen,
 so Python cannot import it by name. Hermes loads it by path under its
@@ -14,7 +14,7 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parent.parent
-PACKAGE = "hermes_hands"
+PACKAGE = "onsite"
 
 
 def load_package() -> None:

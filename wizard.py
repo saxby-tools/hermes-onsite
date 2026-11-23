@@ -1,4 +1,4 @@
-"""Build a settings block for `hermes hands init`.
+"""Build a settings block for `hermes onsite init`.
 
 Settings come from flags or, on a terminal, from a short interview.
 Either way the result goes through the same validation as a block
@@ -13,7 +13,7 @@ from typing import Any
 from typing import Callable
 
 from .config import DEFAULT_SSH_PORT
-from .config import HandsConfig
+from .config import OnsiteConfig
 from .config import KIND_LOCAL
 from .config import KIND_SSH
 from .config import parse_config
@@ -24,7 +24,7 @@ DEFAULT_LOCAL_NAME = "mac"
 
 NO_TARGETS = (
     "No targets were given. Pass --ssh and --local, or run "
-    "`hermes hands init` on a terminal to be asked."
+    "`hermes onsite init` on a terminal to be asked."
 )
 
 INDENT = "  "
@@ -183,7 +183,7 @@ def interview(read: Callable[[str], str]) -> dict[str, Any]:
     }
 
 
-def validate(settings: dict[str, Any]) -> HandsConfig:
+def validate(settings: dict[str, Any]) -> OnsiteConfig:
     return parse_config(settings)
 
 
@@ -215,7 +215,7 @@ def render_yaml(settings: dict[str, Any]) -> str:
     wrapped = {
         "plugins": {
             "entries": {
-                "hermes-hands": {"settings": settings},
+                "onsite": {"settings": settings},
             },
         },
     }

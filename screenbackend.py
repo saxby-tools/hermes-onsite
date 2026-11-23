@@ -106,7 +106,7 @@ def check_internals() -> None:
 
     raise RuntimeError(
         "this Hermes release changed the screen driver code that "
-        "hermes-hands builds on: " + ", ".join(missing) + ". Set "
+        "onsite builds on: " + ", ".join(missing) + ". Set "
         "`computer_use.backend` back to `cua` until the plugin is "
         "updated."
     )
@@ -148,8 +148,8 @@ class TargetDriverSession(_CuaDriverSession):
     def __init__(self, bridge, arguments: list[str], label: str):
         super().__init__(bridge, None)
 
-        self._hands_arguments = arguments
-        self._hands_label = label
+        self._onsite_arguments = arguments
+        self._onsite_label = label
 
     async def _lifecycle_coro(self) -> None:
         """Own the link to the driver for as long as the session lives.
@@ -169,7 +169,7 @@ class TargetDriverSession(_CuaDriverSession):
         try:
             params = StdioServerParameters(
                 command=SSH_BINARY,
-                args=self._hands_arguments,
+                args=self._onsite_arguments,
                 env=local_environment(),
             )
 
@@ -201,7 +201,7 @@ class TargetDriverSession(_CuaDriverSession):
         # file the driver names. Neither holds for a target, and a
         # file path from another machine must never be read here.
         raise RuntimeError(
-            f"the driver on {self._hands_label} gave no answer to "
+            f"the driver on {self._onsite_label} gave no answer to "
             f"`{name}`, and it has no second way to be asked"
         )
 
@@ -214,17 +214,17 @@ class TargetScreenBackend(CuaDriverBackend):
         # a file from the host. Neither exists on a target.
         super().__init__(MODE_STANDARD)
 
-        self._hands_spec = spec
-        self._hands_mode = permission_mode
+        self._onsite_spec = spec
+        self._onsite_mode = permission_mode
 
-    def _hands_start(self) -> None:
-        if self._hands_mode == MODE_BOUNDED:
+    def _onsite_start(self) -> None:
+        if self._onsite_mode == MODE_BOUNDED:
             raise screen.ScreenError(
                 "`computer_use.permission_mode: bounded` reads a file "
                 "on the host and is not available on a target"
             )
 
-        seat = screen.read_seat(self._hands_spec)
+        seat = screen.read_seat(self._onsite_spec)
         problems = screen.find_problems(seat)
 
         if problems:
@@ -236,8 +236,8 @@ class TargetScreenBackend(CuaDriverBackend):
 
         self._session = TargetDriverSession(
             self._bridge,
-            build_stdio_arguments(self._hands_spec, script),
-            self._hands_spec.label,
+            build_stdio_arguments(self._onsite_spec, script),
+            self._onsite_spec.label,
         )
         self._session.set_transport_reset_callback(
             self._handle_transport_reset,
@@ -270,14 +270,14 @@ class TargetScreenBackend(CuaDriverBackend):
 
     def start(self) -> None:
         try:
-            self._hands_start()
+            self._onsite_start()
         except Exception as error:
             # Hermes does not stop a backend whose start failed, and
             # the session's thread would be left behind.
             self._best_effort("stop after a failed start", self.stop)
 
             raise RuntimeError(
-                f"the screen of {self._hands_spec.label} cannot be "
+                f"the screen of {self._onsite_spec.label} cannot be "
                 f"driven: {error}"
             ) from None
 
@@ -341,6 +341,6 @@ def build_backend(runtime: Runtime, permission_mode: str):
     if spec.kind == KIND_LOCAL:
         return CuaDriverBackend(permission_mode=permission_mode)
 
-    logger.info("hands: screen control for this session is on %s", spec.label)
+    logger.info("onsite: screen control for this session is on %s", spec.label)
 
     return TargetScreenBackend(spec, permission_mode)

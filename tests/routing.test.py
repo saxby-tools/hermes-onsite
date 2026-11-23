@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import pytest
 
-from hermes_hands import config
-from hermes_hands import routing
+from onsite import config
+from onsite import routing
 
 
 SETTINGS = {

@@ -1,4 +1,4 @@
-"""A stub OpenAI-compatible model for the hermes-hands test rig.
+"""A stub OpenAI-compatible model for the onsite test rig.
 
 It returns scripted tool calls, so an end-to-end run gives the same
 result every time. No real model is involved.
@@ -268,7 +268,7 @@ def build_models() -> dict:
                 "id": MODEL_ID,
                 "object": "model",
                 "created": 0,
-                "owned_by": "hermes-hands-rig",
+                "owned_by": "onsite-rig",
             },
         ],
     }

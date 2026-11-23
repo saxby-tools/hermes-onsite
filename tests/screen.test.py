@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import pytest
 
-from hermes_hands import mirror
-from hermes_hands import screen
+from onsite import mirror
+from onsite import screen
 
 
 def probe(*fields: str) -> bytes:

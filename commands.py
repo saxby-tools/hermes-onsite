@@ -1,4 +1,4 @@
-"""The commands a person types: `/hands`, `/run` and `hermes hands`."""
+"""The commands a person types: `/onsite`, `/run` and `hermes onsite`."""
 
 from __future__ import annotations
 
@@ -29,12 +29,12 @@ from .runtime import UnknownTarget
 
 logger = logging.getLogger(__name__)
 
-HANDS_COMMAND = "hands"
+MAIN_COMMAND = "onsite"
 RUN_COMMAND = "run"
 
-HANDS_HELP = "Show or switch the machine this session's tools run on"
+MAIN_HELP = "Show or switch the machine this session's tools run on"
 RUN_HELP = "Ask the agent to run a command it proposed"
-CLI_HELP = "Check and set up the hermes-hands targets"
+CLI_HELP = "Check and set up the onsite targets"
 
 MODE_DRY = "[DRY RUN]"
 MODE_LIVE = "[LIVE]"
@@ -47,19 +47,19 @@ TARGET_FOLDER_SEPARATOR = ":"
 
 NEXT_STEPS = (
     "Next:",
-    "  hermes plugins enable hermes-hands",
-    "  hermes config set terminal.backend hands",
-    "  hermes hands status",
+    "  hermes plugins enable onsite",
+    "  hermes config set terminal.backend onsite",
+    "  hermes onsite status",
 )
 
 
 def session_folder(ctx) -> str:
     # In the classic CLI this is the folder Hermes was started in.
-    # In a gateway session it is empty: see `hands_command`.
+    # In a gateway session it is empty: see `main_command`.
     try:
         return ctx.session_cwd() or ""
     except Exception:
-        logger.debug("hands: no session folder", exc_info=True)
+        logger.debug("onsite: no session folder", exc_info=True)
         return ""
 
 
@@ -69,7 +69,7 @@ def session_cache_key() -> str:
     try:
         return environment_key()
     except Exception:
-        logger.debug("hands: no environment key", exc_info=True)
+        logger.debug("onsite: no environment key", exc_info=True)
         return ""
 
 
@@ -81,11 +81,11 @@ def drop_environment(*ids: str) -> None:
     except Exception:
         # The pin is already saved. At worst the old environment
         # lives until Hermes reaps it, a few minutes later.
-        logger.warning("hands: could not drop the environment", exc_info=True)
+        logger.warning("onsite: could not drop the environment", exc_info=True)
 
 
-def build_hands_command(ctx, runtime: Runtime):
-    def hands_command(
+def build_onsite_command(ctx, runtime: Runtime):
+    def main_command(
         raw_args: str = "",
         session_id: str = "",
         session_key: str = "",
@@ -127,7 +127,7 @@ def build_hands_command(ctx, runtime: Runtime):
             cleared=target == CLEAR_OVERRIDE,
         )
 
-    return hands_command
+    return main_command
 
 
 def parse_number(raw_args: str) -> int | None:
@@ -256,7 +256,7 @@ def cli_init(ctx, args) -> int:
 
 
 def mirror_targets(config, name: str | None) -> list[TargetSpec]:
-    """The targets one `hermes hands mirror` run covers."""
+    """The targets one `hermes onsite mirror` run covers."""
 
     if name is None:
         return [spec for spec in config.targets.values() if spec.mirror]
@@ -485,7 +485,7 @@ def cli_dial_out(ctx, args) -> int:
 
 
 def setup_cli(parser) -> None:
-    actions = parser.add_subparsers(dest="hands_action")
+    actions = parser.add_subparsers(dest="onsite_action")
 
     actions.add_parser(
         "status",
@@ -663,7 +663,7 @@ def setup_cli(parser) -> None:
 
 def build_cli_handler(ctx, runtime: Runtime):
     def handle_cli(args) -> int:
-        action = getattr(args, "hands_action", None)
+        action = getattr(args, "onsite_action", None)
 
         if action == "init":
             return cli_init(ctx, args)
@@ -693,9 +693,9 @@ def build_cli_handler(ctx, runtime: Runtime):
 
 def register(ctx, runtime: Runtime) -> None:
     ctx.register_command(
-        HANDS_COMMAND,
-        build_hands_command(ctx, runtime),
-        description=HANDS_HELP,
+        MAIN_COMMAND,
+        build_onsite_command(ctx, runtime),
+        description=MAIN_HELP,
         args_hint="[target|auto]",
     )
     ctx.register_command(
@@ -705,7 +705,7 @@ def register(ctx, runtime: Runtime) -> None:
         args_hint="<number>",
     )
     ctx.register_cli_command(
-        HANDS_COMMAND,
+        MAIN_COMMAND,
         CLI_HELP,
         setup_cli,
         build_cli_handler(ctx, runtime),

@@ -35,7 +35,7 @@ git config user.email "rig@example.invalid"
 cat > README.md <<'README'
 # sample
 
-A throwaway repo for the hermes-hands test rig.
+A throwaway repo for the onsite test rig.
 README
 
 cat > notes.txt <<'NOTES'

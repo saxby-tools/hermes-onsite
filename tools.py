@@ -9,7 +9,7 @@ from .runtime import Runtime
 
 
 TOOL_NAME = "propose_command"
-TOOLSET = "hands"
+TOOLSET = "onsite"
 DESKTOP_SURFACE = "desktop"
 
 DESCRIPTION = (

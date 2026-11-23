@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from hermes_hands import exits
+from onsite import exits
 
 
 def test_exit_zero_is_success():
@@ -68,8 +68,8 @@ def test_a_lost_link_is_spelled_out_for_the_model():
 
     exits.annotate(result, "laptop", exits.STATE_NO_STATUS, note)
 
-    assert result["hands"] == {"target": "laptop", "state": "no_status"}
-    assert result["output"].startswith("partial\n[hands: no exit status")
+    assert result["onsite"] == {"target": "laptop", "state": "no_status"}
+    assert result["output"].startswith("partial\n[onsite: no exit status")
     assert "It was not retried." in result["output"]
 
 
@@ -77,5 +77,5 @@ def test_a_refusal_says_nothing_ran():
     result = exits.refusal("laptop", "target is unreachable")
 
     assert result["returncode"] == exits.SSH_TRANSPORT_EXIT
-    assert result["hands"]["state"] == exits.STATE_NO_STATUS
-    assert result["output"] == "[hands: target is unreachable]"
+    assert result["onsite"]["state"] == exits.STATE_NO_STATUS
+    assert result["output"] == "[onsite: target is unreachable]"

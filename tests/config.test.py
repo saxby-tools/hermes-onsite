@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from hermes_hands import config
+from onsite import config
 
 
 GOOD = {
@@ -44,7 +44,7 @@ def test_no_settings_fails_with_the_fix():
     with pytest.raises(config.ConfigError) as caught:
         config.parse_config(None)
 
-    assert "hermes hands init" in str(caught.value)
+    assert "hermes onsite init" in str(caught.value)
 
 
 def test_missing_targets_is_named():

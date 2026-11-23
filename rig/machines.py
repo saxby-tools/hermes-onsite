@@ -32,10 +32,10 @@ from shell import wait_for_port
 KIND_CONTAINER = "container"
 KIND_REAL = "real"
 
-IMAGE = "hermes-hands-rig/hands:dev"
-DESK_IMAGE = "hermes-hands-rig/desk:dev"
+IMAGE = "onsite-rig/hands:dev"
+DESK_IMAGE = "onsite-rig/desk:dev"
 DESK_BOOT_SECONDS = 3
-CONTAINER = "hermes-hands-rig-hands"
+CONTAINER = "onsite-rig-hands"
 CONTAINER_USER = "dev"
 CONTAINER_HOME = "/home/dev"
 CONTAINER_ROOT = "/home/dev/Development"
@@ -50,14 +50,14 @@ LOGIN_RE = re.compile(r"^([^@\s]+)@([^@\s:]+)$")
 
 # Everything the rig writes on a real laptop goes under this one
 # folder in the user's home, and the folder is removed at the end.
-REAL_ROOT_NAME = ".cache/hermes-hands-rig"
+REAL_ROOT_NAME = ".cache/onsite-rig"
 REAL_SEED_SCRIPT = f"""\
 set -eu
 root="$HOME/{REAL_ROOT_NAME}"
 rm -rf "$root/sample"
 mkdir -p "$root/sample"
 cd "$root/sample"
-printf '# sample\\n\\nA throwaway folder for the hermes-hands rig.\\n' \\
+printf '# sample\\n\\nA throwaway folder for the onsite rig.\\n' \\
   > README.md
 printf 'alpha\\nbravo\\ncharlie\\n' > notes.txt
 printf '%s\\n' "$HOME"
@@ -167,7 +167,7 @@ class ContainerHands:
 
         must([
             "ssh-keygen", "-q", "-t", "ed25519", "-N", "",
-            "-C", "hermes-hands-rig", "-f", str(self.key),
+            "-C", "onsite-rig", "-f", str(self.key),
         ])
 
         return public.read_text().strip()

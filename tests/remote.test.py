@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import subprocess
 
-from hermes_hands import config
-from hermes_hands import remote
+from onsite import config
+from onsite import remote
 
 
 SPEC = config.TargetSpec(
@@ -96,8 +96,8 @@ def test_a_missing_or_odd_path_is_refused():
 
 
 def test_the_inhibit_mode_is_read_from_its_marker():
-    assert remote.parse_inhibit("__HANDS_INHIBIT__=delay\n") == "delay"
-    assert remote.parse_inhibit("__HANDS_INHIBIT__=weird\n") == "none"
+    assert remote.parse_inhibit("__ONSITE_INHIBIT__=delay\n") == "delay"
+    assert remote.parse_inhibit("__ONSITE_INHIBIT__=weird\n") == "none"
     assert remote.parse_inhibit("") == "none"
 
 

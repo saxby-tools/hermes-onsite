@@ -4,10 +4,10 @@ from __future__ import annotations
 
 import pytest
 
-from hermes_hands import config
-from hermes_hands import health
-from hermes_hands import routing
-from hermes_hands import runtime
+from onsite import config
+from onsite import health
+from onsite import routing
+from onsite import runtime
 
 
 SETTINGS = {
@@ -124,7 +124,7 @@ def test_an_unknown_target_is_refused_with_the_choices(tmp_path):
 def test_broken_settings_stop_environment_creation(tmp_path):
     harness = Harness(tmp_path, settings=None)
 
-    assert "hermes hands init" in harness.runtime.config_problem()
+    assert "hermes onsite init" in harness.runtime.config_problem()
 
     with pytest.raises(config.ConfigError):
         harness.runtime.create_environment("~", 180, "session:a")

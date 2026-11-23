@@ -2,7 +2,7 @@
 
 It speaks MCP over its own input and output, one JSON message a line,
 with nothing but the standard library. The rig starts it on a target
-to prove that an MCP server added with `hermes hands mcp` runs there.
+to prove that an MCP server added with `hermes onsite mcp` runs there.
 """
 
 from __future__ import annotations

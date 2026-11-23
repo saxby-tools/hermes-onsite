@@ -1,7 +1,7 @@
 """Remember which target each session is pinned to.
 
 A session picks its target at its first tool call and keeps it. Only
-`/hands <target>` changes it. Hermes rebuilds an idle environment
+`/onsite <target>` changes it. Hermes rebuilds an idle environment
 after a few minutes, so the pick has to outlive the environment, and
 it has to be visible to the server process that draws the status chip.
 
@@ -172,7 +172,7 @@ class Folders:
 
     Hermes tells a tool call which folder its session is in, but it
     does not tell a slash command. The folder is noted when a session
-    builds its prompt and when it builds its environment, so `/hands`
+    builds its prompt and when it builds its environment, so `/onsite`
     can answer for the right folder.
     """
 
