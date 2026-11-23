@@ -159,6 +159,17 @@ def test_a_switch_to_the_machine_in_use_tells_the_agent_nothing(tmp_path):
     assert harness.runtime.moves.take("session:a") is None
 
 
+def test_a_move_is_never_filed_under_a_key_shared_by_other_work(tmp_path):
+    # Cron and other sessionless work all use one key. A note filed
+    # there would reach a job that never moved.
+    harness = Harness(tmp_path)
+
+    harness.runtime.switch("default", "mac", "/home/dev/app", "id-9")
+
+    assert harness.runtime.moves.take("default") is None
+    assert harness.runtime.moves.take("id-9").after == "mac"
+
+
 def test_a_refused_switch_tells_the_agent_nothing(tmp_path):
     harness = Harness(tmp_path)
 
