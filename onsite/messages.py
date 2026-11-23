@@ -12,6 +12,8 @@ from typing import Any
 
 from .config import OnsiteConfig
 from .config import KIND_LOCAL
+from .config import SCREEN_DRIVER
+from .config import SCREEN_SHARING
 from .config import TargetSpec
 from .dialout import SERVICE_NAME
 from .moves import Move
@@ -43,6 +45,27 @@ MOVE_NOTE_OPENING = "Note from the onsite plugin, not typed by the user"
 
 MAX_SKIPPED_SHOWN = 5
 SCREEN_PLUGIN = "onsite-screen"
+
+ROUTE_WORDS = {
+    SCREEN_DRIVER: "Hermes' driver",
+    SCREEN_SHARING: "screen sharing, by position only",
+}
+
+# What the agent reads with a picture taken through screen sharing.
+SHARING_CAPTURE_NOTE = (
+    "this is the whole screen through screen sharing, which shows "
+    "pixels only: there are no numbered elements. Act with "
+    "coordinate=[x, y] read from this picture"
+)
+SHARING_NO_ELEMENTS = (
+    "this screen is reached through screen sharing, which shows "
+    "pixels only, so there is no element to name. Pass "
+    "coordinate=[x, y] read from a capture."
+)
+SHARING_NO_WINDOWS = (
+    "this screen is reached through screen sharing, which cannot "
+    "list or focus apps. Click the window in a capture instead."
+)
 
 MIRROR_NOT_SET = (
     "No target has a `mirror` folder. Set one in config.yaml, or "
@@ -508,7 +531,63 @@ def format_mcp_add(
     return "\n".join(lines)
 
 
-def format_screen_report(spec: TargetSpec, seat, problems, notes) -> str:
+def format_sharing_failed(
+    spec: TargetSpec,
+    reason: str,
+    driver_missing: bool,
+) -> str:
+    """Why a session could not start on a target's screen sharing."""
+
+    lines = [
+        f"the screen of {spec.label} cannot be reached through screen "
+        f"sharing on port {spec.screen_port}: {reason}.",
+    ]
+
+    if driver_missing:
+        lines.append(
+            "Hermes' screen driver is not installed there either. "
+            "Turn on screen sharing on that machine, or install the "
+            "driver there with `hermes computer-use install`."
+        )
+
+    lines.append(f"Check with `hermes onsite screen {spec.name}`.")
+
+    return " ".join(lines)
+
+
+def format_sharing_lost(spec: TargetSpec, reason: str) -> str:
+    return (
+        f"the screen of {spec.label} stopped answering: {reason}. "
+        "Nothing more was sent. The next request opens the link again."
+    )
+
+
+def describe_sharing(spec: TargetSpec, sharing) -> str:
+    """One line on whether a target's screen sharing answered."""
+
+    if not sharing.ok:
+        return f"no answer on port {spec.screen_port}"
+
+    hello = sharing.hello
+    asked = "no password asked"
+
+    if spec.screen_password_env:
+        asked = "password accepted"
+
+    return (
+        f"answers on port {spec.screen_port}: {hello.width} by "
+        f"{hello.height}, {asked}"
+    )
+
+
+def format_screen_report(
+    spec: TargetSpec,
+    seat,
+    sharing,
+    route: str,
+    problems,
+    notes,
+) -> str:
     """The output of `hermes onsite screen`."""
 
     desktop = seat.variables.get("XDG_CURRENT_DESKTOP", "")
@@ -522,6 +601,8 @@ def format_screen_report(spec: TargetSpec, seat, problems, notes) -> str:
         f"  System   {seat.system or 'unknown'}",
         f"  Desktop  {described}",
         f"  Driver   {seat.driver or 'not installed'}",
+        f"  Sharing  {describe_sharing(spec, sharing)}",
+        f"  Route    {ROUTE_WORDS[route]} (`screen: {spec.screen}`)",
         "",
     ]
 

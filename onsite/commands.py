@@ -16,6 +16,7 @@ from . import mcptools
 from . import messages
 from . import mirror
 from . import screen
+from . import screenshare
 from . import wizard
 from .config import ConfigError
 from .config import KIND_LOCAL
@@ -428,10 +429,22 @@ def cli_screen(runtime: Runtime, args) -> int:
         print(error)
         return EXIT_DOWN
 
-    problems = screen.find_problems(seat)
+    sharing = screenshare.ask(spec)
+    route = screen.pick_route(spec.screen, seat)
+    problems = screen.find_route_problems(
+        spec,
+        route,
+        seat,
+        sharing.problem,
+    )
 
     print(messages.format_screen_report(
-        spec, seat, problems, screen.find_notes(seat),
+        spec,
+        seat,
+        sharing,
+        route,
+        problems,
+        screen.find_route_notes(route, seat),
     ))
 
     if problems:
