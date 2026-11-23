@@ -199,6 +199,21 @@ def test_broken_settings_carry_nothing(monkeypatch):
     assert hook(session_id="stored-1") is None
 
 
+def test_settings_broken_for_one_turn_do_not_use_the_move_up(monkeypatch):
+    monkeypatch.setattr(hooks, "session_names", lambda: [])
+    monkeypatch.setattr(hooks, "screen_is_ours", lambda: False)
+    fake = FakeRuntime(parsed=None)
+    fake.moves.note(move("mac", "laptop"), "stored-1")
+
+    hook = hooks.build_turn_hook(fake)
+
+    assert hook(session_id="stored-1") is None
+
+    fake._parsed = PARSED
+
+    assert hook(session_id="stored-1") is not None
+
+
 def test_the_note_warns_about_the_screen_when_the_plugin_runs_it(
     monkeypatch,
 ):
