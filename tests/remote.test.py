@@ -127,3 +127,38 @@ def test_a_caffeinate_wrapper_keeps_the_exit_status():
     wrapped = remote.wrap_with_inhibitor("exit 3", "caffeinate")
 
     assert wrapped == "exec caffeinate -i bash -c 'exit 3'"
+
+
+# ---- a link to a port on the target -----------------------------------
+
+
+def test_a_forward_ends_at_the_targets_own_loopback_address():
+    arguments = remote.build_forward_arguments(SPEC, 5900)
+
+    assert arguments[-3:] == ["-W", "127.0.0.1:5900", "dev@laptop.example"]
+
+
+def test_a_forward_runs_nothing_on_the_target():
+    # The last word is the machine. A word after it would be a command.
+    arguments = remote.build_forward_arguments(SPEC, 5900)
+
+    assert arguments[-1] == "dev@laptop.example"
+    assert not any(part.startswith("sh -c") for part in arguments)
+
+
+def test_a_forward_never_stops_to_ask_a_question():
+    arguments = remote.build_forward_arguments(SPEC, 5900)
+
+    assert "BatchMode=yes" in arguments
+    assert "-T" in arguments
+
+
+def test_a_forward_is_compressed():
+    assert "Compression=yes" in remote.build_forward_arguments(SPEC, 5900)
+
+
+def test_a_forward_and_a_program_share_their_link_options():
+    options = remote.build_link_options(SPEC)
+
+    assert remote.build_forward_arguments(SPEC, 5900)[:len(options)] == options
+    assert remote.build_stdio_arguments(SPEC, "true")[:len(options)] == options
