@@ -30,6 +30,21 @@ has not happened. See [What is tested](#what-is-tested).
 
 Site: <https://saxby-tools.github.io/hermes-onsite/>
 
+## How it compares to the big coding apps
+
+| What the big coding apps do | Hermes on a server, alone | With onsite |
+| --- | --- | --- |
+| Work in the project folder you open | Works on the server | Yes. The folder picks the computer |
+| Run commands and edit files on your computer, as you | No | Yes |
+| Ask before risky steps, in the app you are using | Yes, for the server | Yes, the same prompt |
+| Show where the work is happening | No | A chip and a pane in the desktop app |
+| Browse your computer's folders and start work in one | No | A folder browser in the pane. Not yet seen in the real app |
+| Run a proposed command with one click | No | Run cards. Not yet seen in the real app |
+| Use the tools on your computer | No | MCP servers run there |
+| See and use your computer's screen | The server's screen only | Yes, by two routes. Narrowly tested |
+| Offer a settings screen | No | A Machines page. Not yet seen in the real app |
+| Work from a phone | Not checked | Not tested |
+
 ## How it works
 
 <!-- onsite:diagram {"caption": "Chat goes to the host. Tool calls come back past the gate."} -->
