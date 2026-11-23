@@ -330,7 +330,7 @@ Never tested.
 Run these from a clone of the repository, on the host. The rig uses a
 profile named `buster` unless you pass `--profile`.
 
-- [ ] Unit tests: 379 pass.
+- [ ] Unit tests: 381 pass.
 
 ```bash
 uv run --no-project --with pytest --with pillow --with cryptography python -m pytest -q
