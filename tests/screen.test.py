@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import pytest
 
+from onsite import config
 from onsite import mirror
 from onsite import screen
 
@@ -151,3 +152,95 @@ def test_a_value_with_a_space_or_a_quote_cannot_break_out():
 def test_no_driver_means_no_script():
     with pytest.raises(screen.ScreenError, match="is not installed"):
         screen.build_driver_script(screen.parse_probe(X11))
+
+
+# ---- which way to the screen ------------------------------------------
+
+
+def sharing_spec(setting: str = config.SCREEN_AUTO) -> config.TargetSpec:
+    return config.TargetSpec(
+        name="laptop",
+        kind=config.KIND_SSH,
+        host="laptop.example",
+        user="dev",
+        screen=setting,
+    )
+
+
+def test_left_to_choose_a_target_with_a_driver_uses_it():
+    seat = screen.parse_probe(WAYLAND)
+
+    assert screen.pick_route(config.SCREEN_AUTO, seat) == config.SCREEN_DRIVER
+
+
+def test_left_to_choose_a_target_with_no_driver_uses_screen_sharing():
+    seat = screen.parse_probe(X11)
+
+    assert screen.pick_route(config.SCREEN_AUTO, seat) == config.SCREEN_SHARING
+
+
+def test_a_set_route_is_kept_whatever_the_target_has():
+    seat = screen.parse_probe(WAYLAND)
+
+    assert (
+        screen.pick_route(config.SCREEN_SHARING, seat)
+        == config.SCREEN_SHARING
+    )
+
+
+def test_screen_sharing_that_answers_has_no_problems():
+    seat = screen.parse_probe(X11)
+
+    assert screen.find_route_problems(
+        sharing_spec(),
+        config.SCREEN_SHARING,
+        seat,
+        "",
+    ) == []
+
+
+def test_left_to_choose_with_neither_way_working_names_both():
+    seat = screen.parse_probe(X11)
+
+    problems = screen.find_route_problems(
+        sharing_spec(),
+        config.SCREEN_SHARING,
+        seat,
+        "Connection refused",
+    )
+
+    assert "did not answer on port 5900: Connection refused" in problems[0]
+    assert "is not installed there" in problems[1]
+
+
+def test_set_to_sharing_a_missing_driver_is_not_a_problem():
+    seat = screen.parse_probe(X11)
+
+    problems = screen.find_route_problems(
+        sharing_spec(config.SCREEN_SHARING),
+        config.SCREEN_SHARING,
+        seat,
+        "Connection refused",
+    )
+
+    assert len(problems) == 1
+
+
+def test_the_driver_route_keeps_the_drivers_own_problems():
+    seat = screen.parse_probe(X11)
+
+    problems = screen.find_route_problems(
+        sharing_spec(config.SCREEN_DRIVER),
+        config.SCREEN_DRIVER,
+        seat,
+        "Connection refused",
+    )
+
+    assert problems == screen.find_problems(seat)
+
+
+def test_screen_sharing_comes_with_a_note_that_it_sees_pixels_only():
+    seat = screen.parse_probe(X11)
+    notes = screen.find_route_notes(config.SCREEN_SHARING, seat)
+
+    assert "pixels only" in notes[0]
