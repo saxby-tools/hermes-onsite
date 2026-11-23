@@ -29,7 +29,7 @@ Site: <https://saxby-tools.github.io/hermes-onsite/>
 
 ## How it works
 
-<!-- hands:diagram {"caption": "Chat goes to the host. Tool calls come back past the gate."} -->
+<!-- onsite:diagram {"caption": "Chat goes to the host. Tool calls come back past the gate."} -->
 
 ```text
   the machine you sit at                    the always-on host
@@ -46,7 +46,7 @@ Site: <https://saxby-tools.github.io/hermes-onsite/>
                                                          (local)
 ```
 
-<!-- /hands:diagram -->
+<!-- /onsite:diagram -->
 
 One backend plugin routes each session's tool calls to a named
 target. The clients, the agent loop and the approval gate are stock
@@ -453,7 +453,7 @@ Hermes' own check, `hermes plugins validate`, passes on a clean copy
 of the tree. It warns that the plugin imports private Hermes modules,
 which [Limits](#limits) covers.
 
-<!-- hands:notice {"kind": "untested"} -->
+<!-- onsite:notice {"kind": "untested"} -->
 
 Not yet tested by anyone:
 
@@ -473,7 +473,7 @@ Not yet tested by anyone:
 - A machine that dials out from its own side. The rig opens the
   same kind of link from the host.
 
-<!-- /hands:notice -->
+<!-- /onsite:notice -->
 
 ### Run the tests
 

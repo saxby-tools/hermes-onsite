@@ -2,13 +2,13 @@
 // token it names, read from the stylesheet, so the page cannot drift
 // from it.
 //
-//   <!-- hands:scale -->
+//   <!-- onsite:scale -->
 //
 //   | Token | Value |
 //   | --- | --- |
 //   | `--space-3` | 1rem |
 //
-//   <!-- /hands:scale -->
+//   <!-- /onsite:scale -->
 //
 // The table needs the columns "Token" and "Value". On the site the
 // bars take the table's place.

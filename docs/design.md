@@ -22,7 +22,7 @@ as in on your computer.
 The wordmark is the word onsite in the same face, with the o lit.
 This site's masthead shows the wordmark. Its footer shows the mark.
 
-<!-- hands:marks -->
+<!-- onsite:marks -->
 
 | File | Ground | Use |
 | --- | --- | --- |
@@ -34,7 +34,7 @@ This site's masthead shows the wordmark. Its footer shows the mark.
 | ![The wordmark in blue](brand/wordmark-blue.svg) | light | The name, one colour |
 | ![The wordmark in pale](brand/wordmark-pale.svg) | blue | The name, one colour |
 
-<!-- /hands:marks -->
+<!-- /onsite:marks -->
 
 | Piece | Ground | The o | The rest |
 | --- | --- | --- | --- |
@@ -78,7 +78,7 @@ A second plate, a marble hand, was retired with the old name.
 Every text pair below passes WCAG AA. The lowest is the red chip, at
 5.5 to 1.
 
-<!-- hands:swatches -->
+<!-- onsite:swatches -->
 
 | Token | Light | Dark | Used for |
 | --- | --- | --- | --- |
@@ -102,14 +102,14 @@ Every text pair below passes WCAG AA. The lowest is the red chip, at
 | `--color-stop` | `#ff5a4d` | `#ff5a4d` | Hard limits |
 | `--color-stop-text` | `#06066b` | `#06066b` | Text on red. 5.5 to 1 |
 
-<!-- /hands:swatches -->
+<!-- /onsite:swatches -->
 
 The blue field is the same in both themes. The dark theme changes the
 page around it from paper to navy.
 
 ## Type
 
-<!-- hands:specimen -->
+<!-- onsite:specimen -->
 
 | Class | Sample |
 | --- | --- |
@@ -122,7 +122,7 @@ page around it from paper to navy.
 | `type-mono` | hermes config set terminal.backend onsite |
 | `type-plate` | Plate I. Marble head from a herm. |
 
-<!-- /hands:specimen -->
+<!-- /onsite:specimen -->
 
 | Token | Face | Cost |
 | --- | --- | --- |
@@ -146,7 +146,7 @@ license texts sit beside them in `site/static/fonts/`.
 
 ## Space
 
-<!-- hands:scale -->
+<!-- onsite:scale -->
 
 | Token | Value |
 | --- | --- |
@@ -157,7 +157,7 @@ license texts sit beside them in `site/static/fonts/`.
 | `--space-5` | 2.5rem |
 | `--space-6` | 4rem |
 
-<!-- /hands:scale -->
+<!-- /onsite:scale -->
 
 The gutter is `--gutter`, 1rem, on every screen. Text keeps to
 `--measure`, 42rem. The page column is `--column`, 70rem. The
@@ -183,7 +183,7 @@ system for less of it.
 | `--motion-slow` | 320ms | Larger moves |
 | `--motion-ease` | cubic-bezier(0.2, 0, 0, 1) | Every move |
 
-<!-- hands:motion /-->
+<!-- onsite:motion /-->
 
 ## Components
 
@@ -206,7 +206,7 @@ looks on the site.
 
 ### Chips
 
-<!-- hands:chips -->
+<!-- onsite:chips -->
 
 - Pass
 - Not run
@@ -214,7 +214,7 @@ looks on the site.
 - Limit
 - v0.1.0
 
-<!-- /hands:chips -->
+<!-- /onsite:chips -->
 
 In a table, a cell that says only "Pass" or "Not run" becomes a chip.
 
@@ -240,27 +240,27 @@ terminal:
 
 ### Callouts
 
-<!-- hands:notice -->
+<!-- onsite:notice -->
 
 A profile loads plugins only from its own `plugins/` folder.
 
-<!-- /hands:notice -->
+<!-- /onsite:notice -->
 
-<!-- hands:notice {"kind": "untested"} -->
+<!-- onsite:notice {"kind": "untested"} -->
 
 The desktop plugin inside the real Hermes Desktop app.
 
-<!-- /hands:notice -->
+<!-- /onsite:notice -->
 
-<!-- hands:notice {"kind": "limit"} -->
+<!-- onsite:notice {"kind": "limit"} -->
 
 No sandbox. An SSH target can do anything its user can.
 
-<!-- /hands:notice -->
+<!-- /onsite:notice -->
 
 ### Diagram
 
-<!-- hands:diagram {
+<!-- onsite:diagram {
   "caption": "Chat goes to the host. Tool calls come back past the gate."
 } -->
 
@@ -277,7 +277,7 @@ No sandbox. An SSH target can do anything its user can.
   your shell and files  <--- SSH, as you ----------+
 ```
 
-<!-- /hands:diagram -->
+<!-- /onsite:diagram -->
 
 ## Writing pages
 

@@ -80,20 +80,20 @@ pages are already written:
 A comment block puts a component around ordinary Markdown:
 
 ```markdown
-<!-- hands:notice {"kind": "limit"} -->
+<!-- onsite:notice {"kind": "limit"} -->
 
 No sandbox. An SSH target can do anything its user can.
 
-<!-- /hands:notice -->
+<!-- /onsite:notice -->
 ```
 
 On GitHub, a reader sees the paragraph. On the site, it is boxed and
 labelled "Limit".
 
-- `<!-- hands:name {...} -->` opens a block. The options are strict
+- `<!-- onsite:name {...} -->` opens a block. The options are strict
   JSON: quote every key.
-- `<!-- /hands:name -->` closes it.
-- `<!-- hands:name {...} /-->` is a block with no content.
+- `<!-- /onsite:name -->` closes it.
+- `<!-- onsite:name {...} /-->` is a block with no content.
 - Put each comment on its own line.
 
 A mistake stops the build and names the file and line. The
@@ -139,9 +139,9 @@ a token there is missing from `docs/design.md`, or a colour differs.
 Every page works with the script off. The script adds the Copy
 buttons and the theme toggle.
 
-The comment blocks still open with `hands:`. That prefix is set once,
-as `NAMESPACE` in `eleventy.config.js`, and every Markdown file that
-uses a block repeats it, so it changes in one pass of its own.
+The prefix of the comment blocks, `onsite:`, is set once, as
+`NAMESPACE` in `eleventy.config.js`. Every Markdown file that uses a
+block repeats it, so the two can only change together.
 
 ##  Brand files
 

@@ -18,7 +18,7 @@ export function fail(block, message) {
   const file = block.env?.page?.inputPath ?? "a page";
 
   throw new Error(
-    `hands:${block.name} in ${file}, line ${block.line}: ${message}`,
+    `onsite:${block.name} in ${file}, line ${block.line}: ${message}`,
   );
 }
 

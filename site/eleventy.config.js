@@ -9,7 +9,7 @@
 //
 // Components live in site/components as a pair of files: `name.ejs`
 // draws it and `name.js` turns the block into the template's data.
-// A comment block such as `<!-- hands:name {...} -->` picks one.
+// A comment block such as `<!-- onsite:name {...} -->` picks one.
 //
 // The repo's root is the plugin itself, so everything the site needs
 // stays in this folder. Run it from here with `npm run build`; the
@@ -27,7 +27,7 @@ import mdMarks from "./plugins/md-marks.js";
 
 // ---- Constants --------------------------------------------------------
 
-const NAMESPACE = "hands";
+const NAMESPACE = "onsite";
 
 const SITE_NAME = "onsite";
 

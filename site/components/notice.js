@@ -1,11 +1,11 @@
 // A boxed aside with a coloured bar and a label that says what kind
 // of aside it is.
 //
-//   <!-- hands:notice {"kind": "limit"} -->
+//   <!-- onsite:notice {"kind": "limit"} -->
 //
 //   No sandbox. An SSH target can do anything its user can.
 //
-//   <!-- /hands:notice -->
+//   <!-- /onsite:notice -->
 //
 // `kind` is "note" (the default), "limit" or "untested". On GitHub
 // the reader sees the paragraph alone, so write it to stand without

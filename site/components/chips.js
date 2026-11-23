@@ -1,12 +1,12 @@
 // A row of status chips, from a list.
 //
-//   <!-- hands:chips -->
+//   <!-- onsite:chips -->
 //
 //   - Pass
 //   - Not run
 //   - v0.1.0
 //
-//   <!-- /hands:chips -->
+//   <!-- /onsite:chips -->
 //
 // "Pass", "Not run", "Not tested", "Not accepted" and "Limit" take
 // their colours from shared.js. Anything else is a plain chip.

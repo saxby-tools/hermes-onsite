@@ -2,13 +2,13 @@
 // class the row names, so the page shows the real styles and cannot
 // drift from the stylesheet.
 //
-//   <!-- hands:specimen -->
+//   <!-- onsite:specimen -->
 //
 //   | Class | Sample |
 //   | --- | --- |
 //   | `type-display` | One agent, two machines |
 //
-//   <!-- /hands:specimen -->
+//   <!-- /onsite:specimen -->
 //
 // The table needs the columns "Class" and "Sample". On the site the
 // specimens take the table's place.
