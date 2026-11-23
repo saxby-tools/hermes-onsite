@@ -37,9 +37,13 @@ from tools.computer_use.cua_backend_parse import _z_index_uninformative
 from tools.computer_use.cua_backend_session import _CuaDriverSession
 
 from . import compat
+from . import messages
 from . import screen
 from .config import ConfigError
 from .config import KIND_LOCAL
+from .config import SCREEN_AUTO
+from .config import SCREEN_DRIVER
+from .config import SCREEN_SHARING
 from .config import TargetSpec
 from .remote import build_stdio_arguments
 from .runtime import Runtime
@@ -324,6 +328,24 @@ def session_spec(runtime: Runtime) -> TargetSpec:
     return config.target(route.target)
 
 
+def settle_route(spec: TargetSpec) -> tuple[str, bool]:
+    """Which way to a target's screen, and whether it lacks a driver.
+
+    A target left on `auto` is asked once what it has. If it cannot
+    be asked, the driver's own start says why in full.
+    """
+
+    if spec.screen != SCREEN_AUTO:
+        return spec.screen, False
+
+    try:
+        seat = screen.read_seat(spec)
+    except screen.ScreenError:
+        return SCREEN_DRIVER, False
+
+    return screen.pick_route(spec.screen, seat), not seat.driver
+
+
 def build_backend(runtime: Runtime, permission_mode: str):
     """A screen backend for this session's machine.
 
@@ -332,15 +354,30 @@ def build_backend(runtime: Runtime, permission_mode: str):
     driver's own thread cannot see which session it serves.
     """
 
-    check_internals()
-
     spec = session_spec(runtime)
 
     # A session on the host keeps Hermes' own backend and the host's
     # own screen, exactly as if this plugin were not selected.
     if spec.kind == KIND_LOCAL:
+        check_internals()
+
         return CuaDriverBackend(permission_mode=permission_mode)
 
-    logger.info("onsite: screen control for this session is on %s", spec.label)
+    route, driver_missing = settle_route(spec)
+
+    logger.info(
+        "onsite: screen control for this session is on %s, by %s",
+        spec.label,
+        messages.ROUTE_WORDS[route],
+    )
+
+    # Screen sharing leans on none of Hermes' private driver code, so
+    # it is not held up by a check of that code.
+    if route == SCREEN_SHARING:
+        from .sharebackend import SharedScreenBackend
+
+        return SharedScreenBackend(spec, driver_missing)
+
+    check_internals()
 
     return TargetScreenBackend(spec, permission_mode)
