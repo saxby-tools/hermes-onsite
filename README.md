@@ -247,6 +247,38 @@ these tools. The plugin refuses one in a session that runs on another
 machine, and tells the agent to say so. A session never acts on a
 second machine by itself.
 
+### Screen control on a target
+
+Hermes' `computer_use` tool can act on a target's screen. It follows
+the session: a session on the host keeps the host's screen, and a
+session on a target gets that target's.
+
+It works by running Hermes' own screen driver on the target and
+talking to it over the SSH link. The plugin never installs that
+driver. This checks a target and says what is missing:
+
+```bash
+hermes hands screen laptop
+```
+
+Then link the screen backend into place and select it. The first
+command is a dry run until you add `--apply`:
+
+```bash
+hermes hands screen-install --apply
+```
+
+```bash
+hermes config set computer_use.backend hermes-hands-screen
+```
+
+Hermes' own approval prompt and hard blocks still stand in front of
+every click and keystroke. The prompt does not name the machine, so
+check the status chip or `/hands` when it matters.
+
+This is new and narrowly tested: on a Linux X11 desktop in the test
+rig, with Hermes' pinned driver. See [What is tested](#what-is-tested).
+
 ## Use
 
 | What | CLI and TUI | Hermes Desktop |
@@ -366,6 +398,11 @@ Not yet tested by anyone:
   serves several profiles, with the laptop shown as connected.
 - A macOS machine as an SSH target, and `caffeinate`.
 - `hermes plugins install` from the Git URL.
+- Screen control on macOS, on Wayland, or on any desktop a
+  person is using. It has run only against the rig's own X11
+  desktop.
+- A machine that dials out from its own side. The rig opens the
+  same kind of link from the host.
 
 <!-- /hands:notice -->
 
@@ -421,6 +458,9 @@ remote.py            SSH options, PATH, sleep inhibitor
 mirror.py            a names-only copy of a target's folders
 dialout.py           set-up text for a machine that dials out
 mcptools.py          MCP servers that run on a target
+screen.py            find a target's desktop and screen driver
+screenbackend.py     Hermes' screen backend, on a target
+hermes-hands-screen/ the folder Hermes finds that backend by
 exits.py             the four ways a command can end
 hooks.py             file tools on the right folder, MCP tools
                      on the right machine
