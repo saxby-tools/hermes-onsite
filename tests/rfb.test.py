@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import socket
 import struct
+import sys
 import threading
 
 import pytest
@@ -379,6 +380,20 @@ def test_a_wrong_password_carries_the_servers_reason():
         rfb.Client(server.link).handshake("wrong")
 
     assert "Authentication failed" in str(caught.value)
+
+
+def test_a_hermes_without_the_cipher_package_says_so(monkeypatch):
+    # A None entry makes Python refuse the import, as if it were gone.
+    monkeypatch.setitem(
+        sys.modules,
+        "cryptography.hazmat.decrepit.ciphers.algorithms",
+        None,
+    )
+
+    with pytest.raises(rfb.RfbError) as caught:
+        rfb.answer_challenge(bytes(16), "secret")
+
+    assert "`cryptography`" in str(caught.value)
 
 
 # ---- the screen -------------------------------------------------------
