@@ -2,8 +2,8 @@
 #  comment block fails the PR, and deploys it to GitHub Pages on every
 #  push to the branch the site is served from.
 #
-#  The site's tooling lives in site/, because the repo's root is the
-#  plugin itself. Actions are pinned to commits, the same as the
+#  The site's tooling lives in site/, apart from the plugin, which is
+#  the onsite/ folder. Actions are pinned to commits, the same as the
 #  Saxby lab's workflow this one is adapted from.
 #
 #  Pages must be set to deploy from GitHub Actions for the deploy job
