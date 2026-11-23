@@ -37,9 +37,9 @@ description: >-
   targets you name, with that account's full authority and no
   sandbox; Hermes' approval prompt is the only gate. Uses the system
   ssh client and the keys your SSH setup offers, and never reads or
-  stores a key. Reads a VNC password from an environment variable you
-  name, if a target's screen sharing asks for one, and never writes
-  it down. Keeps one ssh connection open per target in use, one
+  stores a key. Reads one optional secret through Hermes,
+  ONSITE_SCREEN_PASSWORD, if a target's screen sharing asks for a VNC
+  password. Keeps one ssh connection open per target in use, one
   per MCP server you add and one per session that uses a target's
   screen. Files each target's host key in known_hosts on first
   contact. May hold a sleep lock on a target while a command runs.
