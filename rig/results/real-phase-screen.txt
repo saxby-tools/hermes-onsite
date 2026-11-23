@@ -1,0 +1,4 @@
+# Screen control on a target
+
+== Screen: the target's screen can be found
+  skipped: a real machine over SSH has no screen.
