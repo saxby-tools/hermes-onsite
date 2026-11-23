@@ -1,15 +1,15 @@
 # Phase 3: CLI surface
 
-== Phase 3.1: hermes hands status
+== Phase 3.1: hermes onsite status
   --- in a laptop folder
   | Folder    <repo>/.rig/work/sample
   | Target    laptop (<laptop-user>@127.0.0.1)
-  | State     connected (166 ms)
+  | State     connected (123 ms)
   | Start in  <laptop-rig>/sample
   | Why       the session folder is in its path map
   | 
   | Targets
-  |    laptop  ssh    up (169 ms)  <laptop-user>@127.0.0.1
+  |    laptop  ssh    up (179 ms)  <laptop-user>@127.0.0.1
   |  * mac     local  up
   | 
   | * is the default target.
@@ -32,13 +32,13 @@
   PASS  a stopped target is shown as not reachable
   PASS  it exits 1 when the target is down
 
-== Phase 3.2: hermes hands init
+== Phase 3.2: hermes onsite init
   --- without --apply
   | [DRY RUN] settings for config.yaml:
   | 
   | plugins:
   |   entries:
-  |     hermes-hands:
+  |     onsite:
   |       settings:
   |         default: mac
   |         targets:
@@ -64,21 +64,21 @@
   PASS  with --apply it writes and says so
   PASS  the written settings load and route as before
 
-== Phase 3.3: /hands shows and switches the target
-  --- /hands
-  | Hands:   laptop (<laptop-user>@127.0.0.1)
-  | State:   connected (193 ms)
+== Phase 3.3: /onsite shows and switches the target
+  --- /onsite
+  | Onsite:  laptop (<laptop-user>@127.0.0.1)
+  | State:   connected (189 ms)
   | Folder:  <laptop-rig>/sample
   | Why:     this session started there
   | Targets: laptop, mac (default)
-  | Switch with /hands <target>. Go back to the rules with /hands auto.
-  PASS  /hands names the target, its state and the folder
-  --- /hands mac
+  | Switch with /onsite <target>. Go back to the rules with /onsite auto.
+  PASS  /onsite names the target, its state and the folder
+  --- /onsite mac
   | This session now runs on mac (this machine).
   | The next tool call starts in <repo>/.rig/work/sample.
   | The agent was not told. Say so in your next message if it matters, since paths differ between machines.
-  PASS  /hands mac moves the session
-  --- terminal: pwd + 2 commands [completed, 0.30s]
+  PASS  /onsite mac moves the session
+  --- terminal: pwd + 2 commands [completed, 0.35s]
   | terminal result
   | - **output:** <repo>/.rig/work/sample
   | <this-user>
@@ -86,8 +86,8 @@
   | - **exit_code:** 0
   | - **cwd:** <repo>/.rig/work/sample
   PASS  the next tool call runs on the Mac, in the session folder
-  PASS  /hands auto goes back to the folder rules
-  --- terminal: pwd + 2 commands [completed, 1.37s]
+  PASS  /onsite auto goes back to the folder rules
+  --- terminal: pwd + 2 commands [completed, 1.17s]
   | terminal result
   | - **output:** <laptop-rig>/sample
   | <this-user>
@@ -119,11 +119,11 @@
         Script finished.There is no proposed command #9. Known: #1.
 
 == Phase 3.5: the classic CLI on a real terminal
-  PASS  /hands works in the cli client
+  PASS  /onsite works in the cli client
   PASS  Hermes' own approval prompt appears in the cli client
   PASS  denying it in the cli client stops the command
 
 == Phase 3.6: the TUI on a real terminal
-  PASS  /hands works in the tui client
+  PASS  /onsite works in the tui client
   PASS  Hermes' own approval prompt appears in the tui client
   PASS  denying it in the tui client stops the command
