@@ -420,9 +420,24 @@ Written Nov. 22, 2026, against Hermes v0.23.2.
   off limits until Gate 4, and Gate 3 is the owner's to open.
 - **Since.** The owner said to copy it on Nov. 22. It is at
   `~/.hermes/desktop-plugins/hermes-hands/plugin.js` on the laptop,
-  and its checksum matches the repo's. Nobody has yet looked at it
-  in the app. On a profile without the plugin, the chip says the
-  host has no hermes-hands plugin enabled.
+  and its checksum matches the repo's. On a profile without the
+  plugin, the chip says the host has no hermes-hands plugin enabled.
+- **Seen in the app, Nov. 22.** The owner's screenshot shows the
+  chip and the pane on Buster: `laptop`, connected, 181 ms, the
+  folder and the reason. His gateway starts as another profile, so
+  this also ran the plugin's routes in Buster's own plugin host for
+  the first time. The run card has not been seen yet.
+- **Found in the app.** In the Bots tab the chip asked a profile
+  that does not have the plugin, while Buster's chat was open. The
+  app sends a plugin's requests to its active profile, and the
+  profile picker lives in the Sessions tab. The chip now names the
+  profile it asked. Read from the app's source, and matched by the
+  two screenshots.
+- **Found in the app.** The folder picker browses the host, so a
+  folder that exists only on the laptop cannot be opened. Hermes
+  also refuses a turn in a folder the host cannot see
+  (`gateway/session_policy.py`, `workspace_ready`). No plugin hook
+  sits in front of either. The README lists this as a limit.
 - **Reverse the copy.** Delete that one folder on the laptop and
   run "Reload desktop plugins".
 - **Reverse.** `hermes -p buster config set terminal.backend local`
