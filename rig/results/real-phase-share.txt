@@ -1,0 +1,4 @@
+# Screen sharing, below Hermes
+
+== Sharing: the plugin's own link, with no Hermes
+  skipped: a real machine over SSH has no screen.
