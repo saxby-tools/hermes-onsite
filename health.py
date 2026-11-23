@@ -146,7 +146,9 @@ class CircuitBreaker:
             self._opened_at = self._clock()
 
 
-def build_probe_command(spec: TargetSpec) -> list[str]:
+def build_oneshot_command(spec: TargetSpec, remote: str) -> list[str]:
+    """One command on a target, over a connection of its own."""
+
     command = [
         SSH_BINARY,
         "-o", "BatchMode=yes",
@@ -167,9 +169,13 @@ def build_probe_command(spec: TargetSpec) -> list[str]:
     if spec.known_hosts:
         command += ["-o", f"UserKnownHostsFile={spec.known_hosts}"]
 
-    command += [f"{spec.user}@{spec.host}", PROBE_COMMAND]
+    command += [f"{spec.user}@{spec.host}", remote]
 
     return command
+
+
+def build_probe_command(spec: TargetSpec) -> list[str]:
+    return build_oneshot_command(spec, PROBE_COMMAND)
 
 
 def last_line(text: str) -> str:
