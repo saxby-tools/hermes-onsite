@@ -2,58 +2,65 @@
 
 The look has a name: glitched marble. It borrows the electric blue
 and the condensed type of the Hermes site, and screens classical art
-into that blue. The mark, the yellow and the two plates are this
-project's own.
+into that blue. The mark, the yellow and the plate are this project's
+own.
 
 This page is the reference and the test page. On the site, every
 token and component below is drawn live from the stylesheet, so a
 change that breaks one shows here first. On GitHub it reads as plain
 tables.
 
-hermes-hands is a community plugin. Nothing here uses the Hermes wing
-or any Nous Research mark, and no page may call itself official.
+onsite is a community plugin. Nothing here uses the Hermes wing or
+any Nous Research mark, and no page may call itself official.
 
 ## Brand
 
-The mark is a lowercase h, cut across the legs. The stem and the arch
-stay put. The feet land to the right. The brain stays on the host;
-the hands work somewhere else.
+The mark is called "On, lit". It is the letters o and n in Geist Mono
+on a blue tile, with the o lit in yellow. On, as in switched on, and
+as in on your computer.
 
-<!-- hands:marks -->
+The wordmark is the word onsite in the same face, with the o lit.
+This site's masthead shows the wordmark. Its footer shows the mark.
 
-| File | Ground | Use |
-| --- | --- | --- |
-| ![The mark on its tile](brand/mark.svg) | any | Favicon, avatar, anywhere the ground is unknown |
-| ![The mark in blue](brand/mark-blue.svg) | light | One colour, on light pages and in print |
-| ![The mark in pale](brand/mark-pale.svg) | blue | One colour, on blue and dark grounds |
-| ![The wordmark](brand/wordmark.svg) | blue | The name alone, with the yellow hyphen |
-| ![The wordmark in blue](brand/wordmark-blue.svg) | light | The name alone, one colour |
-| ![The lockup](brand/lockup.svg) | blue | Mark and name together; the masthead uses this |
-| ![The lockup in blue](brand/lockup-blue.svg) | light | Mark and name together, on light pages |
+| Piece | Ground | The o | The rest |
+| --- | --- | --- | --- |
+| The mark | Its own blue tile, on any ground | `--color-signal` | `--color-field-text` |
+| The wordmark | The blue field, or a dark page | `--color-signal` | `--color-field-text` |
+| The wordmark | Pale grounds | `--color-field` | `--color-signal-text` |
+| Either, in one colour | Any | Not lit | One colour |
 
-<!-- /hands:marks -->
+Rules for the mark and the wordmark:
 
-Rules for the mark:
+- Never show the mark smaller than 16 pixels.
+- Keep clear space around the mark equal to a quarter of its width.
+- The yellow is only for the lit o. Never light another letter.
+- On pale grounds yellow cannot be read, so the o is blue there.
+- Do not set the mark beside the wordmark. Together they say "on"
+  twice. The mark goes where a square is needed, such as a tab icon.
+  The wordmark goes where a name is needed.
+- Do not redraw, tilt, outline or recolour either one.
 
-- Never smaller than 16 pixels.
-- Keep clear space around it equal to the width of one foot.
-- The yellow is only for the feet and the hyphen. In one colour, they
-  take the same colour as the rest.
-- Do not redraw, tilt, outline or recolour it.
+Both are set in type for now, at weight 500 of Geist Mono. The site
+carries only the regular weight so far, so here they draw a little
+lighter than they should. Image files that need no font are not made
+yet.
 
-The letters are outlines of Geist Mono Medium, so the files need no
-font installed.
+The files in `brand/` named `mark`, `wordmark`, `lockup`, `banner`
+and `social` were drawn for the old name, hermes-hands. They are kept
+for the record and are not used.
 
-### Plates
+### Plate
 
-Two public-domain photos from The Metropolitan Museum of Art, screened
+One public-domain photo from The Metropolitan Museum of Art, screened
 into blue by `brand/make-plates.sh`. Plate I is a Roman marble head
-from a herm, a pillar that once marked a boundary and carried the
-head of Hermes. Plate II is a Roman marble right hand.
+from a herm. A herm was a pillar that carried the head of Hermes and
+stood at doorways and along roads. It marked a place.
 
-| Plate I, the brain | Plate II, the hands |
-| --- | --- |
-| ![A bearded marble head, drawn in broken blue lines](brand/plate-head.png) | ![A marble right hand, drawn in broken blue lines](brand/plate-hand.png) |
+| Plate I |
+| --- |
+| ![A bearded marble head, drawn in broken blue lines](brand/plate-head.png) |
+
+A second plate, a marble hand, was retired with the old name.
 
 ## Colour
 
@@ -79,7 +86,7 @@ Every text pair below passes WCAG AA. The lowest is the red chip, at
 | `--color-code-muted` | `#aab2ff` | `#aab2ff` | Code block labels |
 | `--color-pass` | `#0000c2` | `#c9ceff` | The "Pass" chip |
 | `--color-pass-text` | `#f2f2f2` | `#06066b` | Text on the "Pass" chip |
-| `--color-signal` | `#ffe600` | `#ffe600` | Anything not yet proven; the mark's feet |
+| `--color-signal` | `#ffe600` | `#ffe600` | Anything not yet proven; the lit o of the mark |
 | `--color-signal-text` | `#06066b` | `#06066b` | Text on yellow. 13.3 to 1 |
 | `--color-stop` | `#ff5a4d` | `#ff5a4d` | Hard limits |
 | `--color-stop-text` | `#06066b` | `#06066b` | Text on red. 5.5 to 1 |
@@ -101,8 +108,8 @@ page around it from paper to navy.
 | `type-label` | Install · Use · Limits · Tested |
 | `type-body` | A session picks its target once, from the folder it was opened in. |
 | `type-small` | The output of each run is saved with the rig. |
-| `type-mono` | hermes config set terminal.backend hands |
-| `type-plate` | Plate II. Marble right hand and wrist. |
+| `type-mono` | hermes config set terminal.backend onsite |
+| `type-plate` | Plate I. Marble head from a herm. |
 
 <!-- /hands:specimen -->
 
@@ -172,6 +179,13 @@ system for less of it.
 The masthead and the footer are on this page. The hero is on the
 [front page](../README.md).
 
+### Theme toggle
+
+Three choices in one box, in the masthead: System, Light and Dark.
+System follows the reader's device and is the default. Light and Dark
+are remembered. It is boxed so that it reads as a control, not as one
+more link.
+
 ### Status box
 
 A paragraph that opens with a bold "Status:" is boxed.
@@ -205,12 +219,12 @@ In a table, a cell that says only "Pass" or "Not run" becomes a chip.
 Shell and YAML blocks get a Copy button when the script is running.
 
 ```bash
-hermes hands status
+hermes onsite status
 ```
 
 ```yaml
 terminal:
-  backend: hands
+  backend: onsite
 ```
 
 ### Callouts
@@ -247,7 +261,7 @@ No sandbox. An SSH target can do anything its user can.
                                                    |
                                             approval gate (stock)
                                                    |
-                                            hands backend (this plugin)
+                                            onsite backend (this plugin)
                                                    |
   your shell and files  <--- SSH, as you ----------+
 ```
@@ -267,6 +281,6 @@ the catalog entry pins.
 
 | Asset | File | The catalog's rule |
 | --- | --- | --- |
-| `image` | `docs/brand/banner.png` | 2 to 1, here 1200 by 600. The listing lays the title over its left side |
+| `image` | none yet | 2 to 1, such as 1200 by 600. The listing lays the title over its left side. The old banner has the old name drawn in |
 | `screenshots` | none yet | Up to six. They wait for a person at the real clients |
 | README | `README.md` | Shown as Markdown. Raw HTML is dropped, so it uses none |
