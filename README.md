@@ -175,7 +175,6 @@ plugins:
 | `mirror_depth` | ssh | Levels under the target's home to mirror. Default 3. |
 | `screen` | ssh | How its screen is reached: `auto` (default), `driver` or `sharing`. See [Screen control](#screen-control-on-a-target). |
 | `screen_port` | ssh | The port its screen sharing listens on. Default 5900. |
-| `screen_password_env` | ssh | The name of an environment variable that holds its VNC password. Never the password itself. |
 
 **`path_map`** is for when the two machines name one folder
 differently. A host that mounts your laptop's `~/Development` at
@@ -313,9 +312,17 @@ unless someone turned it off. Screen sharing here means VNC:
 - GNOME's own sharing on Wayland speaks RDP, not VNC. It is not
   covered.
 
-A VNC password goes in an environment variable, never in the
-settings. Put `LAPTOP_SCREEN_PASSWORD=...` in the profile's `.env`
-file and name the variable:
+A VNC password never goes in the settings. Put it in the profile's
+`.env` file, under the one name the plugin declares:
+
+```text
+ONSITE_SCREEN_PASSWORD=...
+```
+
+Hermes hands it to the plugin for that profile only. It is used for
+any target whose screen sharing asks for a password, so targets that
+need different passwords are not covered yet. To pin a target to
+screen sharing:
 
 ```yaml
 laptop:
@@ -323,7 +330,6 @@ laptop:
   host: laptop.example
   user: you
   screen: sharing
-  screen_password_env: LAPTOP_SCREEN_PASSWORD
 ```
 
 **Turn it on.** Link the screen backend into place and select it.
@@ -340,6 +346,9 @@ hermes config set computer_use.backend onsite-screen
 Hermes' own approval prompt and hard blocks still stand in front of
 every click and keystroke, on both routes. The prompt does not name
 the machine, so check the status chip or `/onsite` when it matters.
+Over screen sharing, the key combinations Hermes hard-blocks are
+checked a second time by the plugin, because several key names are
+one key there.
 
 This is new and narrowly tested. The driver has run on a Linux X11
 desktop in the test rig, with Hermes' pinned version. Screen sharing
@@ -418,9 +427,9 @@ the folder you name, and nothing else.
 
 **Your keys.** It uses the `ssh` program and whatever keys your SSH
 setup offers. It never reads, copies or stores a key. A VNC password,
-when a target's screen sharing asks for one, is read from the
-environment variable you name each time a link opens. The plugin
-never writes it down.
+when a target's screen sharing asks for one, is `ONSITE_SCREEN_PASSWORD`
+from the profile's own secrets. The plugin asks Hermes for it each
+time a link opens and never writes it down.
 
 **The network.** It opens SSH connections to the targets you name
 and nothing else. It sends no telemetry and calls no other service.
