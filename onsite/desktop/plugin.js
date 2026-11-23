@@ -211,16 +211,41 @@ function activeProfile() {
   return name.trim()
 }
 
+// The profile that owns the chat in view. The app's Bots tab can show
+// one profile's chat while its requests still go to another.
+function focusedProfile() {
+  const name = readAtom(hostState().focusedSessionProfile)
+
+  if (typeof name !== 'string') {
+    return ''
+  }
+
+  return name.trim()
+}
+
 function describeMissingPlugin() {
   const profile = activeProfile()
+  const focused = focusedProfile()
 
   if (profile === '') {
     return 'The host has no onsite plugin enabled.'
   }
 
-  return (
+  const asked =
     `The app asked the "${profile}" profile, ` +
     'which has no onsite plugin enabled.'
+
+  if (focused === '') {
+    return asked
+  }
+
+  if (focused === profile) {
+    return asked
+  }
+
+  return (
+    `This chat belongs to the "${focused}" profile. ${asked} ` +
+    `Pick "${focused}" in the Sessions tab to see where this chat runs.`
   )
 }
 
