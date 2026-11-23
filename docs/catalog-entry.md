@@ -43,8 +43,9 @@ description: >-
   folders that mirror a target's folder names. /run puts a message
   into the chat, which needs allow_gateway_injection. Serves routes
   to the desktop app under /api/plugins/onsite, one of which writes
-  the plugin's own settings. No telemetry, no other network calls,
-  no self-update, nothing installed on a target.
+  the plugin's own settings. After /onsite moves a session, adds one
+  note to the user's next message to tell the agent. No telemetry, no
+  other network calls, no self-update, nothing installed on a target.
 maintainer: saxby-tools
 tier: community
 category: tools
@@ -65,6 +66,7 @@ capabilities:
     - propose_command
   provides_hooks:
     - pre_tool_call
+    - pre_llm_call
   provides_middleware: []
   requires_env: []
 ```
