@@ -497,7 +497,7 @@ Written Nov. 22, 2026, against Hermes v0.23.2.
   made outside the mirror, even through a link planted in it. A name
   the target sends that could climb out is dropped.
 - **Checked.** 34 unit tests. On Buster: 262 folders made under
-  `/Users/you/Onsite/laptop`, no files; a laptop-only clone opened;
+  `~/Onsite/laptop`, no files; a laptop-only clone opened;
   `hermes onsite status` there says `laptop` and the real folder; a
   real-model command run from it printed the laptop's path and files.
 - **Cost.** The app's file tree shows the mirror's empty folders,
