@@ -136,6 +136,19 @@ On the laptop, in the desktop app, connected to the gateway.
       the pane. **This has never been seen in the real app.**
 - [ ] Click Run. The command runs after any approval. Click Copy and
       paste: it is the exact command.
+- [ ] In the pane, under "Open a folder", pick `laptop` and click
+      Browse. You see the laptop's home folders. Click into one, then
+      click "Start a session in ...". A new session opens, and its
+      chip reads `onsite: laptop`. **Never seen in the real app.**
+- [ ] Ask that session for `pwd`. It prints the folder you picked.
+- [ ] Open Settings, then Plugins, then Machines. Both machines are
+      listed. **Never seen in the real app.**
+- [ ] Click Edit on `laptop`, then "Test connection". It says
+      "Connected in" some milliseconds.
+- [ ] Add a machine named `spare` of the kind "The machine Hermes
+      runs on" and save. It appears in the list. Remove it. It is
+      gone, and gone from Buster's `config.yaml`.
+- [ ] The Remove button for the default machine is greyed out.
 - [ ] Switch to the **Bots** tab and open Buster's chat. If the app's
       active profile is Aster, the pane says it asked the `default`
       profile, which has no plugin. That message is right, not a bug.
@@ -162,6 +175,13 @@ been tested.** The rig only fakes it.
       exit status", and the command is not run a second time.
 
 ## 9. A folder that exists only on the laptop
+
+- [ ] Open one deep folder with no set-up at all. It prints a
+      folder on the host:
+
+```bash
+hermes -p buster onsite open laptop:~/Downloads --apply
+```
 
 - [ ] On the host, copy the laptop's folder names. Add `--apply`
       after the dry run looks right:
@@ -268,13 +288,13 @@ Never tested.
 
 ## 15. The automatic tests
 
-- [ ] Unit tests: 224 pass.
+- [ ] Unit tests: 250 pass.
 
 ```bash
 cd /Users/you/Workspaces/hermes-hands && uv run --no-project --with pytest python -m pytest -q
 ```
 
-- [ ] Desktop tests: 13 pass.
+- [ ] Desktop tests: 28 pass.
 
 ```bash
 cd /Users/you/Workspaces/hermes-hands && node --test tests/desktop.test.mjs
