@@ -656,18 +656,66 @@ async function openMachines() {
   })
 
   const page = made.made.pages[0]
-  const box = await made.mount(page.render())
+  const machines = page.children[0]
+  const box = await made.mount(machines.render())
 
   await made.settle()
 
-  return { ...made, box, page }
+  return { ...made, box, machines, page }
 }
 
-test('it adds a Machines page to Settings', { skip: SKIP }, async () => {
+test('it adds one entry to Settings, named for the plugin', { skip: SKIP }, async () => {
   const { page } = await openMachines()
 
-  assert.equal(page.id, 'machines')
-  assert.equal(page.title, 'Machines')
+  assert.equal(page.id, 'onsite')
+  assert.equal(page.title, 'Onsite')
+})
+
+test('Machines is a page under that entry', { skip: SKIP }, async () => {
+  const { machines, page } = await openMachines()
+
+  assert.equal(page.children.length, 1)
+  assert.equal(machines.id, 'machines')
+  assert.equal(machines.title, 'Machines')
+})
+
+test('the entry itself opens on a summary of the machines', { skip: SKIP }, async () => {
+  const { mount, page, settle } = await openMachines()
+  const home = await mount(page.render())
+
+  await settle()
+
+  const rows = [...home.querySelectorAll('[data-onsite-summary]')]
+
+  assert.deepEqual(rows.map(row => row.getAttribute('data-onsite-summary')), ['laptop', 'mac'])
+  assert.match(rows[1].textContent, /this machine.*\(default\)/)
+  assert.equal(home.querySelector('[data-onsite-edit]'), null)
+  assert.match(home.textContent, /on the Machines page/)
+})
+
+test('each settings page names the profile it really edits', { skip: SKIP }, async () => {
+  const { host, machines, mount, page, settle } = await openMachines()
+
+  host.state.profile = atom('buster')
+
+  const home = await mount(page.render())
+  const list = await mount(machines.render())
+
+  await settle()
+
+  for (const box of [home, list]) {
+    const note = box.querySelector('[data-onsite-profile-note]')
+
+    assert.match(note.textContent, /settings of the "buster" profile/)
+    assert.match(note.textContent, /"Applies to" row above does not change this page/)
+  }
+})
+
+test('with no profile known, the page still says whose settings these are', { skip: SKIP }, async () => {
+  const { box } = await openMachines()
+  const note = box.querySelector('[data-onsite-profile-note]')
+
+  assert.match(note.textContent, /profile the app is using now/)
 })
 
 test('the page lists the machines in the settings', { skip: SKIP }, async () => {
