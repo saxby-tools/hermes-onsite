@@ -93,8 +93,10 @@ MAX_NAME_LENGTH = 4096
 MAX_CUT_TEXT_LENGTH = 16 * 1024 * 1024
 
 # A screen larger than this is a broken or hostile server, not a
-# desktop. It bounds the memory one update can ask for.
+# desktop. The two limits bound the memory a server can ask for: the
+# largest screen sold today has about 33 million pixels.
 MAX_SIDE = 16384
+MAX_PIXELS = 40_000_000
 
 
 class RfbError(Exception):
@@ -300,6 +302,12 @@ class Client:
 
         if not 0 < height <= MAX_SIDE:
             raise RfbError(f"the server reports a screen {height} high")
+
+        if width * height > MAX_PIXELS:
+            raise RfbError(
+                f"the server reports a screen of {width} by {height}, "
+                "too large to be real"
+            )
 
         self.width = width
         self.height = height
