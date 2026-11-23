@@ -115,6 +115,23 @@ def test_a_move_note_is_one_paragraph():
     assert "start in its home folder" in text
 
 
+def test_a_move_note_can_say_that_the_screen_stayed_behind():
+    move = moves.Move("mac", "laptop", "~")
+    text = messages.format_move_note(move, PARSED, screen_note=True)
+
+    assert "`computer_use` tool did not move" in text
+    assert "screen of `mac`" in text
+    assert "start a new chat" in text
+    assert text.endswith("screen of `laptop`.]")
+    assert "\n" not in text
+
+
+def test_a_move_note_says_nothing_of_a_screen_it_does_not_run():
+    move = moves.Move("mac", "laptop", "~")
+
+    assert "computer_use" not in messages.format_move_note(move, PARSED)
+
+
 def test_a_move_note_for_a_cleared_override_says_so():
     move = moves.Move("mac", "laptop", "~", cleared=True)
     text = messages.format_move_note(move, PARSED)

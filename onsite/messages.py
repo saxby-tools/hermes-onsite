@@ -268,12 +268,20 @@ def describe_target(spec: TargetSpec) -> str:
     )
 
 
-def format_move_note(move: Move, config: OnsiteConfig) -> str:
+def format_move_note(
+    move: Move,
+    config: OnsiteConfig,
+    screen_note: bool = False,
+) -> str:
     """What an agent reads, once, after `/onsite` moved its session.
 
     Hermes adds this to the user's next message, so it opens by saying
     who wrote it. It is one paragraph: the agent's instructions still
     name the old machine, and this has to read as the newer word.
+
+    With `screen_note`, it also says that the screen did not move.
+    Hermes keeps a session's screen backend once it is built, and an
+    agent told that its tools moved would assume its screen did too.
     """
 
     spec = config.target(move.after)
@@ -287,7 +295,7 @@ def format_move_note(move: Move, config: OnsiteConfig) -> str:
             "machine its folder picks, with `/onsite auto`."
         )
 
-    return " ".join([
+    sentences = [
         f"[{MOVE_NOTE_OPENING}.",
         lead,
         "Your `terminal`, `read_file`, `write_file`, `patch` and "
@@ -297,8 +305,18 @@ def format_move_note(move: Move, config: OnsiteConfig) -> str:
         "This replaces what your instructions say about the machine.",
         "Paths, files and command output from earlier in this chat "
         f"belong to `{move.before}` and may not exist on "
-        f"`{move.after}`.]",
-    ])
+        f"`{move.after}`.",
+    ]
+
+    if screen_note:
+        sentences.append(
+            "The `computer_use` tool did not move: if you have used it "
+            "in this chat, it still sees and acts on the screen of "
+            f"`{move.before}`. Tell the user to start a new chat to "
+            f"use the screen of `{move.after}`."
+        )
+
+    return " ".join(sentences) + "]"
 
 
 def format_prompt_section(route: Route, config: OnsiteConfig) -> str:
