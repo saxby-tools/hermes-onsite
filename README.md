@@ -1,16 +1,20 @@
-# hermes-hands
+# onsite
 
-![hermes-hands: a marble head and a marble hand, drawn in blue](docs/brand/banner.png)
+Open a project folder on your own computer and your always-on
+[Hermes](https://github.com/NousResearch/hermes-agent) works in it.
 
-hermes-hands makes a remote
-[Hermes](https://github.com/NousResearch/hermes-agent) agent act on
-the machine you are sitting at.
+Hermes stays on your server. Its commands and file edits run on the
+computer the folder lives on, as you. It is the way of working you
+know from Claude Code, Codex and the other big coding apps, for a
+Hermes that lives somewhere else.
 
-The agent's loop, memory and skills stay on the host. That is the
-brain. Shell commands and file edits run on a machine you name, as
-you. That is the hands. Open a project folder and the agent works in
-it, on your machine, with Hermes' own approval prompts still in front
-of every risky command.
+- **Open a folder. That is the whole switch.** The folder you open
+  picks the computer. There is no switch phrase and no mode.
+- **Approve where you are.** Risky commands stop at Hermes' own
+  prompt, in the app you are holding. A chip in the desktop app names
+  the computer in use.
+- **Nothing new to install on your computer.** It uses the SSH you
+  already have. Either side can start the link.
 
 It is a Hermes plugin. Hermes itself is not patched.
 
@@ -19,7 +23,7 @@ to 4 of the build pass on a test rig, against a container and against
 a real laptop. The last step, a person using it from the real clients,
 has not happened. See [What is tested](#what-is-tested).
 
-Site: <https://saxby-tools.github.io/hermes-hands/>
+Site: <https://saxby-tools.github.io/hermes-onsite/>
 
 ## How it works
 
