@@ -279,7 +279,7 @@ computer first.
 | A red dot on the chip | The computer is asleep, off or off the network. | Wake it. Work picks up by itself within about 10 seconds. |
 | Hermes says a command has "no exit status" | The link dropped while the command was running. It may have finished or not. Hermes will not run it twice by itself. | Check the result on your computer, then tell Hermes what you found. |
 | "onsite: not set up" | onsite is off, or has no computers, for the Hermes you are talking to. | Open Machines and add one, or ask the person who runs your server. |
-| A message that names a profile, such as: The app asked the "work" profile, which has no onsite plugin enabled. | The app is looking at a different Hermes profile than you meant. | Switch to the right profile, then look again. |
+| A message that names a profile, such as: This chat belongs to the "home" profile. The app asked the "work" profile, which has no onsite plugin enabled. | The app is asking a different Hermes profile than the one this chat belongs to. | Pick the profile the message names, in the Sessions tab. |
 | "That folder could not be listed." | The computer did not answer, or the folder cannot be read. | Check the chip's dot. Click Browse again. |
 | "More folders than fit here. Go deeper to narrow it." | The folder has more than 500 folders in it. | Click into a folder closer to the one you want. |
 | "Could not reach the chat box. Type /run 3." | The Run button could not type for you. | Type `/run 3` in the chat yourself. |
