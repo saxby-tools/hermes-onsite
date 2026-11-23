@@ -1,8 +1,8 @@
 """Load the plugin as a package named `onsite` for the tests.
 
-The repository root is the plugin folder, and its name has a hyphen,
-so Python cannot import it by name. Hermes loads it by path under its
-own name. The tests do the same under a fixed one.
+The plugin lives in the `onsite` folder of the repository. Hermes
+loads it by path under its own name. The tests do the same under a
+fixed one, so they never depend on what is on the import path.
 """
 
 from __future__ import annotations
@@ -13,7 +13,7 @@ import sys
 from pathlib import Path
 
 
-ROOT = Path(__file__).resolve().parent.parent
+ROOT = Path(__file__).resolve().parent.parent / "onsite"
 PACKAGE = "onsite"
 
 

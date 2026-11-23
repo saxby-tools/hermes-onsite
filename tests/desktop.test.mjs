@@ -21,7 +21,7 @@ import { test } from 'node:test'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 
 const HERE = path.dirname(fileURLToPath(import.meta.url))
-const PLUGIN_PATH = path.join(HERE, '..', 'desktop', 'plugin.js')
+const PLUGIN_PATH = path.join(HERE, '..', 'onsite', 'desktop', 'plugin.js')
 
 const DEFAULT_HERMES_SRC = path.join(os.homedir(), '.hermes', 'hermes-agent')
 const HERMES_SRC = process.env.HERMES_SRC || DEFAULT_HERMES_SRC

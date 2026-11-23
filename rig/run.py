@@ -47,6 +47,8 @@ from shell import wait_for_port  # noqa: E402
 
 
 REPO = Path(__file__).resolve().parent.parent
+# The plugin is one folder of the repository. Only it is installed.
+PLUGIN_DIR = REPO / "onsite"
 RIG_DIR = REPO / ".rig"
 KEYS_DIR = RIG_DIR / "keys"
 WORK_DIR = RIG_DIR / "work"
@@ -336,14 +338,14 @@ class Profile:
         if self.link.is_symlink():
             self.link.unlink()
 
-        self.link.symlink_to(REPO)
+        self.link.symlink_to(PLUGIN_DIR)
 
         # Hermes finds a screen backend by its folder's name, beside
         # the plugin. The link is harmless until a config selects it.
         if self.screen_link.is_symlink():
             self.screen_link.unlink()
 
-        self.screen_link.symlink_to(REPO / SCREEN_PLUGIN_ID)
+        self.screen_link.symlink_to(PLUGIN_DIR / SCREEN_PLUGIN_ID)
         self.reload()
 
     def uninstall(self) -> None:
