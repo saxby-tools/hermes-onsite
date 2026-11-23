@@ -62,7 +62,9 @@ down, tool calls fail with an error that names the target.
 - `plugins.isolation: in_process`, which is Hermes' default. A
   terminal backend cannot run in the plugin host.
 - For an SSH target: key-based SSH from the host to that machine with
-  no prompt, and `bash` on that machine.
+  no prompt, and `bash` on that machine. A machine the host cannot
+  reach can dial out to it. See
+  [A machine the host cannot reach](#a-machine-the-host-cannot-reach).
 - No Python packages. It drives the `ssh` program you already have.
 
 ## Install
@@ -167,6 +169,26 @@ login is refused a blocking lock and gets a delay lock, which holds
 sleep off for five seconds by default (`InhibitDelayMaxSec` in
 `logind.conf`). That covers a short write. A long one can still be
 cut by a closing lid.
+
+### A machine the host cannot reach
+
+A laptop behind a home router cannot be dialed from the host. It can
+dial out. The machine opens one SSH connection to the host and offers
+its own SSH server back through it. The host then reaches the machine
+at a port on its own loopback address.
+
+This prints the command to run on the machine, a service file that
+keeps the link up, and the target's settings. It is a dry run until
+you add `--apply`, which writes the settings:
+
+```bash
+hermes hands dial-out laptop --server you@host.example --user you
+```
+
+The machine still needs its own SSH server, but only the host can
+reach it, through the link. The plugin adds no listener: the host's
+SSH server opens the port, on loopback only. When the link drops,
+tool calls fail at once and resume when the machine dials back in.
 
 ### Folders that exist only on the target
 
@@ -377,6 +399,7 @@ targets/             one class per kind of target: ssh, local
 health.py            probe and circuit breaker
 remote.py            SSH options, PATH, sleep inhibitor
 mirror.py            a names-only copy of a target's folders
+dialout.py           set-up text for a machine that dials out
 exits.py             the four ways a command can end
 hooks.py             keeps the file tools on the right folder
 commands.py          /hands, /run, hermes hands
