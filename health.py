@@ -169,6 +169,9 @@ def build_oneshot_command(spec: TargetSpec, remote: str) -> list[str]:
     if spec.known_hosts:
         command += ["-o", f"UserKnownHostsFile={spec.known_hosts}"]
 
+    if spec.host_key_alias:
+        command += ["-o", f"HostKeyAlias={spec.host_key_alias}"]
+
     command += [f"{spec.user}@{spec.host}", remote]
 
     return command
