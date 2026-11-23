@@ -7,9 +7,11 @@ import os
 import sys
 
 from . import messages
+from . import mirror
 from . import wizard
 from .config import ConfigError
 from .config import KIND_LOCAL
+from .config import TargetSpec
 from .health import probe_target
 from .proposals import STATUS_SENT
 from .runtime import CLEAR_OVERRIDE
@@ -32,6 +34,8 @@ MODE_LIVE = "[LIVE]"
 EXIT_OK = 0
 EXIT_DOWN = 1
 EXIT_USAGE = 2
+
+TARGET_FOLDER_SEPARATOR = ":"
 
 NEXT_STEPS = (
     "Next:",
@@ -210,6 +214,7 @@ def gather_settings(args) -> dict:
         key=args.key,
         known_hosts=args.known_hosts,
         default=args.default,
+        mirror=args.mirror,
     )
 
 
@@ -238,6 +243,101 @@ def cli_init(ctx, args) -> int:
     print(f"{mode} written.")
     print()
     print("\n".join(NEXT_STEPS))
+
+    return EXIT_OK
+
+
+def mirror_targets(config, name: str | None) -> list[TargetSpec]:
+    """The targets one `hermes hands mirror` run covers."""
+
+    if name is None:
+        return [spec for spec in config.targets.values() if spec.mirror]
+
+    if name not in config.targets:
+        return []
+
+    return [config.target(name)]
+
+
+def cli_mirror(runtime: Runtime, args) -> int:
+    try:
+        config = runtime.load_config()
+    except ConfigError as error:
+        print(error)
+        return EXIT_USAGE
+
+    specs = mirror_targets(config, args.target)
+
+    if not specs:
+        print(messages.MIRROR_NOT_SET)
+        return EXIT_USAGE
+
+    mode = MODE_LIVE if args.apply else MODE_DRY
+    code = EXIT_OK
+
+    for spec in specs:
+        depth = args.depth or spec.mirror_depth
+
+        try:
+            result = mirror.sync(spec, depth, args.apply)
+        except mirror.MirrorError as error:
+            print(f"{mode} {spec.label}: {error}")
+            code = EXIT_DOWN
+            continue
+
+        print(messages.format_mirror_result(
+            mode, spec, depth, result, args.apply,
+        ))
+
+    return code
+
+
+def split_target_folder(value: str) -> tuple[str, str] | None:
+    name, separator, folder = value.partition(TARGET_FOLDER_SEPARATOR)
+
+    if not separator:
+        return None
+
+    if not name or not folder:
+        return None
+
+    return name, folder
+
+
+def cli_open(runtime: Runtime, args) -> int:
+    pair = split_target_folder(args.folder)
+
+    if pair is None:
+        print(messages.OPEN_USAGE)
+        return EXIT_USAGE
+
+    name, target_folder = pair
+
+    try:
+        config = runtime.load_config()
+    except ConfigError as error:
+        print(error)
+        return EXIT_USAGE
+
+    if name not in config.targets:
+        print(f"`{name}` is not a target.")
+        return EXIT_USAGE
+
+    spec = config.target(name)
+    mode = MODE_LIVE if args.apply else MODE_DRY
+
+    try:
+        folder, result = mirror.open_folder(spec, target_folder, args.apply)
+    except mirror.MirrorError as error:
+        print(f"{mode} {error}")
+        return EXIT_DOWN
+
+    print(messages.format_open_result(
+        mode, spec, target_folder, str(folder), result, args.apply,
+    ))
+
+    if result.skipped:
+        return EXIT_USAGE
 
     return EXIT_OK
 
@@ -297,6 +397,13 @@ def setup_cli(parser) -> None:
         help="a known_hosts file for NAME alone.",
     )
     init.add_argument(
+        "--mirror",
+        action="append",
+        default=[],
+        metavar="NAME=/HOST/FOLDER",
+        help="a folder on this machine that mirrors NAME's folder names.",
+    )
+    init.add_argument(
         "--default",
         metavar="NAME",
         help="the target used when no folder rule matches.",
@@ -307,6 +414,44 @@ def setup_cli(parser) -> None:
         help="write the settings. Without it, they are only shown.",
     )
 
+    mirrored = actions.add_parser(
+        "mirror",
+        help="copy a target's folder names, not its files, to this "
+        "machine. A dry run unless --apply is given.",
+    )
+    mirrored.add_argument(
+        "target",
+        nargs="?",
+        help="the target to mirror. Default: every target with a mirror.",
+    )
+    mirrored.add_argument(
+        "--depth",
+        type=int,
+        metavar="LEVELS",
+        help="how many levels under the home folder. Default: 3.",
+    )
+    mirrored.add_argument(
+        "--apply",
+        action="store_true",
+        help="make the folders. Without it, they are only counted.",
+    )
+
+    opened = actions.add_parser(
+        "open",
+        help="make one folder on a target openable from this machine. "
+        "A dry run unless --apply is given.",
+    )
+    opened.add_argument(
+        "folder",
+        metavar="TARGET:FOLDER",
+        help="a folder on a target, such as laptop:~/work/site.",
+    )
+    opened.add_argument(
+        "--apply",
+        action="store_true",
+        help="make the folder. Without it, its place is only shown.",
+    )
+
 
 def build_cli_handler(ctx, runtime: Runtime):
     def handle_cli(args) -> int:
@@ -314,6 +459,12 @@ def build_cli_handler(ctx, runtime: Runtime):
 
         if action == "init":
             return cli_init(ctx, args)
+
+        if action == "mirror":
+            return cli_mirror(runtime, args)
+
+        if action == "open":
+            return cli_open(runtime, args)
 
         return cli_status(runtime, args)
 
