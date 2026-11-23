@@ -719,6 +719,30 @@ Written Nov. 22, 2026, against Hermes v0.23.2.
 - **Not checked.** Any of it in the real desktop app. The session
   calls were read from the app's source, not seen working there.
 
+### 50. The plugin lives in one folder of the repository
+
+- **Question.** The repository's root was the plugin. An install
+  cloned all of it, so the test rig, the site and the docs landed in
+  every user's plugin folder, and Hermes' security scan read them.
+- **Pick.** The plugin is the `onsite/` folder. Hermes installs one
+  folder of a repository when it is named:
+  `hermes plugins install saxby-tools/hermes-onsite/onsite`. The
+  catalog entry names it with `subdir`.
+- **Why.** A user gets what runs and nothing else. The scan covers
+  only that. A rig line can no longer block an install, as one did
+  in 42.
+- **What moved.** Every Python module, `plugin.yaml`, `targets/`,
+  `dashboard/`, `desktop/` and `onsite-screen/`. A copy of the
+  license and a short README went in beside them. Tests, the rig,
+  the docs and the site stayed at the root.
+- **Older entries.** File names in this log before this entry are
+  given without the folder. `compat.py` is now `onsite/compat.py`.
+- **Checked.** Unit and desktop tests pass. Hermes' validator passes
+  on the folder alone, with no warnings beyond the private imports.
+  The rig links that folder into the test profile.
+- **Not checked.** The install command itself, from GitHub. It needs
+  a profile nobody is using.
+
 ## Open decisions from the brief
 
 | # | Decision | What the build did |
