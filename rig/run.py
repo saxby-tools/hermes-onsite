@@ -40,6 +40,7 @@ import acp  # noqa: E402  (the path line above has to come first)
 import term  # noqa: E402
 
 from machines import ContainerHands  # noqa: E402
+from machines import DeskHands  # noqa: E402
 from machines import RealHands  # noqa: E402
 from shell import run  # noqa: E402
 from shell import wait_for_port  # noqa: E402
@@ -101,7 +102,24 @@ APPROVAL_TITLES = {
     "--cli": "Dangerous Command",
     "--tui": "approval required",
 }
+APPROVAL_ALLOW_KEY = "1"
 APPROVAL_DENY_KEY = "4"
+
+# How Hermes' CLI reports the end of a prompt, by the key pressed.
+APPROVAL_OUTCOMES = {
+    APPROVAL_ALLOW_KEY: "allowed once",
+    APPROVAL_DENY_KEY: "denied",
+}
+
+SCREEN_PLUGIN_ID = "hermes-hands-screen"
+SCREEN_ALLOWED_FILE = "/tmp/hands-rig-allowed.txt"
+SCREEN_DENIED_FILE = "/tmp/hands-rig-denied.txt"
+SCREEN_TYPED_TEXT = "screen-rig"
+SCREEN_PROMPT_SUBJECT = "computer_use:"
+SCREEN_PICKED_LOG = "hands: screen control for this session is on"
+SCREEN_FAILED_LOG = "computer_use backend unavailable"
+SCREEN_GATED_STEPS = 3
+SCREEN_SETTLE_SECONDS = 2.0
 
 MODE_DRY = "[DRY RUN]"
 MODE_LIVE = "[LIVE]"
@@ -145,6 +163,12 @@ plugins:
               {work}: {root}
           mac:
             kind: local
+"""
+
+# Only a machine with a screen selects the plugin's screen backend.
+SCREEN_CONFIG = """\
+computer_use:
+  backend: {screen_plugin}
 """
 
 PLAN = (
@@ -246,7 +270,12 @@ def start_stub() -> subprocess.Popen:
 
 
 def render_config(hands) -> str:
-    return CONFIG_TEMPLATE.format(
+    extra = ""
+
+    if hands.has_screen:
+        extra = SCREEN_CONFIG.format(screen_plugin=SCREEN_PLUGIN_ID)
+
+    return extra + CONFIG_TEMPLATE.format(
         stub_port=STUB_PORT,
         plugin=PLUGIN_ID,
         ssh_host=hands.ssh_host,
@@ -270,6 +299,7 @@ class Profile:
         self.config = home / "config.yaml"
         self.backup = home / f"config.yaml{BACKUP_SUFFIX}"
         self.link = home / "plugins" / PLUGIN_ID
+        self.screen_link = home / "plugins" / SCREEN_PLUGIN_ID
 
     def command(self, *args: str) -> list[str]:
         return [self.hermes, "-p", self.name, *args]
@@ -306,6 +336,13 @@ class Profile:
             self.link.unlink()
 
         self.link.symlink_to(REPO)
+
+        # Hermes finds a screen backend by its folder's name, beside
+        # the plugin. The link is harmless until a config selects it.
+        if self.screen_link.is_symlink():
+            self.screen_link.unlink()
+
+        self.screen_link.symlink_to(REPO / SCREEN_PLUGIN_ID)
         self.reload()
 
     def uninstall(self) -> None:
@@ -1139,12 +1176,167 @@ def phase_sleep(report: Report, profile: Profile, hands) -> None:
     )
 
 
+def find_after(screen, needle: str, since: int, seconds: float) -> int:
+    """Wait for `needle` and return the place in the output just past it.
+
+    The place matters. The next prompt can be drawn in the same burst
+    as the line being waited for, so a mark taken afterward would
+    already be past it.
+    """
+
+    screen.expect(needle, seconds, since=since)
+
+    found = screen.text.find(needle, since)
+
+    # A redraw can space the words apart. Then the end of what has
+    # been read is the best place that is known.
+    if found < 0:
+        return screen.mark()
+
+    return found + len(needle)
+
+
+def answer_screen_prompts(screen, key: str, start: int) -> int:
+    """Answer Hermes' prompt for each gated step. Returns how many came.
+
+    One key answers a prompt in Hermes' CLI. Nothing else is sent: an
+    Enter key after it would land on the next prompt and accept its
+    first choice, which is "Allow once".
+    """
+
+    answered = 0
+
+    for _ in range(SCREEN_GATED_STEPS):
+        start = find_after(
+            screen,
+            APPROVAL_TITLES["--cli"],
+            start,
+            TERMINAL_TURN_SECONDS,
+        )
+        start = find_after(
+            screen,
+            SCREEN_PROMPT_SUBJECT,
+            start,
+            TERMINAL_TURN_SECONDS,
+        )
+        screen.settle(1.0)
+        screen.type(key)
+
+        start = find_after(
+            screen,
+            APPROVAL_OUTCOMES[key],
+            start,
+            TERMINAL_TURN_SECONDS,
+        )
+        answered += 1
+
+    find_after(screen, "Done.", start, TERMINAL_TURN_SECONDS)
+
+    return answered
+
+
+def screen_turn(report, profile, name: str, script: str, key: str) -> None:
+    screen = profile.terminal(LAPTOP_SESSION_DIR, "--cli", name)
+
+    try:
+        start = screen.mark()
+        screen.enter(f"script:{script}")
+        answered = answer_screen_prompts(screen, key, start)
+
+        report.check(
+            "Hermes' own prompt fired for each gated step",
+            answered == SCREEN_GATED_STEPS,
+            f"prompts: {answered}",
+        )
+    except (term.TermError, RuntimeError) as error:
+        report.check(
+            "Hermes' own prompt fired for each gated step",
+            False,
+            str(error)[-600:],
+        )
+    finally:
+        screen.close()
+
+
+def phase_screen(report: Report, profile: Profile, hands) -> None:
+    report.section("Screen: the target's screen can be found")
+
+    if not hands.has_screen:
+        report.write(f"  skipped: {hands.label} has no screen.")
+        return
+
+    done = profile.cli(LAPTOP_SESSION_DIR, "hands", "screen", "laptop")
+    report.quote("hermes hands screen laptop", scrub(done.stdout))
+    report.check(
+        "the check finds a desktop and a driver",
+        "It can be driven." in done.stdout,
+    )
+
+    # Hermes keeps the screen tool out of editor sessions, so this
+    # phase uses the plain CLI, where a person would use it.
+    report.section("Screen: a session sees the screen of its own machine")
+    agent_log = profile.home / "logs" / "agent.log"
+    before = agent_log.stat().st_size
+    screen = profile.terminal(LAPTOP_SESSION_DIR, "--cli", "screen-look")
+
+    try:
+        start = screen.mark()
+        screen.enter("script:screenlook")
+        seen = screen.expect("Done.", TERMINAL_TURN_SECONDS, since=start)
+
+        report.check(
+            "looking needs no approval",
+            APPROVAL_TITLES["--cli"] not in seen,
+        )
+    except term.TermError as error:
+        report.check("looking needs no approval", False, str(error)[-600:])
+    finally:
+        screen.close()
+
+    with open(agent_log, errors="replace") as handle:
+        handle.seek(before)
+        logged = handle.read()
+
+    report.check(
+        "the plugin picked the target's screen for this session",
+        SCREEN_PICKED_LOG in logged,
+    )
+    report.check(
+        "the screen backend started",
+        SCREEN_FAILED_LOG not in logged,
+    )
+
+    report.section("Screen: a denied click and keystroke stay off it")
+    screen_turn(report, profile, "screen-deny", "screendeny", APPROVAL_DENY_KEY)
+
+    time.sleep(SCREEN_SETTLE_SECONDS)
+
+    report.check(
+        "nothing was typed on the target",
+        not hands.has(SCREEN_DENIED_FILE),
+    )
+
+    report.section("Screen: an approved click and keystroke land on it")
+    screen_turn(
+        report, profile, "screen-allow", "screentype", APPROVAL_ALLOW_KEY,
+    )
+
+    typed = wait_for_file(hands, SCREEN_ALLOWED_FILE, RUN_WAIT_SECONDS)
+
+    report.check(
+        "the typed line ran in the terminal on the target",
+        typed.strip() == SCREEN_TYPED_TEXT,
+        f"file holds: {typed.strip()!r}",
+    )
+
+
 PHASES = {
     "1": ("Phase 1: backend and routing", phase_one),
     "2": ("Phase 2: resilience", phase_two_all),
     "3": ("Phase 3: CLI surface", phase_three),
     "4": ("Phase 4: desktop surface", phase_four),
     "sleep": ("Sleep inhibitor on a systemd target", phase_sleep),
+    "screen": ("Screen control on a target", phase_screen),
 }
 
 
@@ -1187,6 +1379,12 @@ def parse_args() -> argparse.Namespace:
         action="append",
         choices=sorted(PHASES),
         help="a phase to run. Repeat for more. Default: all.",
+    )
+    parser.add_argument(
+        "--desk",
+        action="store_true",
+        help="give the hands container a desktop and Hermes' screen "
+             "driver, for the screen phase.",
     )
     parser.add_argument(
         "--real",
@@ -1239,6 +1437,16 @@ def find_profile_home(args: argparse.Namespace) -> Path:
 
 
 def pick_hands(args: argparse.Namespace):
+    if args.desk and args.real:
+        raise SystemExit("--desk and --real do not go together.")
+
+    if args.desk:
+        return DeskHands(
+            REPO / "rig" / "hands",
+            KEYS_DIR,
+            REPO / "rig" / "desk",
+        )
+
     if not args.real:
         return ContainerHands(REPO / "rig" / "hands", KEYS_DIR)
 
