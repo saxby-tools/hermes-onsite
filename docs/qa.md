@@ -298,7 +298,7 @@ Never tested.
 cd /Users/you/Workspaces/hermes-hands && uv run --no-project --with pytest python -m pytest -q
 ```
 
-- [ ] Desktop tests: 28 pass.
+- [ ] Desktop tests: 29 pass.
 
 ```bash
 cd /Users/you/Workspaces/hermes-hands && node --test tests/desktop.test.mjs
