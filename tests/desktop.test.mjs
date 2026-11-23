@@ -281,10 +281,23 @@ async function setup() {
     })
   }
 
+  // React reads a field's value through its own setter, so the
+  // element's native one is used and a real event is sent after it.
+  const choose = async (element, value) => {
+    const owner = Object.getPrototypeOf(element)
+    const setValue = Object.getOwnPropertyDescriptor(owner, 'value').set
+
+    await React.act(async () => {
+      setValue.call(element, value)
+      element.dispatchEvent(new window.Event('change', { bubbles: true }))
+      await new Promise(resolve => setTimeout(resolve, 0))
+    })
+  }
+
   await settle(() => plugin.register(ctx))
 
   return {
-    backend, calls, click, ctx, host, made, mount, plugin, settle
+    backend, calls, choose, click, ctx, host, made, mount, plugin, settle
   }
 }
 
@@ -694,9 +707,41 @@ test('saving keeps the settings the form does not show', { skip: SKIP }, async (
     port: '',
     key: '',
     mirror: '',
+    screen: '',
     prefixes: ['/home/dev/'],
     path_map: { '/Users/dev/Development': '/home/dev/Development' }
   })
+})
+
+test('a machine can be set to use its own screen sharing', { skip: SKIP }, async () => {
+  const { box, choose, click, made } = await openMachines()
+
+  await click(box.querySelector('[data-onsite-edit="laptop"]'))
+
+  const field = box.querySelector('[data-onsite-field="screen"]')
+
+  assert.equal(field.value, 'auto')
+
+  await choose(field, 'sharing')
+  await click(box.querySelector('[data-onsite-save]'))
+
+  const [, options] = made.requests.find(([route]) => route === '/targets/save')
+
+  assert.equal(options.body.target.screen, 'sharing')
+})
+
+test('the machine Hermes runs on has no screen setting', { skip: SKIP }, async () => {
+  const { box, click, made } = await openMachines()
+
+  await click(box.querySelector('[data-onsite-edit="mac"]'))
+
+  assert.equal(box.querySelector('[data-onsite-field="screen"]'), null)
+
+  await click(box.querySelector('[data-onsite-save]'))
+
+  const [, options] = made.requests.find(([route]) => route === '/targets/save')
+
+  assert.equal('screen' in options.body.target, false)
 })
 
 test('a machine can be tested before it is saved', { skip: SKIP }, async () => {
