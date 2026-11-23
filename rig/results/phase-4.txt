@@ -11,7 +11,7 @@
   |   "label": "laptop (dev@127.0.0.1)",
   |   "connected": true,
   |   "detail": "",
-  |   "latency_ms": 60,
+  |   "latency_ms": 55,
   |   "cwd": "/home/dev/Development/sample",
   |   "folder_known": true,
   |   "reason": "path_map",
@@ -29,7 +29,7 @@
   |       "label": "laptop (dev@127.0.0.1)",
   |       "connected": true,
   |       "detail": "",
-  |       "latency_ms": 47,
+  |       "latency_ms": 48,
   |       "default": false
   |     },
   |     {
@@ -69,44 +69,48 @@
   real React and a real DOM. The app itself and its SDK are
   stand-ins. Gate 3 is still a look at the real app.
   --- node --test tests/desktop.test.mjs
-  | ✔ the file imports only what the desktop loader allows (1.005542ms)
-  | ✔ it registers a chip, a pane and a run card (270.850792ms)
-  | ✔ it asks the host with a POST body, not a query string (8.069208ms)
-  | ✔ the chip changes state when the target goes down and comes back (20.3265ms)
-  | ✔ the chip says so when the host has no plugin (9.00425ms)
-  | ✔ the chip names the profile that has no plugin (6.10375ms)
-  | ✔ the chip says when the chat in view is another profile's (7.63175ms)
-  | ✔ clicking the chip opens the pane (8.177417ms)
-  | ✔ the pane lists proposed commands and Run sends /run N (10.408208ms)
-  | ✔ Copy puts the exact command on the clipboard (1612.985917ms)
-  | ✔ the run card runs in the chat it was drawn in (11.1405ms)
-  | ✔ the run card works on an app that sends no session id (8.694667ms)
-  | ✔ the run card ignores attributes that are not a plain number (6.521125ms)
-  | ✔ a failed send tells the user what to type instead (9.80575ms)
-  | ✔ the pane offers folders only for machines reached over SSH (8.556041ms)
-  | ✔ browsing asks the machine, one folder at a time (10.75425ms)
-  | ✔ picking a folder starts a session in its place on the host (10.622583ms)
-  | ✔ a session is started in the profile the app is on (9.989334ms)
-  | ✔ an app that cannot start sessions is given the folder to open (10.7335ms)
-  | ✔ a machine that cannot be listed says why (8.773875ms)
-  | ✔ it adds a Machines page to Settings (7.059833ms)
-  | ✔ the page lists the machines in the settings (6.705042ms)
-  | ✔ the default machine cannot be removed from the page (7.416083ms)
-  | ✔ saving keeps the settings the form does not show (10.756417ms)
-  | ✔ a machine can be set to use its own screen sharing (13.629334ms)
-  | ✔ the machine Hermes runs on has no screen setting (10.83775ms)
-  | ✔ a machine can be tested before it is saved (11.104833ms)
-  | ✔ a refused save keeps the form open and says why (10.362583ms)
-  | ✔ removing a machine asks the host to take it out (7.328833ms)
-  | ✔ this machine has no address fields (8.97425ms)
-  | ✔ an app with no settings pages still loads the plugin (2.969292ms)
-  | ℹ tests 31
+  | ✔ the file imports only what the desktop loader allows (1.056084ms)
+  | ✔ it registers a chip, a pane and a run card (197.8755ms)
+  | ✔ it asks the host with a POST body, not a query string (8.109417ms)
+  | ✔ the chip changes state when the target goes down and comes back (20.155791ms)
+  | ✔ the chip says so when the host has no plugin (8.083792ms)
+  | ✔ the chip names the profile that has no plugin (7.00275ms)
+  | ✔ the chip says when the chat in view is another profile's (7.213375ms)
+  | ✔ clicking the chip opens the pane (7.145625ms)
+  | ✔ the pane lists proposed commands and Run sends /run N (9.361333ms)
+  | ✔ Copy puts the exact command on the clipboard (1611.952875ms)
+  | ✔ the run card runs in the chat it was drawn in (18.318416ms)
+  | ✔ the run card works on an app that sends no session id (11.000042ms)
+  | ✔ the run card ignores attributes that are not a plain number (10.687833ms)
+  | ✔ a failed send tells the user what to type instead (9.706625ms)
+  | ✔ the pane offers folders only for machines reached over SSH (9.672ms)
+  | ✔ browsing asks the machine, one folder at a time (13.083375ms)
+  | ✔ picking a folder starts a session in its place on the host (12.759791ms)
+  | ✔ a session is started in the profile the app is on (8.895875ms)
+  | ✔ an app that cannot start sessions is given the folder to open (10.104125ms)
+  | ✔ a machine that cannot be listed says why (8.072958ms)
+  | ✔ it adds one entry to Settings, named for the plugin (5.906125ms)
+  | ✔ Machines is a page under that entry (6.619459ms)
+  | ✔ the entry itself opens on a summary of the machines (9.808834ms)
+  | ✔ each settings page names the profile it really edits (9.809708ms)
+  | ✔ with no profile known, the page still says whose settings these are (6.988167ms)
+  | ✔ the page lists the machines in the settings (6.981333ms)
+  | ✔ the default machine cannot be removed from the page (7.16975ms)
+  | ✔ saving keeps the settings the form does not show (14.149292ms)
+  | ✔ a machine can be set to use its own screen sharing (14.180167ms)
+  | ✔ the machine Hermes runs on has no screen setting (9.771292ms)
+  | ✔ a machine can be tested before it is saved (10.371708ms)
+  | ✔ a refused save keeps the form open and says why (9.897584ms)
+  | ✔ removing a machine asks the host to take it out (7.928875ms)
+  | ✔ this machine has no address fields (8.92025ms)
+  | ✔ an app with no settings pages still loads the plugin (2.971ms)
+  | ℹ tests 35
   | ℹ suites 0
-  | ℹ pass 31
+  | ℹ pass 35
   | ℹ fail 0
   | ℹ cancelled 0
   | ℹ skipped 0
   | ℹ todo 0
-  | ℹ duration_ms 2231.93675
+  | ℹ duration_ms 2205.7325
   PASS  every desktop test passes
   PASS  none was skipped for lack of React
