@@ -1,0 +1,28 @@
+# Screen sharing, below Hermes
+
+== Sharing: the plugin's own link, with no Hermes
+
+== Sharing: the screen answers through SSH
+  PASS  screen sharing answers at the target's loopback
+        1280 by 800
+  PASS  a port with nothing behind it fails with ssh's own reason
+        stdio forwarding failed
+
+== Sharing: the screen arrives as pixels
+  PASS  one request brings the whole screen
+        1280 by 800
+  PASS  the picture is not blank
+        762012 bytes are not black
+
+== Sharing: a click and a typed line land in the terminal
+  PASS  the line ran in the terminal on the target
+        file holds: 'share-rig'
+
+== Sharing: a drag moves a window by the same distance
+  PASS  the terminal moved by the length of the drag
+        moved by (200, 100)
+  PASS  and back again
+
+== Sharing: each button arrives as itself
+  PASS  wheel turns, a right click and a double click were all seen
+        presses by button: {'1': 2, '3': 1, '4': 2, '5': 3}
