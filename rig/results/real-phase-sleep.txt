@@ -1,12 +1,12 @@
 # Sleep inhibitor on a systemd target
 
 == Sleep: a lock is held while a command runs
-  --- terminal: systemd-inhibit --list --no-pager | grep hermes-hands [completed, 1.21s]
+  --- terminal: systemd-inhibit --list --no-pager | grep onsite [completed, 1.16s]
   | terminal result
-  | - **output:** hermes-hands   1000 <laptop-user> 532566 systemd-inhibit sleep                                                    A hermes-hands command is running                           delay
+  | - **output:** onsite         1000 <laptop-user> 720443 systemd-inhibit sleep                                                    An onsite command is running                                delay
   | - **exit_code:** 0
   | - **cwd:** <laptop-rig>/sample
-  PASS  the running command holds a hermes-hands sleep lock
+  PASS  the running command holds an onsite sleep lock
   PASS  the lock is one the target allows a remote login to take
         mode: delay
   PASS  no lock is left once the command ends
