@@ -1,0 +1,40 @@
+<div class="ui ui-states">
+  <div class="ui__state">
+    <span class="ui__chip">
+      <span class="ui__dot ui__dot-wait"></span>
+      onsite
+    </span>
+    <span class="ui__tip">onsite: checking where this session runs</span>
+  </div>
+  <div class="ui__state">
+    <span class="ui__chip">
+      <span class="ui__dot ui__dot-ok"></span>
+      onsite: laptop
+      <span class="ui__quiet">…/work/app</span>
+    </span>
+    <span class="ui__tip">
+      Tools run on laptop (you@laptop.example)<br>
+      State: connected (42 ms)<br>
+      Folder: /home/you/work/app<br>
+      Why: the folder is in its mirror
+    </span>
+  </div>
+  <div class="ui__state">
+    <span class="ui__chip">
+      <span class="ui__dot ui__dot-bad"></span>
+      onsite: laptop
+      <span class="ui__quiet">…/work/app</span>
+    </span>
+    <span class="ui__tip">
+      Tools run on laptop (you@laptop.example)<br>
+      State: not reachable (no answer)
+    </span>
+  </div>
+  <div class="ui__state">
+    <span class="ui__chip">
+      <span class="ui__dot ui__dot-bad"></span>
+      onsite: not set up
+    </span>
+    <span class="ui__tip">onsite is not set up on the host.</span>
+  </div>
+</div>

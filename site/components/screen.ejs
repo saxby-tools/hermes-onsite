@@ -1,0 +1,24 @@
+<%#
+  One drawn screen: a window frame, the drawing, a caption, and the
+  same screen in words. The drawing is the file in screens/ that
+  `shows` names. Its styles are under "Screens" in
+  site/static/onsite.css.
+-%>
+<figure class="shot">
+  <div class="shot__window">
+    <div class="shot__bar" aria-hidden="true">
+      <span class="shot__dot"></span>
+      <span class="shot__dot"></span>
+      <span class="shot__dot"></span>
+      <span class="shot__app"><%= app %></span>
+    </div>
+    <div class="shot__body" role="img" aria-label="<%= caption %>">
+<%- include("screens/" + shows + ".ejs") %>
+    </div>
+  </div>
+  <figcaption class="shot__caption"><%= caption %></figcaption>
+  <details class="shot__words">
+    <summary>The same screen in words</summary>
+<%- html %>
+  </details>
+</figure>
