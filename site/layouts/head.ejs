@@ -1,6 +1,8 @@
 <%#
   The head every layout shares: viewport, theme colours, share tags,
-  icons, and the site's one stylesheet and one script. Links to the
+  icons, and the site's one stylesheet and one script. There is no
+  share picture for now: the one in site/static has the old name
+  drawn into it, and a new one has not been made. Links to the
   site's own files are relative, through `root`, so they work under
   any base path. Share tags must be absolute, so they use `canonical`
   and `siteUrl`. Nothing here loads from another origin.
@@ -24,13 +26,7 @@
 <meta property="og:title" content="<%= title %>">
 <meta property="og:description" content="<%= summary %>">
 <meta property="og:url" content="<%= canonical %>">
-<meta property="og:image" content="<%= siteUrl %>social.png">
-<meta property="og:image:width" content="1200">
-<meta property="og:image:height" content="630">
-<meta property="og:image:alt"
-  content="hermes-hands: the brain stays on the host, the hands work
-on your machine. A marble head and a marble hand, drawn in blue.">
-<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:card" content="summary">
 <link rel="preload" as="font" type="font/woff2" crossorigin
   href="<%= root %>fonts/oswald-latin-wght-normal.woff2">
 <link rel="stylesheet" href="<%= root %>onsite.css">
