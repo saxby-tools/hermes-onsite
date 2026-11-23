@@ -156,9 +156,9 @@ To hand the choice back to the folder, type:
 /onsite auto
 ```
 
-Hermes is not told when you move a chat. Say so in your next message
-if it matters, because the same folder can have a different path on
-another computer.
+Hermes is told with your next message. onsite adds one note to it
+that names the new computer, because the same folder can have a
+different path there.
 
 ## Say yes or no
 
