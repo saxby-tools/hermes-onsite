@@ -32,6 +32,10 @@ DEFAULT_CONNECT_TIMEOUT = 3
 MIN_CONNECT_TIMEOUT = 1
 MAX_CONNECT_TIMEOUT = 30
 
+DEFAULT_MIRROR_DEPTH = 3
+MIN_MIRROR_DEPTH = 1
+MAX_MIRROR_DEPTH = 6
+
 # `/hands auto` clears an override, so no target may take the name.
 RESERVED_TARGET_NAMES = ("auto",)
 TARGET_NAME_RE = re.compile(r"^[a-z][a-z0-9-]{0,31}$")
@@ -53,6 +57,8 @@ KNOWN_TARGET_KEYS = frozenset({
     "path",
     "inhibit_sleep",
     "connect_timeout",
+    "mirror",
+    "mirror_depth",
 })
 
 
@@ -85,6 +91,8 @@ class TargetSpec:
     path_mode: str = PATH_MODE_INTERACTIVE
     inhibit_sleep: bool = True
     connect_timeout: int = DEFAULT_CONNECT_TIMEOUT
+    mirror: str = ""
+    mirror_depth: int = DEFAULT_MIRROR_DEPTH
 
     @property
     def label(self) -> str:
@@ -239,6 +247,60 @@ def read_connect_timeout(name: str, raw: Any, problems: list[str]) -> int:
     return raw
 
 
+def read_mirror(
+    name: str,
+    kind: str,
+    raw: Any,
+    problems: list[str],
+) -> str:
+    """The folder on the host that stands in for this target's disk."""
+
+    if raw is None:
+        return ""
+
+    if kind != KIND_SSH:
+        problems.append(f"`{name}.mirror` is only for an ssh target")
+        return ""
+
+    if not is_absolute(raw):
+        problems.append(f"`{name}.mirror` must be an absolute path")
+        return ""
+
+    mirror = normalize_path(raw)
+
+    # Every folder on the host would then count as this target's.
+    if mirror == "/":
+        problems.append(f"`{name}.mirror` cannot be the root folder")
+        return ""
+
+    return mirror
+
+
+def read_mirror_depth(name: str, raw: Any, problems: list[str]) -> int:
+    if raw is None:
+        return DEFAULT_MIRROR_DEPTH
+
+    span = f"between {MIN_MIRROR_DEPTH} and {MAX_MIRROR_DEPTH}"
+
+    if isinstance(raw, bool):
+        problems.append(f"`{name}.mirror_depth` must be a number")
+        return DEFAULT_MIRROR_DEPTH
+
+    if not isinstance(raw, int):
+        problems.append(f"`{name}.mirror_depth` must be a number")
+        return DEFAULT_MIRROR_DEPTH
+
+    if raw < MIN_MIRROR_DEPTH:
+        problems.append(f"`{name}.mirror_depth` must be {span}")
+        return DEFAULT_MIRROR_DEPTH
+
+    if raw > MAX_MIRROR_DEPTH:
+        problems.append(f"`{name}.mirror_depth` must be {span}")
+        return DEFAULT_MIRROR_DEPTH
+
+    return raw
+
+
 def read_text(name: str, key: str, raw: Any, problems: list[str]) -> str:
     if raw is None:
         return ""
@@ -332,6 +394,12 @@ def read_target(name: str, raw: Any, problems: list[str]) -> TargetSpec | None:
             raw.get("connect_timeout"),
             problems,
         ),
+        mirror=read_mirror(name, kind, raw.get("mirror"), problems),
+        mirror_depth=read_mirror_depth(
+            name,
+            raw.get("mirror_depth"),
+            problems,
+        ),
     )
 
 
@@ -404,6 +472,12 @@ def target_to_settings(spec: TargetSpec) -> dict:
 
     if spec.path_map:
         block["path_map"] = dict(spec.path_map)
+
+    if spec.mirror:
+        block["mirror"] = spec.mirror
+
+    if spec.mirror and spec.mirror_depth != DEFAULT_MIRROR_DEPTH:
+        block["mirror_depth"] = spec.mirror_depth
 
     return block
 
