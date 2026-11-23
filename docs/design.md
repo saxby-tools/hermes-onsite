@@ -279,6 +279,20 @@ No sandbox. An SSH target can do anything its user can.
 
 <!-- /onsite:diagram -->
 
+### Screen
+
+A drawing of one screen of the app, for the
+[guide](guide.md). It is simplified on purpose, and every word in it
+is a word the app shows.
+
+<!-- onsite:screen {"shows": "chip"} -->
+
+The Hermes Desktop window, with a chat in the middle. In the bottom
+right corner is a chip with a green dot. It reads "onsite: laptop"
+and then the folder, "…/work/app".
+
+<!-- /onsite:screen -->
+
 ## Writing pages
 
 Every page is a Markdown file that must read plainly on GitHub. The
