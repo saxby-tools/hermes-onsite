@@ -1,9 +1,9 @@
 # Sleep inhibitor on a systemd target
 
 == Sleep: a lock is held while a command runs
-  --- terminal: systemd-inhibit --list --no-pager | grep onsite [completed, 1.16s]
+  --- terminal: systemd-inhibit --list --no-pager | grep onsite [completed, 1.20s]
   | terminal result
-  | - **output:** onsite         1000 <laptop-user> 720443 systemd-inhibit sleep                                                    An onsite command is running                                delay
+  | - **output:** onsite         1000 <laptop-user> 732465 systemd-inhibit sleep                                                    An onsite command is running                                delay
   | - **exit_code:** 0
   | - **cwd:** <laptop-rig>/sample
   PASS  the running command holds an onsite sleep lock
