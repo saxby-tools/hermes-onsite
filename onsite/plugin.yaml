@@ -17,6 +17,13 @@ description: >
 # public plugin API. The upper bound keeps it from loading on a
 # Hermes it was never run against.
 requires_hermes: ">=0.23.2,<0.24"
+# Hermes offers to store this one. It is only read when a session
+# uses the screen of a machine whose screen sharing asks for it.
+optional_env:
+  - name: ONSITE_SCREEN_PASSWORD
+    description: "The VNC password of a computer whose screen sharing asks for one. Leave it unset if none does."
+    prompt: "Screen sharing (VNC) password"
+    password: true
 provides_tools:
   - propose_command
 provides_hooks:

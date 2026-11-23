@@ -45,7 +45,12 @@ VALID_SCREEN_ROUTES = (SCREEN_AUTO, SCREEN_DRIVER, SCREEN_SHARING)
 
 # Where screen sharing listens on nearly every machine that has it.
 DEFAULT_SCREEN_PORT = 5900
-ENV_NAME_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
+
+# The one secret the plugin ever asks Hermes for: a VNC password, for
+# a target whose screen sharing wants one. It is declared in
+# `plugin.yaml` and read through Hermes, so on a gateway that serves
+# several profiles each profile gets its own.
+SCREEN_PASSWORD_ENV = "ONSITE_SCREEN_PASSWORD"
 
 # `/onsite auto` clears an override, so no target may take the name.
 RESERVED_TARGET_NAMES = ("auto",)
@@ -77,7 +82,6 @@ KNOWN_TARGET_KEYS = frozenset({
     "mirror_depth",
     "screen",
     "screen_port",
-    "screen_password_env",
 })
 
 
@@ -114,7 +118,6 @@ class TargetSpec:
     mirror_depth: int = DEFAULT_MIRROR_DEPTH
     screen: str = SCREEN_AUTO
     screen_port: int = DEFAULT_SCREEN_PORT
-    screen_password_env: str = ""
 
     @property
     def host_key_alias(self) -> str:
@@ -383,33 +386,6 @@ def read_screen(name: str, raw: Any, problems: list[str]) -> str:
     return raw
 
 
-def read_env_name(
-    name: str,
-    key: str,
-    raw: Any,
-    problems: list[str],
-) -> str:
-    """The name of an environment variable, never its value.
-
-    A password written here would sit in config.yaml in the clear.
-    A name that could not be a variable is most likely one.
-    """
-
-    value = read_text(name, key, raw, problems)
-
-    if not value:
-        return ""
-
-    if not ENV_NAME_RE.match(value):
-        problems.append(
-            f"`{name}.{key}` must be the name of an environment "
-            "variable, not the password itself"
-        )
-        return ""
-
-    return value
-
-
 def read_flag(
     name: str,
     key: str,
@@ -493,12 +469,6 @@ def read_target(name: str, raw: Any, problems: list[str]) -> TargetSpec | None:
             problems,
             key="screen_port",
             default=DEFAULT_SCREEN_PORT,
-        ),
-        screen_password_env=read_env_name(
-            name,
-            "screen_password_env",
-            raw.get("screen_password_env"),
-            problems,
         ),
     )
 
@@ -584,9 +554,6 @@ def target_to_settings(spec: TargetSpec) -> dict:
 
     if spec.screen_port != DEFAULT_SCREEN_PORT:
         block["screen_port"] = spec.screen_port
-
-    if spec.screen_password_env:
-        block["screen_password_env"] = spec.screen_password_env
 
     return block
 

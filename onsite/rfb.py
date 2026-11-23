@@ -20,8 +20,11 @@ This module imports nothing from Hermes.
 from __future__ import annotations
 
 import struct
+import time
 
 from dataclasses import dataclass
+
+from .config import SCREEN_PASSWORD_ENV
 
 
 BANNER_LENGTH = 12
@@ -98,6 +101,11 @@ MAX_CUT_TEXT_LENGTH = 16 * 1024 * 1024
 MAX_SIDE = 16384
 MAX_PIXELS = 40_000_000
 
+# How long one whole picture of the screen may take, however the
+# server chooses to send it. Each read also has the link's own, much
+# shorter, limit on silence.
+REFRESH_SECONDS = 120
+
 
 class RfbError(Exception):
     """The screen-sharing server said no, or said something else."""
@@ -171,9 +179,8 @@ def pick_security(offers: list[int], has_password: bool) -> int:
 
     if SECURITY_PASSWORD in offers:
         raise RfbError(
-            "the server asks for a VNC password and none is set. Name "
-            "an environment variable that holds it in the target's "
-            "`screen_password_env` setting"
+            "the server asks for a VNC password and none is set. Put "
+            f"`{SCREEN_PASSWORD_ENV}=...` in the profile's `.env` file"
         )
 
     if SECURITY_APPLE.intersection(offers):
@@ -238,8 +245,11 @@ def answer_challenge(challenge: bytes, password: str) -> bytes:
 class Client:
     """One conversation with a screen-sharing server."""
 
-    def __init__(self, link):
+    def __init__(self, link, clock=time.monotonic):
         self._link = link
+        self._clock = clock
+        self._until: float | None = None
+        self._covered = bytearray()
         self.width = 0
         self.height = 0
         self.frame = bytearray()
@@ -247,7 +257,7 @@ class Client:
     # ---- reading ------------------------------------------------------
 
     def _read(self, count: int) -> bytes:
-        return self._link.read_exact(count)
+        return self._link.read_exact(count, self._until)
 
     def _read_u8(self) -> int:
         return self._read(1)[0]
@@ -320,6 +330,7 @@ class Client:
         self.width = width
         self.height = height
         self.frame = bytearray(width * height * BYTES_PER_PIXEL)
+        self._covered = bytearray(width * height)
 
     def handshake(self, password: str = "") -> Hello:
         server = parse_banner(self._read(BANNER_LENGTH))
@@ -379,8 +390,8 @@ class Client:
             self.height,
         ))
 
-    def _read_raw(self, x: int, y: int, width: int, height: int) -> int:
-        """Copy one rectangle into the frame. Returns its area."""
+    def _read_raw(self, x: int, y: int, width: int, height: int) -> None:
+        """Copy one rectangle into the frame, and mark where it fell."""
 
         if x + width > self.width or y + height > self.height:
             raise RfbError("the server sent pixels outside the screen")
@@ -392,31 +403,36 @@ class Client:
         # The usual case, a band as wide as the screen, is one copy.
         if width == self.width:
             start = y * stride
+            first = y * self.width
 
             self.frame[start:start + len(data)] = data
+            self._covered[first:first + width * height] = (
+                b"\x01" * (width * height)
+            )
 
-            return width * height
+            return
+
+        marks = b"\x01" * width
 
         for row in range(height):
             start = (y + row) * stride + x * BYTES_PER_PIXEL
             source = row * row_bytes
+            first = (y + row) * self.width + x
 
             self.frame[start:start + row_bytes] = (
                 data[source:source + row_bytes]
             )
+            self._covered[first:first + width] = marks
 
-        return width * height
+    def _read_update(self) -> bool:
+        """Read one screen update into the frame.
 
-    def _read_update(self) -> tuple[int, bool]:
-        """Read one screen update.
-
-        Returns the area of the pixels it brought, and whether the
-        screen changed size, which empties the frame.
+        Returns whether the screen changed size, which empties the
+        frame and everything marked on it.
         """
 
         self._read(1)
 
-        area = 0
         resized = False
 
         for _ in range(self._read_u16()):
@@ -436,9 +452,9 @@ class Client:
                     "this client did not ask for"
                 )
 
-            area += self._read_raw(x, y, width, height)
+            self._read_raw(x, y, width, height)
 
-        return area, resized
+        return resized
 
     def _skip_other(self, kind: int) -> None:
         if kind == SERVER_BELL:
@@ -463,35 +479,45 @@ class Client:
 
         raise RfbError(f"the server sent a message ({kind}) not in RFB")
 
-    def refresh(self) -> None:
-        """Bring the frame up to date with the whole screen.
+    def _whole_screen_seen(self) -> bool:
+        return self._covered.count(1) == len(self._covered)
 
-        A server may answer one request with several updates. Reading
-        goes on until they add up to the whole screen.
-        """
-
+    def _read_until_whole(self) -> None:
         self._request_update()
+        self._covered = bytearray(len(self._covered))
 
-        needed = self.width * self.height
-        seen = 0
+        while not self._whole_screen_seen():
+            # A server could talk forever and never show the screen:
+            # bells, empty updates, one resize after another.
+            if self._clock() > self._until:
+                raise RfbError(
+                    "the server did not send a whole screen in "
+                    f"{REFRESH_SECONDS} seconds"
+                )
 
-        while seen < needed:
             kind = self._read_u8()
 
             if kind != SERVER_UPDATE:
                 self._skip_other(kind)
                 continue
 
-            area, resized = self._read_update()
-
-            if resized:
+            if self._read_update():
                 self._request_update()
 
-                needed = self.width * self.height
-                seen = 0
-                continue
+    def refresh(self) -> None:
+        """Bring the frame up to date with the whole screen.
 
-            seen += area
+        A server may answer one request with several updates. Reading
+        goes on until every pixel has arrived, however the rectangles
+        overlap, or until the time for one picture runs out.
+        """
+
+        self._until = self._clock() + REFRESH_SECONDS
+
+        try:
+            self._read_until_whole()
+        finally:
+            self._until = None
 
     # ---- input --------------------------------------------------------
 

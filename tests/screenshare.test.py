@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import io
 import sys
+import time
 
 import pytest
 
@@ -106,6 +107,43 @@ def test_a_combination_is_split_on_the_plus_sign():
 def test_a_plus_sign_can_itself_be_the_key():
     assert screenshare.split_combination("ctrl++") == ["ctrl", "+"]
     assert screenshare.split_combination("+") == ["+"]
+
+
+@pytest.mark.parametrize("keys", [
+    "cmd+shift+q",
+    "win+shift+q",
+    "super+shift+Q",
+    "meta+option+backspace",
+    "cmd+l",
+    "win+l",
+    "ctrl+opt+delete",
+    "control+alt+del",
+    "opt+f4",
+    "alt+F4",
+    "cmd+ctrl+q",
+    "cmd+option+shift+q",
+])
+def test_a_blocked_combination_is_blocked_under_every_name(keys):
+    # Hermes blocks these by name. Here `cmd` and `win` are one key
+    # and `opt` is `alt`, so each has to be caught again by key.
+    with pytest.raises(ValueError) as caught:
+        screenshare.parse_keys(keys)
+
+    assert "never sent" in str(caught.value)
+
+
+@pytest.mark.parametrize("keys", ["cmd+q", "ctrl+l", "alt+f5", "shift+q"])
+def test_a_harmless_neighbour_of_a_blocked_combination_goes_through(keys):
+    assert len(screenshare.parse_keys(keys)) == 2
+
+
+def test_a_blocked_combination_sends_no_key_at_all():
+    client = FakeClient()
+
+    with pytest.raises(ValueError):
+        sharer(client).press("win+shift+q")
+
+    assert client.events == []
 
 
 def test_no_key_at_all_is_refused():
@@ -310,6 +348,27 @@ def test_a_scroll_with_no_place_happens_where_the_pointer_was_left():
     assert ("pointer", 70, 20, rfb.WHEEL_UP) in client.events
 
 
+def test_a_first_scroll_with_no_place_happens_mid_screen():
+    # Not at the top-left corner, which opens things on many desktops.
+    client = FakeClient(200, 100)
+
+    sharer(client).scroll("down", amount=1)
+
+    assert ("pointer", 100, 50, rfb.WHEEL_DOWN) in client.events
+    assert not any(event[1:3] == (0, 0) for event in client.events)
+
+
+def test_a_scroll_given_one_side_keeps_the_other_where_it_was():
+    client = FakeClient(200, 100)
+    screen = sharer(client)
+
+    screen.click(70, 20)
+    client.events.clear()
+    screen.scroll("down", amount=1, y=90)
+
+    assert ("pointer", 70, 90, rfb.WHEEL_DOWN) in client.events
+
+
 def test_an_unknown_scroll_direction_is_refused():
     with pytest.raises(ValueError):
         sharer(FakeClient()).scroll("sideways")
@@ -395,6 +454,28 @@ def test_a_link_that_closes_reports_what_ssh_said(monkeypatch):
     link.close()
 
 
+def test_a_link_whose_answer_runs_past_its_deadline_gives_up(monkeypatch):
+    # The link is not silent for long enough to give up on that
+    # count. The caller's own deadline is what ends it.
+    link = shell_link(monkeypatch, "sleep 5", timeout=30)
+
+    with pytest.raises(screenshare.LinkError) as caught:
+        link.read_exact(1, until=time.monotonic() + 0.2)
+
+    assert "did not finish in time" in str(caught.value)
+
+    link.close()
+
+
+def test_a_machine_with_no_ssh_program_says_so(monkeypatch):
+    monkeypatch.setattr(screenshare, "SSH_BINARY", "no-such-program-here")
+
+    with pytest.raises(screenshare.LinkError) as caught:
+        screenshare.SshLink([])
+
+    assert "could not be started" in str(caught.value)
+
+
 def test_a_link_that_says_nothing_gives_up_in_time(monkeypatch):
     link = shell_link(monkeypatch, "sleep 5", timeout=0.2)
 
@@ -409,44 +490,63 @@ def test_a_link_that_says_nothing_gives_up_in_time(monkeypatch):
 # ---- signing in -------------------------------------------------------
 
 
-def target(password_env: str = "") -> config.TargetSpec:
-    return config.TargetSpec(
-        name="laptop",
-        kind=config.KIND_SSH,
-        host="laptop.example",
-        user="dev",
-        screen_password_env=password_env,
-    )
+TARGET = config.TargetSpec(
+    name="laptop",
+    kind=config.KIND_SSH,
+    host="laptop.example",
+    user="dev",
+)
 
 
-def test_a_target_with_no_password_variable_signs_in_without_one():
-    assert screenshare.read_password(target(), {}) == ""
+class FakeLink:
+    def __init__(self):
+        self.closed = False
+
+    def close(self) -> None:
+        self.closed = True
 
 
-def test_the_password_is_read_from_the_variable_the_settings_name():
-    environment = {"LAPTOP_SCREEN": "secret"}
+def test_a_handshake_that_fails_in_any_way_closes_the_link(monkeypatch):
+    # Not only the failures this code expects: an `ssh` process left
+    # behind stays until Hermes stops.
+    link = FakeLink()
 
-    assert screenshare.read_password(
-        target("LAPTOP_SCREEN"),
-        environment,
-    ) == "secret"
+    def explode(client, password):
+        raise ZeroDivisionError("something nobody planned for")
+
+    monkeypatch.setattr(screenshare, "SshLink", lambda arguments: link)
+    monkeypatch.setattr(rfb.Client, "handshake", explode)
+
+    with pytest.raises(ZeroDivisionError):
+        screenshare.connect(TARGET)
+
+    assert link.closed is True
 
 
-def test_a_named_variable_that_is_not_set_says_where_to_set_it():
-    with pytest.raises(screenshare.SharingError) as caught:
-        screenshare.read_password(target("LAPTOP_SCREEN"), {})
+def test_the_password_is_handed_to_the_handshake(monkeypatch):
+    seen = []
+    hello = rfb.Hello((3, 8), rfb.SECURITY_PASSWORD, 4, 2, "desk")
 
-    assert "`LAPTOP_SCREEN`" in str(caught.value)
-    assert ".env" in str(caught.value)
+    def remember(client, password):
+        seen.append(password)
+
+        return hello
+
+    monkeypatch.setattr(screenshare, "SshLink", lambda arguments: FakeLink())
+    monkeypatch.setattr(rfb.Client, "handshake", remember)
+
+    screenshare.connect(TARGET, "secret")
+
+    assert seen == ["secret"]
 
 
 def test_asking_reports_a_refusal_as_a_problem_not_an_error(monkeypatch):
-    def refuse(spec):
+    def refuse(spec, password):
         raise screenshare.LinkError("Connection refused")
 
     monkeypatch.setattr(screenshare, "connect", refuse)
 
-    answer = screenshare.ask(target())
+    answer = screenshare.ask(TARGET)
 
     assert answer.ok is False
     assert answer.problem == "Connection refused"
@@ -456,9 +556,13 @@ def test_asking_leaves_as_soon_as_it_has_its_answer(monkeypatch):
     client = FakeClient()
     hello = rfb.Hello((3, 8), rfb.SECURITY_NONE, 1280, 800, "desk")
 
-    monkeypatch.setattr(screenshare, "connect", lambda spec: (client, hello))
+    monkeypatch.setattr(
+        screenshare,
+        "connect",
+        lambda spec, password: (client, hello),
+    )
 
-    answer = screenshare.ask(target())
+    answer = screenshare.ask(TARGET)
 
     assert answer.ok is True
     assert answer.hello.width == 1280

@@ -129,20 +129,17 @@ def test_a_target_is_left_to_choose_its_screen_route():
 
     assert spec.screen == config.SCREEN_AUTO
     assert spec.screen_port == config.DEFAULT_SCREEN_PORT
-    assert spec.screen_password_env == ""
 
 
 def test_a_screen_route_can_be_set():
     parsed = config.parse_config(laptop_with(
         screen="sharing",
         screen_port=5901,
-        screen_password_env="LAPTOP_SCREEN_PASSWORD",
     ))
     spec = parsed.target("laptop")
 
     assert spec.screen == config.SCREEN_SHARING
     assert spec.screen_port == 5901
-    assert spec.screen_password_env == "LAPTOP_SCREEN_PASSWORD"
 
 
 def test_an_unknown_screen_route_is_refused_with_the_choices():
@@ -159,12 +156,14 @@ def test_a_screen_port_out_of_range_is_named_by_its_own_key():
     assert "`laptop.screen_port` must be between" in str(caught.value)
 
 
-def test_a_password_where_a_variable_name_belongs_is_refused():
-    # The settings file is not the place for a password.
+def test_a_password_has_no_place_in_the_settings():
+    # It comes from Hermes' own secret store, by a declared name.
     with pytest.raises(config.ConfigError) as caught:
-        config.parse_config(laptop_with(screen_password_env="s3cret pass!"))
+        config.parse_config(laptop_with(screen_password="s3cret"))
 
-    assert "not the password itself" in str(caught.value)
+    assert "`laptop.screen_password` is not a known setting" in str(
+        caught.value
+    )
 
 
 def test_screen_settings_are_written_only_when_they_differ():
@@ -172,13 +171,9 @@ def test_screen_settings_are_written_only_when_they_differ():
     custom = config.parse_config(laptop_with(
         screen="sharing",
         screen_port=5901,
-        screen_password_env="LAPTOP_SCREEN_PASSWORD",
     )).target("laptop")
 
     assert "screen" not in config.target_to_settings(plain)
+    assert "screen_port" not in config.target_to_settings(plain)
     assert config.target_to_settings(custom)["screen"] == "sharing"
     assert config.target_to_settings(custom)["screen_port"] == 5901
-    assert (
-        config.target_to_settings(custom)["screen_password_env"]
-        == "LAPTOP_SCREEN_PASSWORD"
-    )

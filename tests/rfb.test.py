@@ -24,7 +24,7 @@ class SocketLink:
     def __init__(self, sock: socket.socket):
         self._sock = sock
 
-    def read_exact(self, count: int) -> bytes:
+    def read_exact(self, count: int, until: float | None = None) -> bytes:
         parts = []
         missing = count
 
@@ -311,7 +311,8 @@ def test_a_password_server_with_no_password_set_says_what_to_set():
     with pytest.raises(rfb.RfbError) as caught:
         rfb.pick_security([rfb.SECURITY_PASSWORD], has_password=False)
 
-    assert "screen_password_env" in str(caught.value)
+    assert "`ONSITE_SCREEN_PASSWORD=...`" in str(caught.value)
+    assert ".env" in str(caught.value)
 
 
 def test_a_mac_that_wants_an_account_says_which_switch_to_turn_on():
@@ -429,6 +430,43 @@ def test_reading_goes_on_until_the_whole_screen_has_arrived():
 
     assert bytes(client.frame) == raw(4, 1, 1) + raw(4, 1, 2)
     assert server.requests == 1
+
+
+def test_the_same_half_sent_twice_is_not_a_whole_screen():
+    # Two updates of the top half add up to the screen's area. They
+    # are still only half of it.
+    server = FakeServer(
+        size=(4, 2),
+        updates=[
+            [(0, 0, 4, 1, rfb.ENCODING_RAW, raw(4, 1, 1))],
+            [(0, 0, 4, 1, rfb.ENCODING_RAW, raw(4, 1, 1))],
+            [(0, 1, 4, 1, rfb.ENCODING_RAW, raw(4, 1, 2))],
+        ],
+        per_request=3,
+    )
+    client = connect(server)
+
+    client.refresh()
+    server.settle()
+
+    assert bytes(client.frame) == raw(4, 1, 1) + raw(4, 1, 2)
+
+
+def test_a_server_that_talks_but_never_shows_the_screen_is_given_up_on():
+    # Each look at the clock is fifty seconds on. The server rings
+    # its bell for ever and sends no pixels.
+    ticks = iter(range(0, 10_000, 50))
+    server = FakeServer(
+        size=(4, 2),
+        chatter=bytes([rfb.SERVER_BELL]) * 8,
+    )
+    client = rfb.Client(server.link, clock=lambda: next(ticks))
+    client.handshake()
+
+    with pytest.raises(rfb.RfbError) as caught:
+        client.refresh()
+
+    assert "did not send a whole screen" in str(caught.value)
 
 
 def test_a_rectangle_narrower_than_the_screen_lands_in_place():

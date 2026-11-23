@@ -18,6 +18,7 @@ from .config import TargetSpec
 from .dialout import SERVICE_NAME
 from .moves import Move
 from .proposals import Proposal
+from .rfb import SECURITY_PASSWORD
 from .routing import REASON_DEFAULT
 from .routing import REASON_MIRROR
 from .routing import REASON_OVERRIDE
@@ -589,7 +590,7 @@ def describe_sharing(spec: TargetSpec, sharing) -> str:
     hello = sharing.hello
     asked = "no password asked"
 
-    if spec.screen_password_env:
+    if hello.security == SECURITY_PASSWORD:
         asked = "password accepted"
 
     return (

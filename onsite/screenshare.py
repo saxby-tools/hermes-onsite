@@ -70,7 +70,14 @@ WHEELS = {
 
 KEY_RETURN = 0xFF0D
 KEY_TAB = 0xFF09
+KEY_BACKSPACE = 0xFF08
+KEY_DELETE = 0xFFFF
+KEY_SHIFT = 0xFFE1
+KEY_CTRL = 0xFFE3
+KEY_ALT = 0xFFE9
+KEY_SUPER = 0xFFEB
 KEY_F1 = 0xFFBE
+KEY_F4 = KEY_F1 + 3
 LAST_F_KEY = 12
 
 # X11 key numbers, which is what RFB sends. A Mac's own server reads
@@ -81,9 +88,9 @@ KEYS = {
     "tab": KEY_TAB,
     "escape": 0xFF1B,
     "esc": 0xFF1B,
-    "backspace": 0xFF08,
-    "delete": 0xFFFF,
-    "del": 0xFFFF,
+    "backspace": KEY_BACKSPACE,
+    "delete": KEY_DELETE,
+    "del": KEY_DELETE,
     "insert": 0xFF63,
     "space": 0x20,
     "up": 0xFF52,
@@ -97,18 +104,39 @@ KEYS = {
     "pagedown": 0xFF56,
     "page_down": 0xFF56,
     "capslock": 0xFFE5,
-    "shift": 0xFFE1,
-    "ctrl": 0xFFE3,
-    "control": 0xFFE3,
-    "alt": 0xFFE9,
-    "option": 0xFFE9,
-    "opt": 0xFFE9,
-    "cmd": 0xFFEB,
-    "command": 0xFFEB,
-    "super": 0xFFEB,
-    "win": 0xFFEB,
-    "meta": 0xFFEB,
+    "shift": KEY_SHIFT,
+    "ctrl": KEY_CTRL,
+    "control": KEY_CTRL,
+    "alt": KEY_ALT,
+    "option": KEY_ALT,
+    "opt": KEY_ALT,
+    "cmd": KEY_SUPER,
+    "command": KEY_SUPER,
+    "super": KEY_SUPER,
+    "win": KEY_SUPER,
+    "meta": KEY_SUPER,
 }
+
+# Hermes hard-blocks a few combinations by name before any backend
+# sees them: the ones that log out, lock the screen or delete with no
+# question. Here several names are one key: `cmd` and `win` both
+# press the "super" key, which is Command on a Mac. So a combination
+# Hermes lets through under one name can be a blocked one under
+# another. The same list is checked again here, after names have
+# become keys. It follows Hermes' list as of v0.23.2.
+BLOCKED_COMBINATIONS = (
+    frozenset({KEY_SUPER, KEY_SHIFT, KEY_BACKSPACE}),
+    frozenset({KEY_SUPER, KEY_ALT, KEY_BACKSPACE}),
+    frozenset({KEY_SUPER, KEY_CTRL, ord("q")}),
+    frozenset({KEY_SUPER, KEY_SHIFT, ord("q")}),
+    frozenset({KEY_SUPER, ord("l")}),
+    frozenset({KEY_CTRL, KEY_ALT, KEY_DELETE}),
+    frozenset({KEY_ALT, KEY_F4}),
+)
+BLOCKED_MESSAGE = (
+    "that key combination logs out, locks the screen or deletes "
+    "without asking. It is never sent."
+)
 TEXT_KEYS = {
     "\n": KEY_RETURN,
     "\r": KEY_RETURN,
@@ -143,13 +171,19 @@ class SshLink:
 
     def __init__(self, arguments: list[str], timeout: float = READ_SECONDS):
         self._timeout = timeout
-        self._process = subprocess.Popen(
-            [SSH_BINARY, *arguments],
-            stdin=subprocess.PIPE,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            bufsize=0,
-        )
+
+        try:
+            self._process = subprocess.Popen(
+                [SSH_BINARY, *arguments],
+                stdin=subprocess.PIPE,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                bufsize=0,
+            )
+        except OSError as error:
+            raise LinkError(
+                f"the `{SSH_BINARY}` program could not be started: {error}"
+            ) from None
 
     def _last_words(self) -> str:
         """What `ssh` itself said, when the link has closed."""
@@ -159,7 +193,15 @@ class SshLink:
         if stream is None:
             return ""
 
-        ready, _, _ = select.select([stream], [], [], ERROR_WAIT_SECONDS)
+        try:
+            ready, _, _ = select.select(
+                [stream],
+                [],
+                [],
+                ERROR_WAIT_SECONDS,
+            )
+        except (OSError, ValueError):
+            return ""
 
         if not ready:
             return ""
@@ -171,23 +213,43 @@ class SshLink:
     def _closed(self) -> LinkError:
         return LinkError(self._last_words() or "the link closed")
 
-    def read_exact(self, count: int) -> bytes:
+    def _wait_for_bytes(self, descriptor: int, wait: float) -> bool:
+        # `select` refuses a descriptor past its own limit, which a
+        # busy Hermes can reach. That is a failed link, not a crash.
+        try:
+            ready, _, _ = select.select([descriptor], [], [], wait)
+        except (OSError, ValueError) as error:
+            raise LinkError(f"the link could not be read: {error}") from None
+
+        return bool(ready)
+
+    def read_exact(self, count: int, until: float | None = None) -> bytes:
+        """Read `count` bytes.
+
+        Two limits apply. The link may not stay silent for longer than
+        its timeout, however large the read. And when `until` is
+        given, the whole read must be done by then.
+        """
+
         descriptor = self._process.stdout.fileno()
-        deadline = time.monotonic() + self._timeout
+        quiet_until = time.monotonic() + self._timeout
         parts = []
         missing = count
 
         while missing:
-            wait = deadline - time.monotonic()
+            now = time.monotonic()
 
-            if wait <= 0:
+            if now >= quiet_until:
                 raise LinkError(
                     f"no answer in {self._timeout:.0f} seconds"
                 )
 
-            ready, _, _ = select.select([descriptor], [], [], wait)
+            if until is not None and now >= until:
+                raise LinkError("the answer did not finish in time")
 
-            if not ready:
+            limit = quiet_until if until is None else min(quiet_until, until)
+
+            if not self._wait_for_bytes(descriptor, limit - now):
                 continue
 
             chunk = os.read(descriptor, min(missing, READ_CHUNK))
@@ -197,6 +259,7 @@ class SshLink:
 
             parts.append(chunk)
             missing -= len(chunk)
+            quiet_until = time.monotonic() + self._timeout
 
         return b"".join(parts)
 
@@ -298,13 +361,33 @@ def split_combination(keys: str) -> list[str]:
     return names
 
 
+def without_case(number: int) -> int:
+    """A letter key as its small letter, so `Q` and `q` are one key."""
+
+    if ord("A") <= number <= ord("Z"):
+        return number + ord("a") - ord("A")
+
+    return number
+
+
+def is_blocked(numbers: list[int]) -> bool:
+    pressed = {without_case(number) for number in numbers}
+
+    return any(blocked <= pressed for blocked in BLOCKED_COMBINATIONS)
+
+
 def parse_keys(keys: str) -> list[int]:
     names = split_combination(keys)
 
     if not names:
         raise ValueError("no key was named")
 
-    return [key_for_name(name) for name in names]
+    numbers = [key_for_name(name) for name in names]
+
+    if is_blocked(numbers):
+        raise ValueError(BLOCKED_MESSAGE)
+
+    return numbers
 
 
 def button_mask(button: str) -> int:
@@ -386,7 +469,7 @@ class Sharer:
         self._limit = limit
         self._pause = pause
         self._lock = threading.Lock()
-        self._at = (0, 0)
+        self._at: tuple[int, int] | None = None
 
     @property
     def screen_size(self) -> tuple[int, int]:
@@ -400,6 +483,33 @@ class Sharer:
             round(x * width / shown[0]),
             round(y * height / shown[1]),
         )
+
+    def _resting_place(self) -> tuple[int, int]:
+        """Where the pointer was left, or the middle of the screen.
+
+        Never a corner: on many desktops a pointer in the corner
+        opens something.
+        """
+
+        if self._at is not None:
+            return self._at
+
+        width, height = self.screen_size
+
+        return width // 2, height // 2
+
+    def _place(self, x: float | None, y: float | None) -> tuple[int, int]:
+        """A place on the screen, with a missing side left where it is."""
+
+        rest_x, rest_y = self._resting_place()
+
+        if x is not None:
+            rest_x = self._on_screen(x, 0)[0]
+
+        if y is not None:
+            rest_y = self._on_screen(0, y)[1]
+
+        return rest_x, rest_y
 
     def _move(self, x: int, y: int, buttons: int = 0) -> None:
         self._client.pointer(x, y, buttons)
@@ -512,10 +622,7 @@ class Sharer:
         held = [key_for_name(name) for name in modifiers or []]
 
         with self._lock:
-            place = self._at
-
-            if x is not None and y is not None:
-                place = self._on_screen(x, y)
+            place = self._place(x, y)
 
             self._press_keys(held)
             self._report(*place)
@@ -550,42 +657,23 @@ class Sharer:
         self._client.close()
 
 
-def read_password(spec: TargetSpec, environment=None) -> str:
-    """The VNC password for a target, from the variable it names.
+def connect(
+    spec: TargetSpec,
+    password: str = "",
+) -> tuple[rfb.Client, rfb.Hello]:
+    """Open a link to a target's screen sharing and sign in.
 
-    The settings hold the variable's name and never the password.
+    The password is only used if the server asks for one. The caller
+    gets it from Hermes. See `compat.screen_password`.
     """
 
-    name = spec.screen_password_env
-
-    if not name:
-        return ""
-
-    if environment is None:
-        environment = os.environ
-
-    password = environment.get(name, "")
-
-    if not password:
-        raise SharingError(
-            f"`{name}` is named as the screen password of `{spec.name}` "
-            "but is not set where Hermes runs. Put it in the profile's "
-            "`.env` file"
-        )
-
-    return password
-
-
-def connect(spec: TargetSpec) -> tuple[rfb.Client, rfb.Hello]:
-    """Open a link to a target's screen sharing and sign in."""
-
-    password = read_password(spec)
     link = SshLink(build_forward_arguments(spec, spec.screen_port))
     client = rfb.Client(link)
 
+    # Whatever goes wrong, the `ssh` process must not be left behind.
     try:
         hello = client.handshake(password)
-    except FAILURES:
+    except BaseException:
         link.close()
         raise
 
@@ -604,11 +692,11 @@ class Answer:
         return self.hello is not None
 
 
-def ask(spec: TargetSpec) -> Answer:
+def ask(spec: TargetSpec, password: str = "") -> Answer:
     """Sign in to a target's screen sharing, then leave at once."""
 
     try:
-        client, hello = connect(spec)
+        client, hello = connect(spec, password)
     except FAILURES as error:
         return Answer(problem=str(error))
 

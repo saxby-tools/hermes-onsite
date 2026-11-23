@@ -403,6 +403,19 @@ def cli_mcp(runtime: Runtime, args) -> int:
     return subprocess.run(call, check=False).returncode
 
 
+def screen_password() -> str:
+    from . import compat
+
+    try:
+        return compat.screen_password()
+    except Exception:
+        # The check still runs. A server that wants a password then
+        # says so, with where to set it.
+        logger.debug("onsite: no screen password", exc_info=True)
+
+        return ""
+
+
 def cli_screen(runtime: Runtime, args) -> int:
     try:
         config = runtime.load_config()
@@ -429,7 +442,7 @@ def cli_screen(runtime: Runtime, args) -> int:
         print(error)
         return EXIT_DOWN
 
-    sharing = screenshare.ask(spec)
+    sharing = screenshare.ask(spec, screen_password())
     route = screen.pick_route(spec.screen, seat)
     problems = screen.find_route_problems(
         spec,

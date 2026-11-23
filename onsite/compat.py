@@ -30,6 +30,7 @@ from tools.environments.ssh import SSHEnvironment
 
 from .config import BACKEND_NAME
 from .config import PLUGIN_ID
+from .config import SCREEN_PASSWORD_ENV
 
 
 logger = logging.getLogger(__name__)
@@ -100,6 +101,19 @@ def load_settings() -> Any:
 
 class SettingsLocked(RuntimeError):
     """This install's settings are managed by something else."""
+
+
+def screen_password() -> str:
+    """The VNC password this profile set, or nothing.
+
+    Read through Hermes' own secret lookup and not from the process
+    environment. One gateway can serve several profiles, and a plain
+    read there could return another profile's password.
+    """
+
+    from agent.secret_scope import get_secret
+
+    return get_secret(SCREEN_PASSWORD_ENV) or ""
 
 
 def screen_backend_name() -> str:

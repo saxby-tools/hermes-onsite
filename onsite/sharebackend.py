@@ -68,7 +68,14 @@ class SharedScreenBackend(ComputerUseBackend):
     # ---- the link -----------------------------------------------------
 
     def _open(self) -> screenshare.Sharer:
-        client, hello = screenshare.connect(self._spec)
+        # Imported here: `compat` pulls in Hermes, and the rest of
+        # this file is tested without it.
+        from . import compat
+
+        client, hello = screenshare.connect(
+            self._spec,
+            compat.screen_password(),
+        )
 
         logger.info(
             "onsite: screen sharing on %s answered: %s by %s",

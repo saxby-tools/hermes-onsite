@@ -261,6 +261,23 @@ def test_the_screen_report_says_which_way_was_picked_and_why():
     assert "It can be driven." in text
 
 
+def test_the_screen_report_says_when_a_password_was_used():
+    signed_in = screenshare.Answer(
+        hello=rfb.Hello((3, 8), rfb.SECURITY_PASSWORD, 1280, 800, "desk"),
+    )
+
+    text = messages.format_screen_report(
+        PARSED.target("laptop"),
+        SEAT,
+        signed_in,
+        config.SCREEN_SHARING,
+        [],
+        [],
+    )
+
+    assert "password accepted" in text
+
+
 def test_the_screen_report_lists_what_stands_in_the_way():
     text = messages.format_screen_report(
         PARSED.target("laptop"),
