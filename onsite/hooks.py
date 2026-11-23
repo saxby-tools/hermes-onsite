@@ -134,6 +134,19 @@ def session_names() -> list[str]:
     return names
 
 
+def screen_is_ours() -> bool:
+    """Whether this profile's screen follows a session's machine."""
+
+    from . import compat
+
+    try:
+        return compat.screen_backend_name() == messages.SCREEN_PLUGIN
+    except Exception:
+        logger.debug("onsite: no screen backend name", exc_info=True)
+
+        return False
+
+
 def build_turn_hook(runtime: Runtime):
     def before_turn(session_id: str = "", task_id: str = "", **kwargs):
         move = runtime.moves.take(
@@ -155,7 +168,9 @@ def build_turn_hook(runtime: Runtime):
         if move.after not in config.targets:
             return None
 
-        return {"context": messages.format_move_note(move, config)}
+        note = messages.format_move_note(move, config, screen_is_ours())
+
+        return {"context": note}
 
     return before_turn
 
