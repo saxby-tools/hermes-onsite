@@ -102,6 +102,18 @@ class SettingsLocked(RuntimeError):
     """This install's settings are managed by something else."""
 
 
+def screen_backend_name() -> str:
+    """The screen backend this profile selects, or nothing."""
+
+    settings = (load_config_readonly() or {}).get("computer_use") or {}
+    name = settings.get("backend")
+
+    if not isinstance(name, str):
+        return ""
+
+    return name.strip()
+
+
 def save_settings(settings: dict) -> None:
     """Write the plugin's whole settings block.
 
