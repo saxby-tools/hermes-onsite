@@ -37,11 +37,13 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import acp  # noqa: E402  (the path line above has to come first)
+import share  # noqa: E402
 import term  # noqa: E402
 
 from machines import ContainerHands  # noqa: E402
 from machines import DeskHands  # noqa: E402
 from machines import RealHands  # noqa: E402
+from machines import SharedDeskHands  # noqa: E402
 from shell import run  # noqa: E402
 from shell import wait_for_port  # noqa: E402
 
@@ -126,6 +128,11 @@ SCREEN_DENIED_FILE = "/tmp/hands-rig-denied.txt"
 SCREEN_TYPED_TEXT = "screen-rig"
 SCREEN_PROMPT_SUBJECT = "computer_use:"
 SCREEN_PICKED_LOG = "onsite: screen control for this session is on"
+SCREEN_SHARING_ANSWERS = "Sharing  answers on port 5900"
+SCREEN_ROUTE_WORDS = {
+    "auto": "Route    Hermes' driver",
+    "sharing": "Route    screen sharing",
+}
 SCREEN_FAILED_LOG = "computer_use backend unavailable"
 SCREEN_GATED_STEPS = 3
 SCREEN_SETTLE_SECONDS = 2.0
@@ -166,6 +173,7 @@ plugins:
             user: {user}
             key: {key}
             known_hosts: {known_hosts}
+            screen: {screen_route}
             prefixes:
               - {home}/
             path_map:
@@ -292,6 +300,7 @@ def render_config(hands) -> str:
         user=hands.user,
         key=hands.key,
         known_hosts=hands.known_hosts,
+        screen_route=hands.screen_route,
         home=hands.home,
         root=hands.root,
         work=WORK_DIR,
@@ -1410,6 +1419,14 @@ def phase_screen(report: Report, profile: Profile, hands) -> None:
         "the check finds a desktop and a driver",
         "It can be driven." in done.stdout,
     )
+    report.check(
+        "it finds the target's screen sharing too",
+        SCREEN_SHARING_ANSWERS in done.stdout,
+    )
+    report.check(
+        "it names the route this target is set to use",
+        SCREEN_ROUTE_WORDS[hands.screen_route] in done.stdout,
+    )
 
     # Hermes keeps the screen tool out of editor sessions, so this
     # phase uses the plain CLI, where a person would use it.
@@ -1469,6 +1486,16 @@ def phase_screen(report: Report, profile: Profile, hands) -> None:
     )
 
 
+def phase_share(report: Report, profile: Profile, hands) -> None:
+    report.section("Sharing: the plugin's own link, with no Hermes")
+
+    if not hands.has_screen:
+        report.write(f"  skipped: {hands.label} has no screen.")
+        return
+
+    share.run(report, hands, PLUGIN_DIR)
+
+
 PHASES = {
     "1": ("Phase 1: backend and routing", phase_one),
     "2": ("Phase 2: resilience", phase_two_all),
@@ -1476,6 +1503,7 @@ PHASES = {
     "4": ("Phase 4: desktop surface", phase_four),
     "sleep": ("Sleep inhibitor on a systemd target", phase_sleep),
     "screen": ("Screen control on a target", phase_screen),
+    "share": ("Screen sharing, below Hermes", phase_share),
 }
 
 
@@ -1524,6 +1552,12 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         help="give the hands container a desktop and Hermes' screen "
              "driver, for the screen phase.",
+    )
+    parser.add_argument(
+        "--share",
+        action="store_true",
+        help="with --desk: set the target to be reached by screen "
+             "sharing, so the screen phase runs over that route.",
     )
     parser.add_argument(
         "--real",
@@ -1579,8 +1613,13 @@ def pick_hands(args: argparse.Namespace):
     if args.desk and args.real:
         raise SystemExit("--desk and --real do not go together.")
 
+    if args.share and not args.desk:
+        raise SystemExit("--share needs --desk.")
+
     if args.desk:
-        return DeskHands(
+        kind = SharedDeskHands if args.share else DeskHands
+
+        return kind(
             REPO / "rig" / "hands",
             KEYS_DIR,
             REPO / "rig" / "desk",
