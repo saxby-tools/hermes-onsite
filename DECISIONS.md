@@ -518,6 +518,40 @@ Written Nov. 22, 2026, against Hermes v0.23.2.
   folder. A copy of Buster's config from before is in
   `.rig/buster-config.before-mirror.yaml`.
 
+### 45. A machine that dials out uses a reverse SSH forward
+
+- **Owner's call, Nov. 22.** Support both ways to connect: the host
+  dials the machine, and the machine dials the host.
+- **Options.** A daemon on the machine that speaks its own protocol
+  to a listener on the host, as two other plugins do. Or OpenSSH's
+  own remote forward: the machine opens one connection out and
+  offers its SSH server back through it.
+- **Pick.** The remote forward. `hermes hands dial-out` prints the
+  `ssh -R` command, a service file and the target's settings. The
+  target is an ordinary SSH target at `127.0.0.1` and a port.
+- **Why.** Nothing new to secure: no second protocol, no listener of
+  the plugin's own, no program installed on the machine. Routing,
+  the breaker, the mirror and the approval path are untouched,
+  because the host still speaks plain SSH to the machine.
+- **Host keys.** Every such machine shares the address 127.0.0.1.
+  So a loopback target's key is filed under `hermes-hands-<name>`
+  with `HostKeyAlias`. A port handed to another machine then fails
+  closed against the first machine's key.
+- **Checked on the laptop.** With a stand-in tunnel from the host to
+  port 22022: the target showed up in 133 ms, its key was filed
+  under the alias, a real-model command ran in a laptop-only folder,
+  and after the link was cut the status said "Connection refused"
+  in 1.5 seconds. 20 unit tests.
+- **Not checked.** The link opened from the laptop's side. The test
+  tunnel was opened from the host, which looks the same to the
+  plugin. The service file has not been run. A link that hangs
+  half-open, as a sleeping laptop may leave it, relies on the same
+  timeout the rig's frozen-relay test covers.
+- **Cost.** The machine still needs an SSH server, and must be able
+  to log in to the host. Any account on the host can reach the
+  forwarded port, though the machine's SSH server still asks for a
+  key.
+
 ## Open decisions from the brief
 
 | # | Decision | What the build did |
