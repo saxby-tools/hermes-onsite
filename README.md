@@ -145,6 +145,8 @@ plugins:
 | `path` | ssh | `interactive` (default) or `none`. See below. |
 | `inhibit_sleep` | ssh | Default true. See below. |
 | `connect_timeout` | ssh | Seconds. Default 3. |
+| `mirror` | ssh | A folder on the host that holds the target's folder names. See below. |
+| `mirror_depth` | ssh | Levels under the target's home to mirror. Default 3. |
 
 **`path_map`** is for when the two machines name one folder
 differently. A host that mounts your laptop's `~/Development` at
@@ -165,6 +167,43 @@ login is refused a blocking lock and gets a delay lock, which holds
 sleep off for five seconds by default (`InhibitDelayMaxSec` in
 `logind.conf`). That covers a short write. A long one can still be
 cut by a closing lid.
+
+### Folders that exist only on the target
+
+Hermes only runs a session in a folder the host can see, and the
+desktop app's folder picker browses the host. A folder on your laptop
+is not on the host. A mirror gives it an address there.
+
+A mirror is a folder on the host that copies the target's folder
+names and nothing else: no files, ever. Open a session in a mirrored
+folder and it runs in the real folder on the target.
+
+Name the mirror when you set up, or add `mirror` to the target:
+
+```bash
+hermes hands init --ssh laptop=you@laptop.example --local mac --mirror laptop=/Users/you/Hands/laptop
+```
+
+Then copy the folder names. Both commands are dry runs until you add
+`--apply`:
+
+```bash
+hermes hands mirror --apply
+```
+
+That covers the folders under the target's home, three levels deep,
+and skips any whose name starts with a dot. For one folder at any
+depth:
+
+```bash
+hermes hands open laptop:~/work/site --apply
+```
+
+It prints the folder to open on the host. The mirror is only an
+address. The app's file tree shows its empty folders, not the
+target's files, and anything the app itself writes there stays on the
+host. The plugin never deletes from a mirror and never makes one
+outside the folder you named.
 
 ## Use
 
@@ -226,8 +265,10 @@ Read these before trusting it with real work.
 - **The folder must exist on the host.** Hermes will not run a turn
   in a folder the host cannot see, and the desktop app's folder
   picker and file tree read the host's disk. To work in a folder on
-  an SSH target, the host needs its own view of that folder, such as
-  a network mount, with a `path_map` entry for it.
+  an SSH target, the host needs its own view of that folder: a
+  `mirror` of its folder names, or a network mount with a `path_map`
+  entry. With a mirror, the app's file tree shows folders and no
+  files.
 - **The Bots tab in Hermes Desktop.** The app sends the chip's
   requests to its active profile, which is set in the Sessions tab.
   With a bot's chat open in the Bots tab, the chip can describe a
@@ -335,6 +376,7 @@ provider.py          the `hands` terminal backend
 targets/             one class per kind of target: ssh, local
 health.py            probe and circuit breaker
 remote.py            SSH options, PATH, sleep inhibitor
+mirror.py            a names-only copy of a target's folders
 exits.py             the four ways a command can end
 hooks.py             keeps the file tools on the right folder
 commands.py          /hands, /run, hermes hands
