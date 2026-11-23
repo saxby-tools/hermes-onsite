@@ -245,6 +245,27 @@ code {
   margin: 0;
 }
 
+/* ---- Wordmark ------------------------------------------------------- */
+
+/* The name, set in type: the word onsite in Geist Mono, with the o
+ * lit in yellow. It is drawn for the blue field and for dark grounds.
+ *
+ * The wordmark is specified at weight 500. Only the 400 file is in
+ * site/static/fonts so far, so it draws in Regular until the Medium
+ * file is added. */
+
+.wordmark {
+  color: var(--color-field-text);
+  font-family: var(--font-mono);
+  font-weight: 500;
+  line-height: 1;
+  text-decoration: none;
+}
+
+.wordmark__lit {
+  color: var(--color-signal);
+}
+
 /* ---- Masthead ------------------------------------------------------- */
 
 .top {
@@ -272,8 +293,8 @@ code {
   margin-right: auto;
 }
 
-.top__lockup {
-  width: 11rem;
+.top__wordmark {
+  font-size: 1.5rem;
 }
 
 .top__nav {
@@ -1158,8 +1179,8 @@ main {
     position: static;
   }
 
-  .top__lockup {
-    width: 9.5rem;
+  .top__wordmark {
+    font-size: 1.25rem;
   }
 
   .top__nav {
