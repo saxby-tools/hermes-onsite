@@ -40,6 +40,9 @@ const POLL_MS = 5000
 const REQUEST_TIMEOUT_MS = 8000
 const COPIED_MS = 1500
 
+// How the app reports a route that the host does not have.
+const NOT_FOUND = '404'
+
 const AREA_CHIP = 'statusBar.right'
 const AREA_PANES = 'panes'
 const AREA_DIRECTIVES = 'transcript.directives'
@@ -163,6 +166,42 @@ function requestBody() {
   }
 }
 
+// One gateway can serve several profiles, and each has its own
+// plugins. The app sends a plugin's requests to whichever profile is
+// active, which is not always the one the person thinks they are in.
+function activeProfile() {
+  const name = readAtom(hostState().profile)
+
+  if (typeof name !== 'string') {
+    return ''
+  }
+
+  return name.trim()
+}
+
+function describeMissingPlugin() {
+  const profile = activeProfile()
+
+  if (profile === '') {
+    return 'The host has no hermes-hands plugin enabled.'
+  }
+
+  return (
+    `The app asked the "${profile}" profile, ` +
+    'which has no hermes-hands plugin enabled.'
+  )
+}
+
+function describeError(error) {
+  const text = String(error?.message ?? error ?? 'unknown error')
+
+  if (text.includes(NOT_FOUND)) {
+    return describeMissingPlugin()
+  }
+
+  return text
+}
+
 async function post(path) {
   return plugin.rest(path, {
     method: 'POST',
@@ -190,16 +229,6 @@ async function refresh() {
     // The chip already shows that the host is unreachable. The list
     // keeps what it had, so a blip does not blank the pane.
   }
-}
-
-function describeError(error) {
-  const text = String(error?.message ?? error ?? 'unknown error')
-
-  if (text.includes('404')) {
-    return 'The host has no hermes-hands plugin enabled.'
-  }
-
-  return text
 }
 
 function notify(kind, message) {
