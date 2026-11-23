@@ -35,6 +35,7 @@ from .config import PLUGIN_ID
 logger = logging.getLogger(__name__)
 
 DATA_DIR_NAME = "plugin-data"
+PLUGINS_DIR_NAME = "plugins"
 SESSION_ID_VAR = "HERMES_SESSION_ID"
 SESSION_KEY_VAR = "HERMES_SESSION_KEY"
 
@@ -64,6 +65,7 @@ __all__ = [
     "drop_current_environment",
     "environment_key",
     "load_settings",
+    "plugins_dir",
     "terminal_persistence",
 ]
 
@@ -76,6 +78,12 @@ def bind(ctx) -> None:
 
 def data_dir() -> Path:
     return Path(get_hermes_home()) / DATA_DIR_NAME / PLUGIN_ID
+
+
+def plugins_dir() -> Path:
+    """The folder this profile loads its plugins from."""
+
+    return Path(get_hermes_home()) / PLUGINS_DIR_NAME
 
 
 def load_settings() -> Any:
