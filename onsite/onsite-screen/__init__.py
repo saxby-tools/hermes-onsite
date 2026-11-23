@@ -16,8 +16,6 @@ from __future__ import annotations
 import importlib
 import sys
 
-from pathlib import Path
-
 from tools.computer_use.backend import ComputerUseBackend
 from tools.computer_use.backend import ComputerUseProvider
 
@@ -26,9 +24,6 @@ NAME = "onsite-screen"
 DISPLAY_NAME = "onsite (the session's own machine)"
 
 MAIN_PLUGIN = "hermes_plugins.onsite"
-# This folder ships inside the onsite plugin and is linked
-# into place, so the plugin itself is one folder up.
-MAIN_MANIFEST = Path(__file__).resolve().parent.parent / "plugin.yaml"
 BACKEND_MODULE = "screenbackend"
 
 NOT_ENABLED = (
@@ -46,7 +41,11 @@ class OnsiteScreenProvider(ComputerUseProvider):
         # Cheap, as Hermes asks: nothing is dialed until a session
         # first uses its screen. Whether onsite is enabled is
         # settled then, with a message that says what to do.
-        return MAIN_MANIFEST.is_file()
+        #
+        # A "no" here makes Hermes drop the screen tool without a
+        # word, and a check against the disk goes stale in a Hermes
+        # that has been running since before the plugin last moved.
+        return True
 
     def create_backend(self, *, permission_mode: str) -> ComputerUseBackend:
         package = sys.modules.get(MAIN_PLUGIN)
