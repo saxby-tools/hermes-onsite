@@ -19,7 +19,7 @@
         took 0.01s
   PASS  it still names the target
   waiting 11s for the cooldown
-  --- terminal: pwd + 2 commands [completed, 0.51s]
+  --- terminal: pwd + 2 commands [completed, 0.49s]
   | terminal result
   | - **output:** <laptop-rig>/sample
   | <this-user>
@@ -38,18 +38,18 @@
 == Phase 2.3: the target freezes, as a sleeping laptop
   PASS  the session works before the freeze
   idle for 6s, then a tool call
-  --- terminal: pwd + 2 commands [failed, 3.18s]
+  --- terminal: pwd + 2 commands [failed, 3.10s]
   | terminal result
   | - **output:** [onsite: onsite target laptop (<laptop-user>@127.0.0.1) is unreachable: Connection timed out during banner exchange. No command was run and nothing was retried. The target is checked again in about 10s.]
   | - **exit_code:** 255
   PASS  the error names the target
   PASS  it arrives within 5 seconds
-        took 3.18s
+        took 3.10s
   PASS  the command was never sent
   PASS  the next call fails at once
         took 0.01s
   waiting 11s for the cooldown
-  --- terminal: pwd + 2 commands [completed, 0.51s]
+  --- terminal: pwd + 2 commands [completed, 0.44s]
   | terminal result
   | - **output:** <laptop-rig>/sample
   | <this-user>
@@ -59,7 +59,7 @@
 
 == Phase 2.4: the target freezes just before a call
   PASS  the session works before the freeze
-  --- terminal: pwd + 2 commands [failed, 6.63s]
+  --- terminal: pwd + 2 commands [failed, 6.45s]
   | terminal result
   | - **output:** mux_client_request_session: read from master failed: Broken pipe
   | Connection timed out during banner exchange
@@ -69,4 +69,4 @@
   PASS  the error names the target
   PASS  it says the command may have run and was not retried
   PASS  it arrives within 10 seconds
-        took 6.63s (the five-second bar is missed here; see DECISIONS.md)
+        took 6.45s (the five-second bar is missed here; see DECISIONS.md)
