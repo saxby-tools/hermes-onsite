@@ -476,6 +476,48 @@ Written Nov. 22, 2026, against Hermes v0.23.2.
   deploy. `build/v1` and `main` are both on the list. `main` was
   added on Nov. 22, just before the merge in 3.
 
+### 44. A names-only mirror gives a target folder an address
+
+- **Question.** A folder that exists only on the laptop could not be
+  opened. Hermes needs the session folder on the host, and the app's
+  picker browses the host. See 41.
+- **Owner's call, Nov. 22.** Mirror the laptop's folder tree on the
+  host, names only. No mount and no share, because a plugin in the
+  catalog cannot ask its users for either.
+- **Pick.** A target's `mirror` setting names a folder on the host.
+  `hermes hands mirror` copies folder names under the target's home
+  into it. `hermes hands open TARGET:FOLDER` adds one folder at any
+  depth. Routing treats the mirror as a map to the target's root, so
+  nothing else in the plugin changed.
+- **Measured on the laptop.** The whole home has 499,461 folders.
+  Three levels deep without dot folders it has 262, which list in
+  0.2 seconds and take 8 KB on the wire. So the mirror is shallow by
+  default and deep only where asked.
+- **Rules.** Only folders are made. Nothing is deleted. Nothing is
+  made outside the mirror, even through a link planted in it. A name
+  the target sends that could climb out is dropped.
+- **Checked.** 34 unit tests. On Buster: 262 folders made under
+  `/Users/you/Hands/laptop`, no files; a laptop-only clone opened;
+  `hermes hands status` there says `laptop` and the real folder; a
+  real-model command run from it printed the laptop's path and files.
+- **Cost.** The app's file tree shows the mirror's empty folders,
+  not the target's files. Names go stale until the next run. What
+  the app itself writes into a mirrored folder stays on the host.
+- **Not chosen.** A sync tool: two copies of a working tree lose
+  edits. A mount over SFTP: every SSH target already has an SFTP
+  server, but turning it into folders on the host needs FUSE or a
+  helper program, which a catalog plugin cannot assume. An MCP file
+  server: it gives the model tools, not the app a folder.
+- **The fix that belongs upstream.** Hermes already lists a remote
+  machine in the picker and the file tree, but only for its own
+  `ssh` backend (`get_ssh_workspace_fs` in
+  `hermes_cli/ssh_workspace_fs.py` checks the backend name). A seam
+  that lets any terminal backend supply that adapter would show the
+  target's real files with no mirror at all.
+- **Reverse.** Remove `mirror` from the target and delete the
+  folder. A copy of Buster's config from before is in
+  `.rig/buster-config.before-mirror.yaml`.
+
 ## Open decisions from the brief
 
 | # | Decision | What the build did |
