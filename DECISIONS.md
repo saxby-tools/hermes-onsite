@@ -147,8 +147,8 @@ Written Nov. 22, 2026, against Hermes v0.23.2.
   clear the folder Hermes recorded for the session.
 - **Why.** Found by test: without the last step Hermes hands the old
   machine's working directory to the new machine.
-- **Limit.** The agent is not told about the switch. The reply to
-  `/onsite` says so.
+- **Limit.** The agent was not told about the switch. Entry 51
+  fixed that.
 
 ## The backend
 
@@ -742,6 +742,38 @@ Written Nov. 22, 2026, against Hermes v0.23.2.
   The rig links that folder into the test profile.
 - **Not checked.** The install command itself, from GitHub. It needs
   a profile nobody is using.
+
+### 51. After a move, the agent is told once, in the user's next message
+
+- **Question.** `/onsite <target>` moved a session, and the next tool
+  call ran on the new machine. The note in the agent's instructions
+  is written once per session, so the agent went on describing the
+  old machine and passing its paths.
+- **Options.** Add a line to the first tool result after the move.
+  Rebuild the instructions. Put a message into the chat, as `/run`
+  does. Add context to the user's next message with a `pre_llm_call`
+  hook.
+- **Pick.** The hook. `/onsite` records the move in memory, under
+  every id the session goes by. The next turn in that session takes
+  it and Hermes adds one paragraph to the user's message. It opens
+  with "Note from the onsite plugin, not typed by the user".
+- **Why not the others.** A line in a tool result would land inside
+  a file's contents when the next call is `read_file`. Hermes does
+  not rebuild a session's instructions, and doing so would throw
+  away its prompt cache. A chat message needs
+  `allow_gateway_injection` and starts a turn the user did not ask
+  for.
+- **Details.** Two moves before a turn are told as one trip. A trip
+  that ends where it began says nothing. Hermes stores what it sent
+  with the message, so a replayed session still shows the note.
+- **Limit.** The move is held in memory. If Hermes restarts between
+  `/onsite` and the next message, the agent is not told. The pin
+  itself is on disk, so the tools still run on the right machine.
+- **Checked.** The rig reads what its stub model was asked: the note
+  is there on the turn after `/onsite mac`, gone on the turn after
+  that, and there again after `/onsite auto`.
+- **Reverse.** Remove the `pre_llm_call` hook from `hooks.py` and
+  `plugin.yaml`. Nothing else reads a move.
 
 ## Open decisions from the brief
 
