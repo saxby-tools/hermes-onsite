@@ -112,6 +112,62 @@ def test_an_override_wins_and_can_be_cleared(tmp_path):
     assert harness.built[-1][0] == "laptop"
 
 
+def test_a_switch_is_held_for_the_agent(tmp_path):
+    harness = Harness(tmp_path)
+    harness.session_cwd = "/home/dev/app"
+    harness.runtime.create_environment("~", 180, "session:a")
+
+    harness.runtime.switch("session:a", "mac", "/home/dev/app", "id-9")
+
+    move = harness.runtime.moves.take("id-9")
+
+    assert move.before == "laptop"
+    assert move.after == "mac"
+    assert move.cleared is False
+
+
+def test_a_switch_before_the_first_tool_call_knows_the_old_machine(
+    tmp_path,
+):
+    # Nothing is pinned yet, so the folder's own answer is the past.
+    harness = Harness(tmp_path)
+
+    harness.runtime.switch("session:a", "mac", "/home/dev/app")
+
+    assert harness.runtime.moves.take("session:a").before == "laptop"
+
+
+def test_clearing_an_override_is_held_for_the_agent_too(tmp_path):
+    harness = Harness(tmp_path)
+
+    harness.runtime.switch("session:a", "mac", "/home/dev/app")
+    harness.runtime.moves.take("session:a")
+    harness.runtime.switch("session:a", "auto", "/home/dev/app")
+
+    move = harness.runtime.moves.take("session:a")
+
+    assert move.before == "mac"
+    assert move.after == "laptop"
+    assert move.cleared is True
+
+
+def test_a_switch_to_the_machine_in_use_tells_the_agent_nothing(tmp_path):
+    harness = Harness(tmp_path)
+
+    harness.runtime.switch("session:a", "laptop", "/home/dev/app")
+
+    assert harness.runtime.moves.take("session:a") is None
+
+
+def test_a_refused_switch_tells_the_agent_nothing(tmp_path):
+    harness = Harness(tmp_path)
+
+    with pytest.raises(runtime.UnknownTarget):
+        harness.runtime.switch("session:a", "desktop", "/home/dev/app")
+
+    assert harness.runtime.moves.take("session:a") is None
+
+
 def test_an_unknown_target_is_refused_with_the_choices(tmp_path):
     harness = Harness(tmp_path)
 
