@@ -32,8 +32,10 @@ the computer your folder is on and brings the result back.
 A few words to know. The app calls each computer a **machine**, and
 in a few places a **target**. It calls the server the **host**. A
 **profile** is one Hermes set-up on the server, and a server can
-hold several. This guide says "computer" and "server", and uses the
-app's words only where the app does.
+hold several. A **session** is one chat. A **mirror** is onsite's
+list of a computer's folder names, which is what you browse in the
+pane. This guide says "computer" and "server", and uses the app's
+words only where the app does.
 
 ## Before you start
 
@@ -144,10 +146,9 @@ plugin enabled."
 The chip shows the last two parts of the folder. Rest the pointer on
 it, or click it, for the whole path and for **Why**: the reason that
 computer was picked. The reasons are short, such as "the folder is in
-its mirror" or "set with /onsite". A mirror is onsite's list of a
-computer's folder names, which is what you browse in the pane. After
-the first command in a chat the reason reads "this session started
-there", because a chat stays on the computer it started on.
+its mirror" or "set with /onsite". After the first command in a chat
+the reason reads "this session started there", because a chat stays
+on the computer it started on.
 
 ### Move a chat to another computer
 
@@ -303,7 +304,7 @@ computer first.
 | --- | --- | --- |
 | A red dot on the chip | The computer is asleep, off or off the network. | Wake it. Work picks up by itself within about 10 seconds. |
 | Hermes says a command has "no exit status" | The link dropped while the command was running. It may have finished or not. Hermes will not run it twice by itself. | Check the result on your computer, then tell Hermes what you found. |
-| "onsite: not set up" | onsite is off, has no computers or has a setting it cannot read, or the app could not reach the server. | Rest the pointer on the chip to read which. Open Machines and add a computer, or ask the person who runs your server. |
+| "onsite: not set up" | onsite is off, has no computers, has a setting it cannot read or is not selected on the server, or the app could not reach the server. | Rest the pointer on the chip to read which. Open Machines and add a computer, or ask the person who runs your server. "Set up but not in use" is step 2 of [Set up](../README.md#set-up). |
 | A message that names a profile, such as: This chat belongs to the "home" profile. The app asked the "work" profile, which has no onsite plugin enabled. | The app is asking a different Hermes profile than the one this chat belongs to. | Pick the profile the message names, in the Sessions tab. |
 | A line that says a folder "could not be listed on laptop", with a reason | The computer did not answer, or the folder cannot be read. | Check the chip's dot. Click Browse again. |
 | A greyed-out Run button and "Run is off for this profile.", or after `/run 1`: "This client does not let a plugin hand the agent a message." | The server has not allowed onsite to put a message into a chat. | Ask Hermes in your own words to run the command, or use Copy. To fix it for good, see step 3 of [Set up](../README.md#set-up). |
