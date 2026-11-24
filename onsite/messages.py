@@ -69,10 +69,8 @@ SHARING_NO_WINDOWS = (
 )
 
 MIRROR_NOT_SET = (
-    "No such target to mirror. With no name, `hermes onsite mirror` "
-    "covers each target that has a `mirror` folder set, and none "
-    "has. Name a target, or set one with `hermes onsite init "
-    "--mirror NAME=FOLDER`."
+    "No such target to mirror. Only a target reached over SSH has a "
+    "mirror. `hermes onsite status` lists the targets."
 )
 OPEN_USAGE = (
     "Name the folder as TARGET:FOLDER, such as laptop:~/work."
@@ -89,8 +87,9 @@ FOLDER_UNKNOWN = (
 
 INJECTION_HINT = (
     "This client does not let a plugin hand the agent a message. To "
-    "allow it, set `plugins.entries.onsite.allow_gateway_injection: "
-    "true` in config.yaml. Until then, ask the agent to run it:"
+    "allow it, run `hermes config set "
+    "plugins.entries.onsite.allow_gateway_injection true` on the "
+    "host. Until then, ask the agent to run it:"
 )
 
 
