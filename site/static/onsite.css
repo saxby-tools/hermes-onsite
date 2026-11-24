@@ -511,11 +511,12 @@ code {
   color: var(--color-signal);
 }
 
-/* The one plate keeps to the right, at a size the head reads at. */
+/* The one plate keeps to the top right and fills its column. */
 .hero__plate {
+  align-self: start;
   justify-self: end;
   width: 100%;
-  max-width: 26rem;
+  max-width: 36rem;
 }
 
 /* ---- Plate ---------------------------------------------------------- */
