@@ -707,7 +707,7 @@ test('each settings page names the profile it really edits', { skip: SKIP }, asy
     const note = box.querySelector('[data-onsite-profile-note]')
 
     assert.match(note.textContent, /settings of the "buster" profile/)
-    assert.match(note.textContent, /"Applies to" row above does not change this page/)
+    assert.match(note.textContent, /"Applies to" row in Settings does not change this page/)
   }
 })
 

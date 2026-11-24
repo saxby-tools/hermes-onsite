@@ -1188,9 +1188,11 @@ function describeTest(answer) {
   return `No connection: ${answer.detail || 'no answer'}`
 }
 
-// The app shows an "Applies to" row of profiles above every plugin
-// page. A plugin's requests go to the app's active profile whatever
-// that row says, so each page names the profile it really edits.
+// The app's Settings show an "Applies to" row of profiles on its own
+// plugin pages. A plugin's requests go to the app's active profile
+// whatever that row says, so each page names the profile it really
+// edits. The row is not drawn on a plugin's own page in the Hermes
+// this was read against, so the note does not say where it is.
 function describeSettingsProfile() {
   const profile = activeProfile()
 
@@ -1200,8 +1202,8 @@ function describeSettingsProfile() {
 
   return (
     `These are the settings of the "${profile}" profile, the one ` +
-    'picked in the Sessions tab. The "Applies to" row above does not ' +
-    'change this page.'
+    'picked in the Sessions tab. The "Applies to" row in Settings ' +
+    'does not change this page.'
   )
 }
 
@@ -1428,7 +1430,7 @@ export default {
     ctx.register({
       id: PANE_ID,
       area: AREA_PANES,
-      title: 'onsite',
+      title: 'Onsite',
       data: { placement: 'right', width: PANE_WIDTH },
       render: () => jsx(OnsitePane, {})
     })
