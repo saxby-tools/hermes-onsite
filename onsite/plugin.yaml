@@ -13,12 +13,15 @@ description: >
   commands still stop at Hermes' own approval prompt. Select it with
   `terminal.backend: onsite` and name your computers with
   `hermes onsite init`, or in Settings in the desktop app.
-# The plugin reuses Hermes' local and SSH environments, which are not
-# public plugin API. The upper bound keeps it from loading on a
-# Hermes it was never run against.
+# The plugin reuses Hermes' local, SSH and screen-driver code, which
+# is not public plugin API. It has been run on 0.23.2 only. The upper
+# bound keeps it from loading at 0.24, where that code may move.
 requires_hermes: ">=0.23.2,<0.24"
-# Hermes offers to store this one. It is only read when a session
-# uses the screen of a machine whose screen sharing asks for it.
+# The one secret the plugin reads, through Hermes. Hermes does not
+# ask for it at install: it goes in the profile's `.env`. It is read
+# each time a screen-sharing link opens, and by `hermes onsite
+# screen`. It is used only when a machine's screen sharing asks for
+# a password.
 optional_env:
   - name: ONSITE_SCREEN_PASSWORD
     description: "The VNC password of a computer whose screen sharing asks for one. Leave it unset if none does."
