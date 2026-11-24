@@ -46,8 +46,8 @@ reader's browser or to a plugin user.
 | Markdown | Page | Layout |
 | --- | --- | --- |
 | `README.md` | `index.html` | `home.ejs` |
-| `DECISIONS.md` | `DECISIONS.html` | `page.ejs` |
-| `docs/*.md` | `docs/*.html` | `page.ejs` |
+| `DECISIONS.md` | `DECISIONS/` | `page.ejs` |
+| `docs/guide.md` | `docs/guide/` | `page.ejs` |
 
 The README is the front page. `home.ejs` puts everything before its
 first `##` heading in the hero, and builds the "On this page" list
