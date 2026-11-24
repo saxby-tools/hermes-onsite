@@ -5,8 +5,17 @@
 <title><%= title %> · <%= siteName %></title>
 <%- include("head.ejs") %>
 </head>
+<%
+  // The "On this page" bar is built from the page's `##` headings,
+  // which already carry the anchors GitHub gives them.
+  const headings = content.matchAll(/<h2 id="([^"]*)">([\s\S]*?)<\/h2>/g);
+  const sections = [...headings].map((heading) => {
+    return { id: heading[1], title: heading[2] };
+  });
+-%>
 <body class="layout-page">
 <%- include("top.ejs") -%>
+<%- include("contents.ejs", { sections }) -%>
 <main class="page prose" id="main">
 <%- content %>
 </main>

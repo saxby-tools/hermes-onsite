@@ -161,7 +161,8 @@ license texts sit beside them in `site/static/fonts/`.
 
 The gutter is `--gutter`, 1rem, on every screen. Text keeps to
 `--measure`, 42rem. The page column is `--column`, 70rem. The
-masthead is `--top-height`, 3.5rem, tall.
+masthead is `--top-height`, 3.5rem, tall. The "On this page" bar
+under it is `--contents-height`, 2.75rem, tall.
 
 ## Radius
 

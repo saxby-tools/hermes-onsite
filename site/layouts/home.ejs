@@ -51,18 +51,7 @@
     </div>
   </header>
 
-  <nav class="contents" aria-labelledby="contents-title">
-    <div class="contents__inner">
-      <h2 class="label contents__title" id="contents-title">
-        On this page
-      </h2>
-      <ul class="contents__list">
-<% for (const section of sections) { -%>
-        <li><a href="#<%= section.id %>"><%- section.title %></a></li>
-<% } -%>
-      </ul>
-    </div>
-  </nav>
+<%- include("contents.ejs", { sections }) -%>
 <% for (const section of sections) { -%>
 
   <section class="section" aria-labelledby="<%= section.id %>">

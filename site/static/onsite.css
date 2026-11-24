@@ -88,6 +88,7 @@
   --column: 70rem;
   --measure: 42rem;
   --top-height: 3.5rem;
+  --contents-height: 2.75rem;
 }
 
 :root[data-theme="light"] {
@@ -132,7 +133,9 @@
 
 html {
   -webkit-text-size-adjust: 100%;
-  scroll-padding-top: calc(var(--top-height) + var(--space-3));
+  scroll-padding-top: calc(
+    var(--top-height) + var(--contents-height) + var(--space-3)
+  );
 }
 
 body {
@@ -308,15 +311,17 @@ code {
   border-bottom: 1px solid var(--color-field-deep);
 }
 
+/* One row at every width. Nothing in it wraps, so the masthead is
+ * always `--top-height` tall and the contents bar can stick under it. */
 .top__inner {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   align-items: center;
-  gap: var(--space-2) var(--space-4);
+  gap: var(--space-4);
   max-width: var(--column);
-  min-height: var(--top-height);
+  height: var(--top-height);
   margin: 0 auto;
-  padding: var(--space-2) var(--gutter);
+  padding: 0 var(--gutter);
 }
 
 .top__home {
@@ -330,8 +335,8 @@ code {
 
 .top__nav {
   display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-1) var(--space-4);
+  flex-wrap: nowrap;
+  gap: var(--space-4);
 }
 
 .top__link {
@@ -355,6 +360,12 @@ code {
   background-size: 100% 2px;
 }
 
+/* The link for the part of the site the reader is in keeps its
+ * underline. */
+.top__link[aria-current] {
+  background-size: 100% 2px;
+}
+
 .top__link-button {
   display: inline-flex;
   align-items: center;
@@ -370,7 +381,13 @@ code {
   transform: translateX(0.1875rem);
 }
 
-/* The icon in the Source button takes the button's text colour. */
+/* The Source button is a button, so it has no underline to grow. */
+.top__link-button,
+.top__link-button:hover {
+  background: var(--color-field-text);
+}
+
+/* An icon takes the colour of the text around it. */
 .top__icon {
   flex: none;
   width: 1rem;
@@ -378,8 +395,9 @@ code {
   fill: currentColor;
 }
 
-/* Three choices in one box, so it reads as a control and not as one
- * more link. The pressed choice is filled. */
+/* Three icons in one box, so it reads as a control and not as one
+ * more link. The pressed choice is filled. Each button has a spoken
+ * name and a tip, because an icon alone says too little. */
 .theme-toggle {
   display: inline-flex;
   border: 1px solid var(--color-field-muted);
@@ -392,16 +410,12 @@ code {
 }
 
 .theme-toggle__option {
-  padding: var(--space-1) var(--space-2);
+  display: grid;
+  place-items: center;
+  padding: 0.375rem;
   border: 0;
   background: none;
   color: var(--color-field-text);
-  font-family: var(--font-display);
-  font-size: var(--size-label);
-  font-weight: 500;
-  letter-spacing: var(--track);
-  line-height: 1.3;
-  text-transform: uppercase;
   cursor: pointer;
   transition: background var(--motion-fast) var(--motion-ease);
 }
@@ -531,33 +545,70 @@ code {
 
 /* ---- Contents ------------------------------------------------------- */
 
+/* The "On this page" bar. It sticks under the masthead, is one row
+ * tall, and scrolls sideways when its links do not fit. */
+
 .contents {
+  position: sticky;
+  top: var(--top-height);
+  z-index: 1;
   border-bottom: 1px solid var(--color-line);
   background: var(--color-ground-raised);
 }
 
 .contents__inner {
   display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: var(--space-2) var(--space-4);
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: var(--space-4);
   max-width: var(--column);
+  height: var(--contents-height);
   margin: 0 auto;
-  padding: var(--space-3) var(--gutter);
+  padding: 0 var(--gutter);
 }
 
 .contents__title {
+  flex: none;
   color: var(--color-text-muted);
 }
 
+/* The four backgrounds are the scroll shadows. The first two are
+ * covers in the bar's own colour that travel with the links, so each
+ * hides its shadow only while the list is scrolled to that end. The
+ * last two are the shadows, which stay put at the edges. */
 .contents__list {
   display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-1) var(--space-4);
+  flex: 1;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: var(--space-4);
+  min-width: 0;
+  max-height: var(--contents-height);
   margin: 0;
   padding: 0;
+  overflow-x: auto;
   list-style: none;
   font-size: var(--size-small);
+  white-space: nowrap;
+  scrollbar-width: none;
+  background:
+    linear-gradient(to right, var(--color-ground-raised) 40%, transparent)
+      left center / 2.5rem 100% no-repeat local,
+    linear-gradient(to left, var(--color-ground-raised) 40%, transparent)
+      right center / 2.5rem 100% no-repeat local,
+    linear-gradient(to right, var(--color-line), transparent)
+      left center / 1rem 100% no-repeat scroll,
+    linear-gradient(to left, var(--color-line), transparent)
+      right center / 1rem 100% no-repeat scroll;
+}
+
+.contents__list::-webkit-scrollbar {
+  display: none;
+}
+
+.contents__list li {
+  flex: none;
+  padding: var(--space-2) 0;
 }
 
 /* ---- Sections and pages --------------------------------------------- */
@@ -1610,18 +1661,29 @@ main {
 }
 
 @media (max-width: 40em) {
-  /* The masthead wraps to two rows, so it stops sticking. */
-  .top {
-    position: static;
+  /* Tighter, but still one row. The Source button keeps its icon and
+   * its spoken name, and drops the word. */
+  .top__inner,
+  .top__nav {
+    gap: var(--space-3);
   }
 
   .top__wordmark {
     font-size: 1.25rem;
   }
 
-  .top__nav {
-    order: 3;
-    flex-basis: 100%;
+  .top__link-button {
+    padding: var(--space-2);
+  }
+
+  .top__word,
+  .contents__title {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
   }
 }
 

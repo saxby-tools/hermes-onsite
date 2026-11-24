@@ -1,0 +1,24 @@
+<%#
+  The "On this page" bar: one link per `##` heading of the page. It
+  sticks under the masthead while the page scrolls. It is one row
+  tall. When the links do not fit they scroll sideways, and a shadow
+  at either end says there is more that way. A page with fewer than
+  two headings gets no bar. Its styles are under "Contents" in
+  site/static/onsite.css.
+
+  `sections` is a list of `{ id, title }`, in page order.
+-%>
+<% if (sections.length > 1) { -%>
+<nav class="contents" aria-labelledby="contents-title">
+  <div class="contents__inner">
+    <h2 class="label contents__title" id="contents-title">
+      On this page
+    </h2>
+    <ul class="contents__list">
+<% for (const section of sections) { -%>
+      <li><a href="#<%= section.id %>"><%- section.title %></a></li>
+<% } -%>
+    </ul>
+  </div>
+</nav>
+<% } -%>

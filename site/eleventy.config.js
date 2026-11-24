@@ -36,6 +36,14 @@ const SITE_NAME = "onsite";
 
 const HOME_PAGE = "./README.md";
 
+const GUIDE_PAGE = "./docs/guide.md";
+
+// The two parts of the site the masthead links to. Every page that
+// is not the guide belongs to the docs.
+const SECTION_DOCS = "docs";
+
+const SECTION_GUIDE = "guide";
+
 const COMPONENTS_DIR = "site/components";
 
 const SOURCE_URL =
@@ -130,6 +138,24 @@ function layoutOf(inputPath) {
   return "page.ejs";
 }
 
+// Which masthead link a page lights up.
+function sectionOf(inputPath) {
+  if (inputPath === GUIDE_PAGE) {
+    return SECTION_GUIDE;
+  }
+
+  return SECTION_DOCS;
+}
+
+// True for the two pages the masthead links straight to.
+function isSectionFront(inputPath) {
+  if (inputPath === HOME_PAGE) {
+    return true;
+  }
+
+  return inputPath === GUIDE_PAGE;
+}
+
 function permalinkOf(page) {
   if (page.inputPath === HOME_PAGE) {
     return "index.html";
@@ -205,6 +231,8 @@ export default async function (eleventyConfig) {
     permalink: (data) => permalinkOf(data.page),
     title: (data) => titleOf(data.page.inputPath),
     root: (data) => rootOf(data.page),
+    section: (data) => sectionOf(data.page.inputPath),
+    sectionFront: (data) => isSectionFront(data.page.inputPath),
     source: (data) => sourceOf(data.page.inputPath),
   });
 
