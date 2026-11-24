@@ -15,15 +15,6 @@ Hermes app the whole time.
 
 <!-- /onsite:notice -->
 
-Jump to a part:
-
-- [Open a folder](#open-a-folder)
-- [See where Hermes is working](#see-where-hermes-is-working)
-- [Say yes or no](#say-yes-or-no)
-- [Run a command Hermes suggests](#run-a-command-hermes-suggests)
-- [Add or change a computer](#add-or-change-a-computer)
-- [If something goes wrong](#if-something-goes-wrong)
-
 ## How it works
 
 You talk to Hermes in the app. Hermes thinks on your server. When it
