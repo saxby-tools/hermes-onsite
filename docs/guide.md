@@ -1,8 +1,9 @@
 # The onsite guide
 
-Open a folder on your own computer and Hermes works in it. This guide
-shows each screen you will meet, in the order you meet it. You do not
-need to know how any of it is set up.
+Open a folder on your own computer and the Hermes that lives on your
+server works in it. This guide shows each screen you will meet, in
+the order you meet it. You do not need to know how any of it is set
+up.
 
 For people who use Hermes Desktop. About six minutes to read.
 
