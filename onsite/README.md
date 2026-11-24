@@ -27,7 +27,14 @@ First, the server must be able to log in to your computer over SSH
 with a key and no prompt. `ssh you@laptop.example true`, run on the
 server, must return at once.
 
-Then, on the server, with the plugin installed and enabled:
+Then install it on the server. Until it is in the Hermes catalog,
+that is:
+
+```bash
+hermes plugins install saxby-tools/hermes-onsite/onsite --enable
+```
+
+Then, still on the server:
 
 ```bash
 hermes onsite init --ssh laptop=you@laptop.example --local mac --apply
@@ -49,15 +56,18 @@ The first names your computers. `laptop` and `mac` are names you
 choose, for your computer and for the server. `you@laptop.example`
 is what you would type after `ssh`. Leave off `--apply` to see the
 settings without writing them. The second turns onsite on for new
-sessions. The third lets the Run button and `/run` hand a command to
-the agent. The fourth should show each computer as `up`. In Hermes
+sessions. The third is for commands the agent proposes and waits
+on: it lets `/run`, and the Run button in the desktop app, hand one
+to the agent. The fourth should show each computer as `up`. In Hermes
 Desktop, the first can also be done under Settings, Plugins, Onsite,
 then Machines.
 
-To start work, open a folder on your computer. From a terminal on
-the server, `hermes onsite open laptop:~/work --apply` prints a
-folder. Start `hermes` in it. In Hermes Desktop, click the onsite
-chip at the bottom right and browse to the folder.
+To start work, open a folder on your computer. Use one that exists
+there. From a terminal on the server, `hermes onsite open
+laptop:~/work --apply` prints a folder. Start `hermes` in it and ask
+it to run `uname -n`. It should print your computer's name. In
+Hermes Desktop, click the onsite chip at the bottom right. A pane
+opens where you browse to the folder.
 
 Hermes Desktop loads the plugin's desktop part from the computer the
 app runs on, and it may arrive switched off. If no chip that starts
