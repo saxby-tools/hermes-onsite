@@ -878,6 +878,55 @@ Written Nov. 22, 2026, against Hermes v0.23.2.
   against the same desk, as entry 52 describes for screen sharing.
   The driver route captured, clicked and typed a line that landed.
 
+### 54. The first release candidate was fact-checked, line by line
+
+- **Owner's call, Nov. 24.** Get `main` ready for the catalog, with a
+  fact-checking round through the docs. The owner then walks it as a
+  new user, from the docs alone.
+- **How.** Three readers were given the docs and the code, and no
+  explanation: one for the README and the catalog draft, one for the
+  guide, the QA page and the site's drawings, and one for everything
+  the docs say about Hermes itself. Each claim was held against the
+  code or against Hermes' source. What they found was checked again
+  before it was changed.
+- **Also run.** `hermes plugins install` of the plugin's folder from
+  GitHub, into an empty Hermes home, then every command in the
+  README's Install and Set up, and `hermes plugins validate`. All
+  worked. Nothing ran against a live gateway or a real profile.
+- **Found and fixed in the docs.** Install did not say the plugin
+  must be enabled. Set up left out the setting that lets `/run`
+  reach the agent. The desktop half had one way in, by hand, with a
+  path that only works when `HERMES_HOME` is set in the shell.
+  Hermes has two more ways, and they are now written down as read
+  from source and not tried. About thirty smaller claims were wrong
+  or stale, in the README, the guide and the QA page.
+- **Found and fixed in the code.** `hermes onsite init` now prints
+  the `/run` setting among its next steps. The profile note on the
+  settings pages no longer says where the app's "Applies to" row is,
+  because Hermes does not draw it on a plugin's own page. The pane's
+  title is "Onsite", as its heading already was. One stale message
+  and two stale help lines about mirrors were corrected.
+- **Found and not fixed.** Issues 24, 25 and 26: a login to every
+  machine every five seconds while the app is open, a file of shell
+  variables Hermes leaves in a machine's `/tmp`, and a Run button
+  that says "Sent" when `/run` is not allowed. Each is now in the
+  README under What it touches or in the guide.
+
+### 55. The catalog's page is the plugin folder's own README
+
+- **Found.** With `subdir` set, the catalog shows the README from
+  that folder at the listed commit, not the repository's. That file
+  was 17 lines with no status and no disclosure. The catalog's rule
+  13 asks for the disclosure in the plugin's README.
+- **Pick.** `onsite/README.md` now carries the status line, the four
+  set-up commands, what the plugin touches and the main limits, in
+  about a hundred lines. The repository's README stays the full
+  reference.
+- **Cost.** Two status lines and two disclosure lists to keep true.
+  `docs/catalog-entry.md` says so in its checklist.
+- **Reverse.** Move the plugin to the top of a repository of its
+  own, and the one README serves both.
+
 ## Open decisions from the brief
 
 | # | Decision | What the build did |
