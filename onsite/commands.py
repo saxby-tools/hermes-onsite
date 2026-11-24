@@ -48,7 +48,6 @@ TARGET_FOLDER_SEPARATOR = ":"
 
 NEXT_STEPS = (
     "Next:",
-    "  hermes plugins enable onsite",
     "  hermes config set terminal.backend onsite",
     "  hermes onsite status",
     "",
@@ -306,7 +305,7 @@ def cli_mirror(runtime: Runtime, args) -> int:
         try:
             result = mirror.sync(spec, depth, args.apply)
         except mirror.MirrorError as error:
-            print(f"{mode} {spec.label}: {error}")
+            print(f"{mode} {spec.label} could not be mirrored: {error}")
             code = EXIT_DOWN
             continue
 
@@ -606,8 +605,8 @@ def setup_cli(parser) -> None:
     mirrored.add_argument(
         "target",
         nargs="?",
-        help="the target to mirror. Default: every target that has a "
-        "`mirror` folder set.",
+        help="the target to mirror. Default: every target reached "
+        "over SSH.",
     )
     mirrored.add_argument(
         "--depth",
