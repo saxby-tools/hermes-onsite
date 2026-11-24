@@ -35,7 +35,7 @@ description: >-
   stop at Hermes' own approval prompt in the app you are holding. In
   Hermes Desktop a chip names the computer in use, a pane browses its
   folders and starts sessions there, proposed commands get a Run
-  button, and a settings page adds and tests computers. MCP servers
+  button, and settings pages add and test computers. MCP servers
   can run on the computer too, and Hermes can see and drive its
   screen, through Hermes' own driver or the screen sharing the
   computer already has. Disclosure —
@@ -47,12 +47,14 @@ description: >-
   ONSITE_SCREEN_PASSWORD, if a target's screen sharing asks for a VNC
   password. Keeps one ssh connection open per target in use, one
   per MCP server you add and one per session that uses a target's
-  screen. While Hermes Desktop is open, logs in to each target every
-  five seconds to see that it is up. Files each target's host key in
+  screen. While Hermes Desktop is in view, logs in to the session's
+  target every five seconds and after each tool call to see that it
+  is up, and to every target while its pane is open. Files each target's host key in
   known_hosts on first contact. May hold a sleep lock on a target
-  while a command runs. Hermes' own SSH code, which it reuses, leaves
-  one small file per session in the target's /tmp holding the
-  shell's exported variables. Writes three small state files under
+  while a command runs. Hermes' own SSH code, which it reuses,
+  writes a small file to the target's /tmp for each environment it
+  builds, holding the shell's exported variables, functions and
+  aliases; the plugin removes it when that environment is closed. Writes three small state files under
   plugin-data/onsite and empty folders that mirror a target's folder
   names. /run puts a message into the chat, which needs
   allow_gateway_injection. Serves eight routes to the desktop app
@@ -149,4 +151,7 @@ The pull request must also repeat the disclosure, and say where the
 private imports are: in two files, `compat.py` and
 `screenbackend.py`. The second names every member it needs and fails
 with a plain message if one moves. The first fails with an import
-error.
+error for the three environment classes. Its other private imports
+are made when they are needed. If one of those moves, the feature
+that needs it stops with a line in the log and no message to the
+user.
