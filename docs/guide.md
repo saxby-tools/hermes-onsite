@@ -29,14 +29,16 @@ the computer your folder is on and brings the result back.
 | onsite | Picks the computer from the folder you opened. |
 | Your computer | Runs the command or edits the file, as you. |
 
-One word to know: the app calls each computer a **machine**. This
-guide says "computer" and uses "machine" only where the app does.
+One word to know: the app calls each computer a **machine**, and in
+a few places a **target**. This guide says "computer" and uses the
+app's words only where the app does.
 
 ## Before you start
 
-onsite has to be set up once, on the server. If you did not do that
-yourself, ask the person who runs your Hermes server. The steps are in
-the [README](../README.md#set-up).
+onsite has to be installed and set up once, on the server. If you
+did not do that yourself, ask the person who runs your Hermes server.
+The steps are in the README, under [Install](../README.md#install)
+and [Set up](../README.md#set-up).
 
 You can tell it is ready by looking at the bottom right corner of
 Hermes Desktop. A small chip there names a computer.
@@ -62,11 +64,13 @@ side of the window. It is titled "Onsite".
 
 <!-- onsite:screen {"shows": "pane"} -->
 
-The onsite pane, on the right of the chat. At the top, four lines:
-"Runs on: laptop (you@laptop.example)", "State: connected (42 ms)",
-"Folder: /home/you/work/app" and "Why: the folder is in its mirror".
-Below that is a list of two machines, each with a green dot: "laptop",
-marked "(default)", and "mac (this machine)". Then a hint, "Move this
+The onsite pane, on the right of the chat. At the top, four rows,
+each a name with its value beside it: "Runs on", "laptop
+(you@laptop.example)". "State", "connected (42 ms)". "Folder",
+"/home/you/work/app". "Why", "the folder is in its mirror". Below
+that is a list of two machines, each with a green dot: "laptop
+(you@laptop.example)", marked "(default)", and "mac (this machine)".
+Then a hint, "Move this
 session with /onsite <target>." Then "Open a folder", with a menu set
 to "laptop" and a Browse button. Last, "Proposed commands", which says
 "Nothing is waiting. Commands the agent proposes show up here."
@@ -77,8 +81,8 @@ to "laptop" and a Browse button. Last, "Proposed commands", which says
 
 Under "Open a folder", pick a computer from the menu and click
 **Browse**. You see the folders in your home folder on that computer.
-Click a folder to go into it. Click the row with two dots to go back
-up.
+Folders whose names start with a dot are left out. Click a folder to
+go into it. Click the row with two dots to go back up.
 
 <!-- onsite:screen {"shows": "browser"} -->
 
@@ -116,9 +120,9 @@ Four versions of the chip, each beside its hover text. A grey dot and
 "onsite": it is checking where this session runs. A green dot and
 "onsite: laptop …/work/app": tools run on laptop, the state is
 "connected (42 ms)", with the folder and the reason. A red dot and
-"onsite: laptop …/work/app": the state is "not reachable (no
-answer)". A red dot and "onsite: not set up": onsite is not set up on
-the host.
+"onsite: laptop …/work/app": the state is "not reachable (no answer
+in 4s)". A red dot and "onsite: not set up": "The host has no onsite
+plugin enabled." 
 
 <!-- /onsite:screen -->
 
@@ -127,12 +131,14 @@ the host.
 | A grey dot and "onsite" | It is checking. This lasts a moment. |
 | A green dot and a computer's name | Hermes is working there, in the folder shown. |
 | A red dot and a computer's name | onsite cannot reach that computer right now. |
-| A red dot and "onsite: not set up" | onsite is not set up for the Hermes you are talking to. |
+| A red dot and "onsite: not set up" | onsite could not answer for the Hermes you are talking to. Rest the pointer on the chip to read why. |
 
 The chip shows the last two parts of the folder. Rest the pointer on
 it, or click it, for the whole path and for **Why**: the reason that
 computer was picked. The reasons are short, such as "the folder is in
-its mirror" or "set with /onsite".
+its mirror" or "set with /onsite". After the first command in a chat
+it reads "this session started there", because a chat stays on the
+computer it started on.
 
 ### Move a chat to another computer
 
@@ -193,7 +199,10 @@ a click on Run: the Run button now reads "Sent".
 <!-- /onsite:screen -->
 
 - **Run** asks Hermes to run it. The button changes to "Sent". If the
-  command is risky, Hermes still asks you first.
+  command is risky, Hermes still asks you first. Run needs one
+  setting on the server. If Hermes answers that this client does not
+  let a plugin hand the agent a message, see the table under
+  [If something goes wrong](#if-something-goes-wrong).
 - **Copy** puts the command on your clipboard. The button reads
   "Copied" for a moment.
 
@@ -216,7 +225,7 @@ The Machines page in Settings. A line at the top says "The machines a
 session can run on. A session picks one from the folder it is opened
 in." A second line says whose settings these are: "These are the
 settings of the "home" profile, the one picked in the Sessions tab.
-The "Applies to" row above does not change this page." Two rows
+The "Applies to" row in Settings does not change this page." Two rows
 follow. The first is "laptop", "you@laptop.example
 (default)", with an Edit button and a Remove button that is greyed
 out. The second is "mac", "this machine", with Edit and Remove. At
@@ -244,22 +253,24 @@ three buttons: Save, Test connection and Cancel.
 
 | Field | What to put in it |
 | --- | --- |
-| Name | A short name you will recognise, such as "laptop". You cannot change it later. |
+| Name | A short name you will recognise, such as "laptop". Small letters, digits and hyphens only, starting with a letter. You cannot change it later. |
 | Where it is | "Another machine, over SSH" for any computer but the server. |
 | Address | The computer's name or address on your network. |
 | Log in as | Your user name on that computer. |
 | Port | Leave it empty unless you were told a number. |
 | Key file | Leave it empty unless you were told a file. |
 | Its screen is reached by | Leave it as it is. It only matters if you let Hermes see and use this computer's screen. |
-| Folders that belong to it | Folders whose work should happen on this computer, one on each line. |
+| Folders that belong to it | Folders whose work should happen on this computer, one on each line. Write each in full from the first slash, such as "/home/you/". |
 | Use it when no folder rule matches | Tick it for the computer you use most. |
 
 Click **Test connection** before you save. It tries the computer as
-you typed it and saves nothing. You get one of two answers:
+you typed it and saves nothing. You get one of these answers:
 
 - "Connected in 42 ms." It works. Click **Save**.
 - "No connection:" and a reason. Check the address and the user name,
   and that the computer is awake.
+- A line that names a field, such as "`laptop.host` is required for
+  an ssh target". Fill that field in.
 
 ### Change or remove one
 
@@ -276,9 +287,10 @@ computer first.
 | --- | --- | --- |
 | A red dot on the chip | The computer is asleep, off or off the network. | Wake it. Work picks up by itself within about 10 seconds. |
 | Hermes says a command has "no exit status" | The link dropped while the command was running. It may have finished or not. Hermes will not run it twice by itself. | Check the result on your computer, then tell Hermes what you found. |
-| "onsite: not set up" | onsite is off, or has no computers, for the Hermes you are talking to. | Open Machines and add one, or ask the person who runs your server. |
+| "onsite: not set up" | onsite is off, has no computers or has a setting it cannot read, or the app could not reach the server. | Rest the pointer on the chip to read which. Open Machines and add a computer, or ask the person who runs your server. |
 | A message that names a profile, such as: This chat belongs to the "home" profile. The app asked the "work" profile, which has no onsite plugin enabled. | The app is asking a different Hermes profile than the one this chat belongs to. | Pick the profile the message names, in the Sessions tab. |
-| "That folder could not be listed." | The computer did not answer, or the folder cannot be read. | Check the chip's dot. Click Browse again. |
+| A line that says a folder "could not be listed on laptop", with a reason | The computer did not answer, or the folder cannot be read. | Check the chip's dot. Click Browse again. |
+| After a click on Run, or `/run 1`: "This client does not let a plugin hand the agent a message." | The server has not allowed onsite to put a message into a chat. | Ask Hermes in your own words to run the command. To fix it for good, see step 3 of [Set up](../README.md#set-up). |
 | "More folders than fit here. Go deeper to narrow it." | The folder has more than 500 folders in it. | Click into a folder closer to the one you want. |
 | "Could not reach the chat box. Type /run 3." | The Run button could not type for you. | Type `/run 3` in the chat yourself. |
 | No Onsite entry in Settings | Your version of the app cannot show a plugin's settings page. | Use the commands in the [README](../README.md#set-up). |
@@ -316,5 +328,7 @@ the network link, which is not quite the same.
 
 The full list is in the README, under
 [What is tested](../README.md#what-is-tested). The screens in this
-guide are drawings. Every word in them is a word the app shows, but
-the app around them will look different.
+guide are drawings. Every word inside the chip, the pane, the cards
+and the settings pages is a word onsite shows. The chat lines and
+Hermes' own question are examples, and the app around them will look
+different.
