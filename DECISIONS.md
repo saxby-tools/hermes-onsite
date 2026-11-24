@@ -906,11 +906,11 @@ Written Nov. 22, 2026, against Hermes v0.23.2.
   because Hermes does not draw it on a plugin's own page. The pane's
   title is "Onsite", as its heading already was. One stale message
   and two stale help lines about mirrors were corrected.
-- **Found and not fixed.** Issues 24, 25 and 26: a login to every
-  machine every five seconds while the app is open, a file of shell
-  variables Hermes leaves in a machine's `/tmp`, and a Run button
-  that says "Sent" when `/run` is not allowed. Each is now in the
-  README under What it touches or in the guide.
+- **Found, and fixed later that night.** Issues 24, 25 and 26: a
+  login to every machine every five seconds while the app is open, a
+  file of shell variables Hermes leaves in a machine's `/tmp`, and a
+  Run button that says "Sent" when `/run` is not allowed. See entry
+  56.
 
 ### 55. The catalog's page is the plugin folder's own README
 
@@ -926,6 +926,82 @@ Written Nov. 22, 2026, against Hermes v0.23.2.
   `docs/catalog-entry.md` says so in its checklist.
 - **Reverse.** Move the plugin to the top of a repository of its
   own, and the one README serves both.
+
+### 56. Three gaps the fact check found were closed the same night
+
+- **Owner's call, Nov. 24.** "You keep going", on leaving for the
+  night, after the three were listed as found and not fixed. Read as
+  leave to fix them. It was not a sign-off on how.
+- **The logins (issue 24).** The chip's check asked the host for
+  every machine's state, every five seconds and after each tool
+  call, and the host logged in to the session's machine twice for
+  one answer. Only the pane shows the list. So the desktop half now
+  asks for the list only while its pane is open, the host probes
+  each machine once for an answer, and a window out of sight does
+  not ask on the timer or after a tool call.
+- **What is left of it.** With the app in view, the session's own
+  machine still gets one login every five seconds. That is the price
+  of a dot that is never stale. Changing it means either a slower
+  dot or trusting an open link, which can call a sleeping machine
+  awake. Left for the owner.
+- **Cost.** The pane's list fills in a moment after the pane opens.
+  A chip can be up to five seconds old when the window comes back.
+- **Not checked.** "While its pane is open" counts the pane as open
+  from when the app draws it until the app removes it. Whether the
+  app removes a closed pane or only hides it was not traced. If it
+  only hides it, the list is asked for from the first time the pane
+  is opened, as before, less the second login.
+- **The files (issue 25).** Each time Hermes' SSH code builds an
+  environment it writes the shell's exported variables, functions
+  and aliases to `/tmp/hermes-snap-<id>.sh` on the machine, and
+  never removes it. The plugin's SSH class now removes its own
+  session's files when Hermes closes the environment, while the link
+  is still up. Only a path of exactly that shape is handed to `rm`.
+- **Found by running it on the laptop.** The first try removed
+  nothing. The laptop's login shell is zsh, which stops a command at
+  a pattern that matches nothing, and one of the two patterns never
+  matches. The removal now runs in `sh`, like the set-up script.
+- **Not covered.** A Hermes that is killed never closes the
+  environment, and a machine that is down is not waited for. Those
+  files stay until the machine clears its temp folder.
+- **The button (issue 26).** The host's status answer now says
+  whether `/run` may reach the agent, read from the same setting
+  Hermes reads. The run card greys Run out and says how to allow it.
+  An older host says nothing, and Run then works as before.
+- **Reverse.** Each is one small change: `wants_rows` in `api.py`
+  and `openPanes` in the desktop half, `cleanup` in
+  `targets/ssh.py`, and `run_allowed` in `compat.py`.
+
+### 57. A fresh reader walked the docs as a new user, and set-up changed
+
+- **How.** After entry 54, a reader with no knowledge of the plugin
+  followed the README in an empty Hermes home, running each command,
+  and was told not to open the source to get unstuck. A second
+  reader checked the text rewritten for entry 54.
+- **What stopped the new user.** Nothing said the server has to be
+  able to log in to the user's computer, or how to check it. Set up
+  ended at `status`, with no first session. The example's `--prefix`
+  could not be told from a path on the laptop. The Use table sent
+  people to `init` to add a machine, and `init` writes the whole
+  list. Some commands were shown as dry runs and some with
+  `--apply`, under the same sentence.
+- **Pick.** The README now states the SSH requirement with a
+  one-line check, the example names two targets and no folder rule,
+  and Set up has a fifth step that opens a folder and starts a
+  session. Commands in the feature sections are shown as dry runs.
+  `init` refuses a list with no default and says which flag to add,
+  and no longer tells people to enable a plugin that has to be
+  enabled for `init` to exist.
+- **What the second reader corrected.** The app's "Install from Git"
+  cannot install the desktop part alone. One button installs both
+  parts, into the profile picked in the dialog, and a desktop part
+  that arrives beside an existing plugin is switched off. The README
+  had said to choose a part. It now says what the button does and
+  where the switch is.
+- **Still open, and the owner's call.** The app and the CLI label
+  the host's own target "this machine". In an app that runs on a
+  laptop, that points at the wrong computer. The guide now says so.
+  A better label is a naming choice and was left alone.
 
 ## Open decisions from the brief
 
