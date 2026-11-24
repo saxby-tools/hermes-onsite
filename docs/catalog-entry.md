@@ -11,7 +11,13 @@ Only the repository's owner, or a major contributor, may submit it.
 
 Two lines are filled in on the day: `sha` and the commit in `image`.
 Both must be the same full commit, because the catalog shows the
-README and the picture as they were at that commit.
+README and the picture as they were at that commit. `sha` is 40
+small hex characters and must name a commit, not a tag.
+
+The README the catalog shows is the one in the plugin's folder,
+`onsite/README.md`, because the entry has a `subdir`. That page
+carries the status line and the disclosure. The repository's own
+README is not shown there.
 
 ```yaml
 name: onsite
@@ -41,15 +47,21 @@ description: >-
   ONSITE_SCREEN_PASSWORD, if a target's screen sharing asks for a VNC
   password. Keeps one ssh connection open per target in use, one
   per MCP server you add and one per session that uses a target's
-  screen. Files each target's host key in known_hosts on first
-  contact. May hold a sleep lock on a target while a command runs.
-  Writes three small state files under plugin-data/onsite and empty
-  folders that mirror a target's folder names. /run puts a message
-  into the chat, which needs allow_gateway_injection. Serves routes
-  to the desktop app under /api/plugins/onsite, one of which writes
-  the plugin's own settings. After /onsite moves a session, adds one
-  note to the user's next message to tell the agent. No telemetry, no
-  other network calls, no self-update, nothing installed on a target.
+  screen. While Hermes Desktop is open, logs in to each target every
+  five seconds to see that it is up. Files each target's host key in
+  known_hosts on first contact. May hold a sleep lock on a target
+  while a command runs. Hermes' own SSH code, which it reuses, leaves
+  one small file per session in the target's /tmp holding the
+  shell's exported variables. Writes three small state files under
+  plugin-data/onsite and empty folders that mirror a target's folder
+  names. /run puts a message into the chat, which needs
+  allow_gateway_injection. Serves eight routes to the desktop app
+  under /api/plugins/onsite. Two write the plugin's own settings and
+  one makes mirror folders. Adds a section to the system prompt that
+  names the session's computer. After /onsite moves a session, adds
+  one note to the user's next message to tell the agent. No
+  telemetry, no other network calls, no self-update, nothing
+  installed on a target.
 maintainer: saxby-tools
 tier: community
 category: tools
@@ -81,9 +93,11 @@ capabilities:
 
 - [ ] Every box in the [QA journeys](qa.md) is ticked, or has an
       issue.
-- [ ] `hermes plugins validate --install-deps` passes on a clean
-      clone at the commit being listed, against the current Hermes
-      release.
+- [ ] `hermes plugins validate --install-deps <clone>/onsite` passes
+      on a clean clone at the commit being listed, against the
+      current Hermes release. The path is the plugin's folder, not
+      the top of the clone. It passed on Nov. 24 on a copy installed
+      from GitHub, with the one warning about private imports.
 - [ ] If Hermes 0.24 has shipped, the plugin has been run on it and
       `requires_hermes` raised in `plugin.yaml` and here. An entry
       that cannot be installed on arrival will be declined.
@@ -96,29 +110,43 @@ capabilities:
       the pull request. Up to six, each pinned to the same commit.
       They must be taken in the real app. The guide's pictures are
       drawings and must not be listed as screenshots.
-- [ ] The README's status line says what is true on the day.
+- [ ] The status line says what is true on the day, in both
+      `README.md` and `onsite/README.md`. The second is the one the
+      catalog shows.
 
 ## What the pull request should say
 
-The catalog asks a new entry to explain how it differs from ones
-already listed. Four are close:
+The submission guide asks the pull request to say what the plugin
+does, which Hermes surfaces it uses and everything the disclosure
+rule covers, with screenshots of anything that has a screen. Saying
+how it differs from entries already listed is our own addition. Four
+are close:
 
-- **`local-hands`** runs a program on your computer that dials a hub
-  on the server, and asks for approval in that program's own
-  terminal. Onsite installs nothing on your computer and approves in
-  the Hermes client.
-- **`hermes-teleoperator`** deploys a program to each computer and
-  switches with a typed command; every chat starts on the server.
-  Onsite picks the computer from the folder a session is opened in.
-- **`tether`** needs a full Hermes on your computer and a code typed
-  there for each session. It does not run on a Linux computer.
-- **`hermes-remote-hands`** adds separate tools for one Mac beside
-  Hermes' own.
+- **`local-hands`** runs a small program on each computer. It dials
+  a hub on the server and asks you before acting. The agent switches
+  computers with a tool. Onsite runs no program of its own on your
+  computer and approves in the Hermes client.
+- **`hermes-teleoperator`** puts its own receiver program on each
+  computer and switches a conversation between computers over SSH.
+  Onsite adds nothing to the computer and picks it from the folder a
+  session is opened in.
+- **`tether`** needs Hermes on your computer, which must be a Mac or
+  run Windows. You switch by saying "tether" and a name, and the
+  person at that computer allows each session on its own screen.
+- **`hermes-remote-hands`** adds six separate tools for one Mac,
+  beside Hermes' own.
 
-None of the four picks the computer by folder, opens a folder that
-exists only on your computer, or adds a folder browser, a settings
-page or run buttons to the desktop app.
+None of the four says it picks the computer by folder, or opens a
+folder that exists only on your computer. `tether` has its own panel
+in the desktop app. None lists a folder browser or run buttons
+there.
 
-The pull request must also repeat the disclosure, and say that the
-private imports are fenced in two files that name every member they
-need and fail with a plain message if one moves.
+These lines were checked on Nov. 24 against each plugin's entry in
+the catalog that ships with Hermes 0.23.2. Read them against the
+catalog again on the day.
+
+The pull request must also repeat the disclosure, and say where the
+private imports are: in two files, `compat.py` and
+`screenbackend.py`. The second names every member it needs and fails
+with a plain message if one moves. The first fails with an import
+error.
