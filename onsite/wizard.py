@@ -27,6 +27,12 @@ NO_TARGETS = (
     "`hermes onsite init` on a terminal to be asked."
 )
 
+NO_DEFAULT = (
+    "No default target was named. Add `--default NAME`. It is the "
+    "target used when no folder rule matches. With exactly one "
+    "`--local` target, that one is taken."
+)
+
 INDENT = "  "
 
 
@@ -184,6 +190,10 @@ def interview(read: Callable[[str], str]) -> dict[str, Any]:
 
 
 def validate(settings: dict[str, Any]) -> OnsiteConfig:
+    # The settings' own check would say to run this very command.
+    if settings.get("default") is None:
+        raise FlagError(NO_DEFAULT)
+
     return parse_config(settings)
 
 

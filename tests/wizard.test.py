@@ -81,10 +81,17 @@ def test_a_flag_for_an_unknown_target_is_refused():
         build(prefix=["desktop=/home/dev/"])
 
 
-def test_no_default_and_two_locals_fails_validation():
+def test_no_default_and_two_locals_says_which_flag_to_add():
     settings = build(local=["mac", "mini"])
 
-    with pytest.raises(config.ConfigError):
+    with pytest.raises(wizard.FlagError, match="--default NAME"):
+        wizard.validate(settings)
+
+
+def test_no_default_and_no_local_says_which_flag_to_add():
+    settings = build(ssh=["laptop=dev@laptop.example"], local=[])
+
+    with pytest.raises(wizard.FlagError, match="--default NAME"):
         wizard.validate(settings)
 
 
