@@ -69,8 +69,10 @@ SHARING_NO_WINDOWS = (
 )
 
 MIRROR_NOT_SET = (
-    "No target has a `mirror` folder. Set one in config.yaml, or "
-    "run `hermes onsite init` with `--mirror NAME=FOLDER`."
+    "No such target to mirror. With no name, `hermes onsite mirror` "
+    "covers each target that has a `mirror` folder set, and none "
+    "has. Name a target, or set one with `hermes onsite init "
+    "--mirror NAME=FOLDER`."
 )
 OPEN_USAGE = (
     "Name the folder as TARGET:FOLDER, such as laptop:~/work."
