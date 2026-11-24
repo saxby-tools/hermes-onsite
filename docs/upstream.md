@@ -142,3 +142,25 @@ override. A test container's entrypoint that writes that file blocks
 stepped down one level, but a rig outside `tests/` is not. Either
 documenting which folders are exempt, or stepping down any path a
 manifest lists as test-only, would help plugin authors.
+
+### A plugin installed from a subfolder is listed as "provenance: drift"
+
+`hermes_cli/plugins_provenance.py` sorts an installed plugin by two
+facts: whether Hermes has an install record for it, and whether its
+folder holds a `.git`. A record with no `.git` is called drift, "flagged
+with a reinstall remedy".
+
+An install from one folder of a repository
+(`hermes plugins install owner/repo/subdir`, or a catalog entry with
+`subdir`) publishes only that folder, so it never has a `.git`. Every
+such plugin is listed as drift from the moment it is installed.
+
+Seen as: `provenance: drift` under the plugin in `hermes plugins
+list`, right after a clean `hermes plugins install
+saxby-tools/hermes-onsite/onsite` into an empty home. To a new user
+it reads as tampering.
+
+The record already holds the source with its `#subdir` and the exact
+revision. Treating a record whose source names a subfolder as a git
+install would fix the label.
+
