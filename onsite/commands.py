@@ -51,6 +51,11 @@ NEXT_STEPS = (
     "  hermes plugins enable onsite",
     "  hermes config set terminal.backend onsite",
     "  hermes onsite status",
+    "",
+    "So that /run can hand a command to the agent in the TUI and the",
+    "desktop app:",
+    "  hermes config set "
+    "plugins.entries.onsite.allow_gateway_injection true",
 )
 
 
@@ -601,13 +606,15 @@ def setup_cli(parser) -> None:
     mirrored.add_argument(
         "target",
         nargs="?",
-        help="the target to mirror. Default: every target with a mirror.",
+        help="the target to mirror. Default: every target that has a "
+        "`mirror` folder set.",
     )
     mirrored.add_argument(
         "--depth",
         type=int,
         metavar="LEVELS",
-        help="how many levels under the home folder. Default: 3.",
+        help="how many levels under the home folder. Default: the "
+        "target's `mirror_depth`, which is 3 unless set.",
     )
     mirrored.add_argument(
         "--apply",
