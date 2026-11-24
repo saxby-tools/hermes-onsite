@@ -410,6 +410,88 @@ test('clicking the chip opens the pane', { skip: SKIP }, async () => {
   assert.deepEqual(calls.reveal, ['onsite:pane'])
 })
 
+test('the machine list is asked for only while the pane is open', { skip: SKIP }, async () => {
+  const { made, mount, settle } = await setup()
+  const asked = () => made.requests.filter(([route]) => route === '/status')
+
+  assert.equal(asked()[0][1].body.rows, false)
+
+  await mount(made.contributions.pane.render())
+  await settle()
+
+  assert.equal(asked()[asked().length - 1][1].body.rows, true)
+})
+
+test('the pane keeps its machine list when an answer comes without one', { skip: SKIP }, async () => {
+  const { backend, made, mount, settle } = await setup()
+  const box = await mount(made.contributions.pane.render())
+
+  await settle()
+
+  const { rows, ...bare } = UP
+
+  backend.status = bare
+  await settle(made.intervals[0])
+
+  assert.equal(rows.length, 2)
+  assert.match(box.textContent, /mac \(this machine\)/)
+})
+
+test('a window out of sight does not ask the host', { skip: SKIP }, async () => {
+  const { made, settle } = await setup()
+  let state = 'hidden'
+
+  Object.defineProperty(document, 'visibilityState', {
+    configurable: true,
+    get: () => state
+  })
+
+  const before = made.requests.length
+
+  await settle(made.intervals[0])
+  await settle(made.events['tool.complete'])
+
+  assert.equal(made.requests.length, before)
+
+  state = 'visible'
+  await settle(made.intervals[0])
+
+  assert.ok(made.requests.length > before)
+})
+
+test('a host that does not allow /run greys Run out and says how to allow it', { skip: SKIP }, async () => {
+  const { backend, calls, click, made, mount, settle } = await setup()
+
+  backend.status = { ...UP, run_allowed: false }
+  backend.proposals = [PROPOSAL]
+  await settle(made.intervals[0])
+
+  const box = await mount(made.contributions.pane.render())
+  const run = box.querySelector('[data-action="run"]')
+  const note = box.querySelector('[data-onsite-run-off]')
+
+  assert.equal(run.disabled, true)
+  assert.match(note.textContent, /Run is off for this profile/)
+  assert.match(note.textContent, /allow_gateway_injection true/)
+
+  await click(run)
+
+  assert.deepEqual(calls.submit, [])
+  assert.ok(box.querySelector('[data-action="copy"]'))
+})
+
+test('a host that says nothing about /run leaves Run as it was', { skip: SKIP }, async () => {
+  const { backend, made, mount, settle } = await setup()
+
+  backend.proposals = [PROPOSAL]
+  await settle(made.intervals[0])
+
+  const box = await mount(made.contributions.pane.render())
+
+  assert.equal(box.querySelector('[data-action="run"]').disabled, false)
+  assert.equal(box.querySelector('[data-onsite-run-off]'), null)
+})
+
 test('the pane lists proposed commands and Run sends /run N', { skip: SKIP }, async () => {
   const { backend, calls, click, made, mount, settle } = await setup()
 

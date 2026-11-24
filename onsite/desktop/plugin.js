@@ -43,6 +43,13 @@ const POLL_MS = 5000
 const REQUEST_TIMEOUT_MS = 8000
 const COPIED_MS = 1500
 
+// Shown on a proposed command when the host will not let `/run` hand
+// it to the agent. The command is the one the README gives.
+const RUN_OFF_NOTE =
+  'Run is off for this profile. Ask Hermes to run it, or copy it. ' +
+  'To turn Run on, on the host: hermes config set ' +
+  'plugins.entries.onsite.allow_gateway_injection true'
+
 // How the app reports a route that the host does not have.
 const NOT_FOUND = '404'
 
@@ -167,6 +174,9 @@ function useStore(store) {
 const statusStore = createStore(null)
 const proposalsStore = createStore([])
 
+// How many copies of the pane are on screen now.
+let openPanes = 0
+
 // Set in register(). The components need the plugin context to call
 // the host, and they are created outside it.
 let plugin = null
@@ -276,12 +286,34 @@ function describeError(error) {
   return text
 }
 
-async function post(path) {
+async function post(path, extra = {}) {
   return plugin.rest(path, {
     method: 'POST',
-    body: requestBody(),
+    body: { ...requestBody(), ...extra },
     timeoutMs: REQUEST_TIMEOUT_MS
   })
+}
+
+function paneIsOpen() {
+  return openPanes > 0
+}
+
+// An answer asked for before the pane opened has no list of machines.
+// The pane keeps the list it has until the next answer brings one.
+function keepRows(answer) {
+  if (!answer?.ok) {
+    return answer
+  }
+
+  if (Array.isArray(answer.rows)) {
+    return answer
+  }
+
+  if (!paneIsOpen()) {
+    return answer
+  }
+
+  return { ...answer, rows: statusStore.get()?.rows }
 }
 
 async function refresh() {
@@ -290,7 +322,12 @@ async function refresh() {
   }
 
   try {
-    statusStore.set(await post('/status'))
+    // The list of machines costs the host one login to each. Only
+    // the pane shows it, so it is only asked for while the pane is
+    // open.
+    const answer = await post('/status', { rows: paneIsOpen() })
+
+    statusStore.set(keepRows(answer))
   } catch (error) {
     statusStore.set({ ok: false, error: describeError(error) })
   }
@@ -303,6 +340,18 @@ async function refresh() {
     // The chip already shows that the host is unreachable. The list
     // keeps what it had, so a blip does not blank the pane.
   }
+}
+
+function windowIsHidden() {
+  return globalThis.document?.visibilityState === 'hidden'
+}
+
+function refreshIfSeen() {
+  if (windowIsHidden()) {
+    return
+  }
+
+  refresh()
 }
 
 function notify(kind, message) {
@@ -441,7 +490,7 @@ function CopyButton({ text }) {
   })
 }
 
-function RunButton({ number, sessionId }) {
+function RunButton({ number, sessionId, off }) {
   const [sent, setSent] = useState(false)
 
   const onClick = () => {
@@ -453,14 +502,22 @@ function RunButton({ number, sessionId }) {
   return jsx('button', {
     className: BUTTON_CLASS,
     'data-action': 'run',
-    disabled: sent,
+    disabled: sent || off,
     onClick,
     type: 'button',
     children: sent ? 'Sent' : 'Run'
   })
 }
 
+// The host says whether `/run` may hand a command to the agent. An
+// older host says nothing, and Run then works as it always did.
+function runIsOff(status) {
+  return status?.run_allowed === false
+}
+
 function CommandBlock({ number, command, why, sessionId }) {
+  const off = runIsOff(useStore(statusStore))
+
   return jsxs('div', {
     className: 'flex flex-col gap-1 rounded border border-(--ui-border) p-2',
     'data-proposal': number,
@@ -472,7 +529,7 @@ function CommandBlock({ number, command, why, sessionId }) {
           jsxs('span', {
             className: 'flex gap-1',
             children: [
-              jsx(RunButton, { number, sessionId }),
+              jsx(RunButton, { number, sessionId, off }),
               command ? jsx(CopyButton, { text: command }) : null
             ]
           })
@@ -481,7 +538,14 @@ function CommandBlock({ number, command, why, sessionId }) {
       command
         ? jsx('code', { className: CODE_CLASS, children: command })
         : jsx('div', { className: TEXT_MUTED, children: `Run it with /run ${number}.` }),
-      why ? jsx('div', { className: joinClasses(TEXT_SMALL, TEXT_MUTED), children: why }) : null
+      why ? jsx('div', { className: joinClasses(TEXT_SMALL, TEXT_MUTED), children: why }) : null,
+      off
+        ? jsx('div', {
+            className: joinClasses(TEXT_SMALL, TEXT_MUTED),
+            'data-onsite-run-off': true,
+            children: RUN_OFF_NOTE
+          })
+        : null
     ]
   })
 }
@@ -829,6 +893,15 @@ function OnsitePane() {
   const proposals = useStore(proposalsStore)
   const pending = proposals.filter(item => item.status === 'pending')
   const sessionId = sessionIds()[0] ?? null
+
+  useEffect(() => {
+    openPanes += 1
+    refresh()
+
+    return () => {
+      openPanes -= 1
+    }
+  }, [])
 
   return jsxs('div', {
     className: 'flex h-full flex-col gap-3 overflow-y-auto p-3 text-[0.8125rem]',
@@ -1463,11 +1536,12 @@ export default {
     })
 
     // Status comes from a live probe on the host each time. Nothing
-    // here is cached between polls.
-    ctx.setInterval(refresh, POLL_MS)
+    // here is cached between polls. A window nobody can see does not
+    // ask, so a machine is not logged in to for a chip out of sight.
+    ctx.setInterval(refreshIfSeen, POLL_MS)
 
     EVENTS_THAT_CHANGE_STATE.forEach(type => {
-      ctx.onEvent?.(type, () => refresh())
+      ctx.onEvent?.(type, () => refreshIfSeen())
     })
 
     refresh()
