@@ -268,8 +268,9 @@ def real_folder(spec: TargetSpec, target_folder: str) -> str:
     try:
         raw = run_remote(spec, script, CHECK_TIMEOUT_SECONDS)
     except MirrorError as error:
+        # The reason may be the folder or the link. It says which.
         raise MirrorError(
-            f"{target_folder} is not a folder on {spec.label}: {error}"
+            f"{target_folder} could not be opened on {spec.label}: {error}"
         ) from None
 
     fields = [field for field in split_fields(raw) if field]

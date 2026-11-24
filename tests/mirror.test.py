@@ -301,7 +301,7 @@ def test_open_says_so_when_the_folder_is_not_there(tmp_path, monkeypatch):
 
     monkeypatch.setattr(mirror, "run_remote", fake_remote)
 
-    with pytest.raises(mirror.MirrorError, match="is not a folder on"):
+    with pytest.raises(mirror.MirrorError, match="could not be opened on"):
         mirror.open_folder(laptop(str(tmp_path)), "/nope", True)
 
     assert list(tmp_path.iterdir()) == []
