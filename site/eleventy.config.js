@@ -4,8 +4,10 @@
 // as a table and the Hermes marketplace would print it. Each page's
 // layout, address and title come from here instead: the repo's
 // README.md is the front page and uses site/layouts/home.ejs, every
-// other page uses site/layouts/page.ejs, `findings.md` becomes
-// `findings.html`, and the title is the file's first heading.
+// other page uses site/layouts/page.ejs, and the title is the file's
+// first heading. Every page but the front page gets a folder of its
+// own: `docs/guide.md` becomes `docs/guide/index.html`, so its
+// address is `docs/guide/` with no file name in it.
 //
 // Components live in site/components as a pair of files: `name.ejs`
 // draws it and `name.js` turns the block into the template's data.
@@ -34,6 +36,14 @@ const SITE_NAME = "onsite";
 
 const HOME_PAGE = "./README.md";
 
+const GUIDE_PAGE = "./docs/guide.md";
+
+// The two parts of the site the masthead links to. Every page that
+// is not the guide belongs to the docs.
+const SECTION_DOCS = "docs";
+
+const SECTION_GUIDE = "guide";
+
 const COMPONENTS_DIR = "site/components";
 
 const SOURCE_URL =
@@ -42,8 +52,8 @@ const SOURCE_URL =
 const SITE_URL = "https://saxby-tools.github.io/hermes-onsite/";
 
 const SITE_SUMMARY = "A community plugin for the Hermes agent. Open a " +
-  "project folder on your own computer and your always-on Hermes " +
-  "works in it, with Hermes' own approval prompts kept on.";
+  "project folder on your own computer and the Hermes that lives on " +
+  "your server works in it, with its own approval prompts kept on.";
 
 // Copied as they are. The README and the design page point at these.
 const PASSTHROUGH = [
@@ -128,23 +138,43 @@ function layoutOf(inputPath) {
   return "page.ejs";
 }
 
+// Which masthead link a page lights up.
+function sectionOf(inputPath) {
+  if (inputPath === GUIDE_PAGE) {
+    return SECTION_GUIDE;
+  }
+
+  return SECTION_DOCS;
+}
+
+// True for the two pages the masthead links straight to.
+function isSectionFront(inputPath) {
+  if (inputPath === HOME_PAGE) {
+    return true;
+  }
+
+  return inputPath === GUIDE_PAGE;
+}
+
 function permalinkOf(page) {
   if (page.inputPath === HOME_PAGE) {
     return "index.html";
   }
 
-  return `${page.filePathStem}.html`;
+  return `${page.filePathStem}/index.html`;
 }
 
-// "../" once per folder, so links work under any base path.
+// "../" once per folder, so links work under any base path. A page
+// sits in a folder named for it, so `/docs/guide` is two folders
+// down from the root.
 function rootOf(page) {
   if (page.inputPath === HOME_PAGE) {
     return "./";
   }
 
-  const depth = page.filePathStem.split("/").length - 2;
+  const depth = page.filePathStem.split("/").length - 1;
 
-  return depth > 0 ? "../".repeat(depth) : "./";
+  return "../".repeat(depth);
 }
 
 function sourceOf(inputPath) {
@@ -201,6 +231,8 @@ export default async function (eleventyConfig) {
     permalink: (data) => permalinkOf(data.page),
     title: (data) => titleOf(data.page.inputPath),
     root: (data) => rootOf(data.page),
+    section: (data) => sectionOf(data.page.inputPath),
+    sectionFront: (data) => isSectionFront(data.page.inputPath),
     source: (data) => sourceOf(data.page.inputPath),
   });
 

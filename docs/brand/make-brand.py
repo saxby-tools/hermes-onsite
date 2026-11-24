@@ -18,6 +18,9 @@ It writes these files into docs/brand/:
     banner.svg          the plugin catalog's picture, 1200 by 600
     social.svg          the picture shown when a page is shared
 
+The two pictures show plate-table.png, which make-plate-table.sh
+makes. Run that first.
+
 make-icons.sh then turns the mark and the two pictures into the PNG
 and ICO files the site and the catalog need.
 """
@@ -46,7 +49,7 @@ MONO_FILE = FONTS / "geist-mono-latin-500-normal.woff2"
 
 DISPLAY_FILE = FONTS / "oswald-latin-wght-normal.woff2"
 
-PLATE_FILE = "plate-head.png"
+PLATE_FILE = "plate-table.png"
 
 # Colours, from site/static/onsite.css.
 FIELD = "#0000f2"
@@ -76,11 +79,25 @@ BANNER_WIDTH = 1200
 BANNER_HEIGHT = 600
 SOCIAL_HEIGHT = 630
 
-HEADLINE = ["OPEN A FOLDER.", "HERMES WORKS", "THERE."]
-HEADLINE_SIZE = 84
-HEADLINE_LEADING = 94
+HEADLINE = [
+    "OPEN A FOLDER ON",
+    "YOUR COMPUTER.",
+    "YOUR SERVER\u2019S HERMES",
+    "WORKS THERE.",
+]
+HEADLINE_SIZE = 52
+HEADLINE_LEADING = 62
 HEADLINE_WEIGHT = 300
 HEADLINE_TRACK = 1
+HEADLINE_TOP = 232
+
+# The plate fills the right of each picture. It is three wide to two
+# tall, so at the banner's height it is 900 wide; only the part from
+# PLATE_EDGE rightward shows, which keeps Mercury and Jupiter and
+# drops most of the hostess. A yellow bar marks the edge: the door.
+PLATE_EDGE = 590
+PLATE_RATIO = 1.5
+DOOR_WIDTH = 8
 
 LABEL = "COMMUNITY PLUGIN"
 LABEL_SIZE = 24
@@ -353,30 +370,19 @@ def write_wordmarks(mono: hb.Font) -> None:
 
 # ---- The pictures -----------------------------------------------------
 
-def pillar(left: float, top: float, width: float, height: float) -> str:
-    """The herm's pillar, drawn as the same broken lines as the plate."""
-    rows = ""
-    row = top
-
-    while row < top + height:
-        rows += (
-            f'  <rect x="{number(left)}" y="{number(row)}" '
-            f'width="{number(width)}" height="6" fill="{FIELD}" />\n'
-        )
-        row += 12
-
-    return rows
-
-
 def picture(name: str, height: int, note: str, fonts: dict) -> None:
-    """The herm on its spot, on paper, with the promise beside it.
+    """The promise on paper, beside the plate of the gods at the table.
 
-    The plate is pale ink on a blue ground. Its red channel is 0 on
-    the ground and near 1 on the ink, so the filter turns red into
-    alpha and paints the ink blue. That lets it sit on paper.
+    The left of the picture is paper, with the words. The right is
+    the plate as it is, blue with pale ink. A yellow bar stands
+    between them, where a door would be. The catalog draws a flat
+    blue halftone for entries with no picture; half paper and one
+    hard yellow line keep this from looking like one.
     """
     drop = height - BANNER_HEIGHT
-    floor = 536 + drop
+    plate_width = height * PLATE_RATIO
+    plate_left = BANNER_WIDTH - plate_width
+
     body = (
         f'  <rect width="{BANNER_WIDTH}" height="{height}" '
         f'fill="{PAPER}" />\n'
@@ -384,12 +390,20 @@ def picture(name: str, height: int, note: str, fonts: dict) -> None:
 
     body += (
         '  <defs>\n'
-        '    <filter id="ink" color-interpolation-filters="sRGB"\n'
-        '      x="0" y="0" width="1" height="1">\n'
-        '      <feColorMatrix type="matrix"\n'
-        '        values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0.949  1 0 0 0 0" />\n'
-        '    </filter>\n'
+        '    <clipPath id="plate">\n'
+        f'      <rect x="{PLATE_EDGE}" y="0" '
+        f'width="{BANNER_WIDTH - PLATE_EDGE}" height="{height}" />\n'
+        '    </clipPath>\n'
         '  </defs>\n'
+    )
+    body += (
+        f'  <image href="{PLATE_FILE}" x="{number(plate_left)}" y="0" '
+        f'width="{number(plate_width)}" height="{height}" '
+        'clip-path="url(#plate)" />\n'
+    )
+    body += (
+        f'  <rect x="{PLATE_EDGE - DOOR_WIDTH}" y="0" '
+        f'width="{DOOR_WIDTH}" height="{height}" fill="{SIGNAL}" />\n'
     )
 
     # Two knocked-out rows at the left edge, as on the plates.
@@ -404,28 +418,17 @@ def picture(name: str, height: int, note: str, fonts: dict) -> None:
     )
     body += shape_tag(label, FIELD)
 
-    body += pillar(806, floor - 112, 212, 112)
-    body += (
-        f'  <image href="{PLATE_FILE}" x="660" y="{-20 + drop}" '
-        'width="500" height="500" filter="url(#ink)" />\n'
-    )
-    body += (
-        f'  <rect x="610" y="{floor}" width="590" height="18" '
-        f'fill="{SIGNAL}" />\n'
-    )
-    body += (
-        f'  <rect x="610" y="{floor + 18}" width="590" height="4" '
-        f'fill="{FIELD}" />\n'
-    )
-
     for index, line in enumerate(HEADLINE):
         text, _, _ = draw(
             fonts["headline"], line, HEADLINE_SIZE, MARGIN,
-            250 + drop / 2 + index * HEADLINE_LEADING, HEADLINE_TRACK,
+            HEADLINE_TOP + drop / 2 + index * HEADLINE_LEADING,
+            HEADLINE_TRACK,
         )
         body += shape_tag(text, FIELD)
 
-    first, rest, _ = word_letters(fonts["mono"], WORD_SIZE, MARGIN, floor)
+    first, rest, _ = word_letters(
+        fonts["mono"], WORD_SIZE, MARGIN, height - MARGIN,
+    )
     body += shape_tag(first, FIELD) + shape_tag(rest, NAVY)
 
     svg(name, BANNER_WIDTH, height, "onsite", note, body, sized=True)
@@ -436,9 +439,9 @@ def write_pictures(fonts: dict) -> None:
         "banner.svg", BANNER_HEIGHT,
         "The source of banner.png, the picture the Hermes plugin\n"
         "    catalog shows for onsite. The catalog wants 2 to 1 and lays\n"
-        "    the listing's title over the left side, so the herm stands\n"
-        "    on the right. The ground is paper, because the catalog draws\n"
-        "    a blue halftone for entries with no picture.",
+        "    the listing's title over the left side, so the plate is on\n"
+        "    the right. The plate is an engraving of Jupiter and Mercury\n"
+        "    as guests at the table of Philemon and Baucis.",
         fonts,
     )
     picture(

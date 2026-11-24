@@ -1,8 +1,9 @@
 # The onsite guide
 
-Open a folder on your own computer and Hermes works in it. This guide
-shows each screen you will meet, in the order you meet it. You do not
-need to know how any of it is set up.
+Open a folder on your own computer and the Hermes that lives on your
+server works in it. This guide shows each screen you will meet, in
+the order you meet it. You do not need to know how any of it is set
+up.
 
 For people who use Hermes Desktop. About six minutes to read.
 
@@ -14,15 +15,6 @@ editing files, on the computer where your project is. You stay in the
 Hermes app the whole time.
 
 <!-- /onsite:notice -->
-
-Jump to a part:
-
-- [Open a folder](#open-a-folder)
-- [See where Hermes is working](#see-where-hermes-is-working)
-- [Say yes or no](#say-yes-or-no)
-- [Run a command Hermes suggests](#run-a-command-hermes-suggests)
-- [Add or change a computer](#add-or-change-a-computer)
-- [If something goes wrong](#if-something-goes-wrong)
 
 ## How it works
 

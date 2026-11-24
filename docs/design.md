@@ -2,8 +2,8 @@
 
 The look has a name: glitched marble. It borrows the electric blue
 and the condensed type of the Hermes site, and screens classical art
-into that blue. The mark, the yellow and the plate are this project's
-own.
+into that blue. The mark, the yellow and the plates are this
+project's own.
 
 This page is the reference and the test page. On the site, every
 token and component below is drawn live from the stylesheet, so a
@@ -60,18 +60,29 @@ installed. `brand/make-brand.py` draws them from the font files, and
 fails if its numbers and the stylesheet's drift apart.
 `brand/make-icons.sh` turns the mark into the site's icons.
 
-### Plate
+### Plates
 
-One public-domain photo from The Metropolitan Museum of Art, screened
-into blue by `brand/make-plates.sh`. Plate I is a Roman marble head
-from a herm. A herm was a pillar that carried the head of Hermes and
-stood at doorways and along roads. It marked a place.
+Two public-domain pictures, each screened into blue as broken lines
+with a few rows knocked sideways.
 
-| Plate I |
-| --- |
-| ![A bearded marble head, drawn in broken blue lines](brand/plate-head.png) |
+Plate I is the hero. It is an engraving of 1613 by Hendrik Goudt,
+after a painting by Adam Elsheimer, from the Cleveland Museum of Art.
+It shows a story the Roman poet Ovid tells. Jupiter and Mercury, who
+is Hermes, travel as strangers and are turned away at every door in
+a town. One old couple, Philemon and Baucis, takes them in. Mercury
+is the young man in the winged hat. `brand/make-plate-table.sh` makes
+the plate.
 
-A second plate, a marble hand, was retired with the old name.
+Plate II is a Roman marble head from a herm, from The Metropolitan
+Museum of Art. A herm was a pillar that carried the head of Hermes
+and stood at the door of a house. `brand/make-plates.sh` makes it.
+
+| Plate I, at your table | Plate II, at your door |
+| --- | --- |
+| ![Two travellers at a table by lamplight, drawn in broken blue lines](brand/plate-table.png) | ![A bearded marble head, drawn in broken blue lines](brand/plate-head.png) |
+
+Both say the same thing as the name: the gods came to where you
+were. A third plate, a marble hand, was retired with the old name.
 
 ## Colour
 
@@ -120,7 +131,7 @@ page around it from paper to navy.
 | `type-body` | A session picks its target once, from the folder it was opened in. |
 | `type-small` | The output of each run is saved with the rig. |
 | `type-mono` | hermes config set terminal.backend onsite |
-| `type-plate` | Plate I. Marble head from a herm. |
+| `type-plate` | Plate I. Jupiter and Mercury at the house of Philemon and Baucis. |
 
 <!-- /onsite:specimen -->
 
@@ -161,7 +172,8 @@ license texts sit beside them in `site/static/fonts/`.
 
 The gutter is `--gutter`, 1rem, on every screen. Text keeps to
 `--measure`, 42rem. The page column is `--column`, 70rem. The
-masthead is `--top-height`, 3.5rem, tall.
+masthead is `--top-height`, 3.5rem, tall. The "On this page" bar
+under it is `--contents-height`, 2.75rem, tall.
 
 ## Radius
 
@@ -306,6 +318,6 @@ the catalog entry pins.
 
 | Asset | File | The catalog's rule |
 | --- | --- | --- |
-| `image` | `docs/brand/banner.png` | 2 to 1, here 1200 by 600. The listing lays the title over its left side, so the herm stands on the right. The ground is paper, because the catalog draws a blue halftone for entries with no picture |
+| `image` | `docs/brand/banner.png` | 2 to 1, here 1200 by 600. The listing lays the title over its left side, so the plate is on the right. The left half is paper, because the catalog draws a flat blue halftone for entries with no picture |
 | `screenshots` | none yet | Up to six. They wait for a person at the real clients |
 | README | `README.md` | Shown as Markdown. Raw HTML is dropped, so it uses none |

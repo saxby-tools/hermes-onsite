@@ -1,9 +1,10 @@
 # onsite
 
-![onsite: a marble head on a pillar, standing on a yellow line](docs/brand/banner.png)
+![onsite: an old engraving of two gods as guests at a table](docs/brand/banner.png)
 
-Open a project folder on your own computer and your always-on
-[Hermes](https://github.com/NousResearch/hermes-agent) works in it.
+Open a project folder on your own computer and the
+[Hermes](https://github.com/NousResearch/hermes-agent) that lives on
+your server works in it.
 
 Hermes stays on your server. Its commands and file edits run on the
 computer the folder lives on, as you. It is the way of working you
