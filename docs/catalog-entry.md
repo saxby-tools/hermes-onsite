@@ -21,11 +21,11 @@ subdir: onsite
 sha: <the 40-character commit being listed>
 version: "0.1.0"
 description: >-
-  Open a project folder on your own computer and your always-on
-  Hermes works in it. Hermes stays on your server; its terminal and
-  file tools run on the computer the folder lives on, as you, over
-  the SSH you already have, started from either side. The folder you
-  open picks the computer: no switch phrase, no mode. Risky commands
+  Open a project folder on your own computer and the Hermes that
+  lives on your server works in it. Its terminal and file tools run
+  on the computer the folder lives on, as you, over the SSH you
+  already have, started from either side. The folder you open picks
+  the computer: no switch phrase, no mode. Risky commands
   stop at Hermes' own approval prompt in the app you are holding. In
   Hermes Desktop a chip names the computer in use, a pane browses its
   folders and starts sessions there, proposed commands get a Run
