@@ -18,13 +18,22 @@ config of the profile it is given for the length of a run. That is
 
 ## Before you start
 
+- [ ] From the host, this returns at once with no question. If it
+      asks for a password, the laptop does not accept the host's key
+      yet, and nothing below can work:
+
+```bash
+ssh you@laptop.example true
+```
+
 - [ ] Restart the Hermes gateway on the host if the plugin was
       updated or reloaded while it ran. A gateway keeps what it
       loaded: each reload leaves an old copy of the hooks behind, and
       the screen backend is only read once.
 - [ ] The `test` profile has the plugin set up. A profile set up
-      earlier needs nothing here. A new one needs these four, in
-      order:
+      earlier needs nothing here. Do not run the second command on
+      it: `init --apply` writes the whole list of targets and drops
+      any it is not given. A new profile needs these four, in order:
 
 ```bash
 hermes -p test plugins install saxby-tools/hermes-onsite/onsite --enable
@@ -91,24 +100,39 @@ ls "$(hermes -p qa config path | xargs dirname)/plugins/onsite"
 Now the desktop app's part, on the computer the app runs on. **This
 has never been tried.** It was read from Hermes' source.
 
-- [ ] In the app, open Capabilities, then Plugins. The row for
-      Onsite says its desktop half is "unavailable (remote backend)",
-      or there is no desktop row yet.
+The app's "Install from Git" installs both parts of the plugin with
+one button. The agent plugin goes into the profile set under
+"Install for profile". **Set that to `qa` and check it before each
+click.** A click with another profile picked installs the plugin
+there and turns it on.
+
+- [ ] In the app, open Capabilities, then Plugins. Note what the row
+      for the plugin says about its desktop half. With a remote host
+      it should read "unavailable (remote backend)".
 - [ ] Click "Install from Git" and enter
       `saxby-tools/hermes-onsite/onsite`. The dialog lists "Agent
-      plugin" and "Desktop UI". Write down what it offers and what it
-      says about where each part goes.
-- [ ] Install the Desktop UI part. If you copied `plugin.js` there by
-      hand before, the app says the desktop plugin already exists.
-      Move the old `~/.hermes/desktop-plugins/onsite` folder away and
-      try again.
-- [ ] Within a few seconds the status bar shows a chip that starts
-      with "onsite". If it does not, run "Reload desktop plugins"
-      from the command palette.
+      plugin" and "Desktop UI", with a line under each on where it
+      goes. Set "Install for profile" to `qa`. Leave "Force
+      reinstall" off.
+- [ ] Click Install. Because `qa` already has the plugin, the dialog
+      reports that the agent plugin already exists, and still fetches
+      the Desktop UI. Write down its exact words.
+- [ ] If you copied `plugin.js` there by hand before, the app says
+      the desktop plugin already exists. Move the old
+      `~/.hermes/desktop-plugins/onsite` folder away and try again.
+- [ ] The desktop part arrives switched off. Open the plugin's entry
+      in Capabilities, Plugins and turn on the switch labelled
+      Desktop. The status bar then shows a chip that starts with
+      "onsite".
 - [ ] Enter the bare address,
       `https://github.com/saxby-tools/hermes-onsite`, in the same
       dialog. It finds no plugin. That is expected, and worth one
       line on how clear the message is.
+- [ ] Optional, the whole install through the app: make a second
+      throwaway profile, `hermes profile create qa2`, and run
+      "Install from Git" with "Install for profile" set to `qa2`. It
+      should install the agent plugin there, turn it on, and turn the
+      desktop part on with it. Remove `qa2` when done.
 
 ## 2. Set up
 
@@ -119,12 +143,13 @@ hermes -p qa onsite init --ssh laptop=you@laptop.example --local mac --prefix la
 ```
 
 - [ ] The same command with `--apply` writes them and prints what to
-      run next: three commands, then one more that lets `/run` hand a
+      run next: two commands, then one more that lets `/run` hand a
       command to the agent.
-- [ ] Run the second, third and fourth of those with `-p qa` added
-      after `hermes`. The printed lines leave the profile out. Then
-      `hermes -p qa onsite status` shows `laptop` up and `mac` as the
-      default.
+- [ ] Run all three with `-p qa` added after `hermes`. The printed
+      lines leave the profile out. `hermes -p qa onsite status` then
+      shows `laptop` up and `mac` as the default.
+- [ ] `hermes -p qa onsite init --ssh box=you@laptop.example` with
+      no other flag refuses, and says to add `--default NAME`.
 - [ ] With no flags, in a terminal, `hermes -p qa onsite init` asks
       questions instead.
 
@@ -138,8 +163,9 @@ Use the `test` profile from here on.
 cd /Users/you/Development && hermes -p test --tui
 ```
 
-- [ ] Before any message, type `/onsite`. It says the session has not
-      said which folder it is in yet.
+- [ ] Before any message, type `/onsite`. It either says the session
+      has not said which folder it is in yet, or names a target from
+      the folder you started in. Note which.
 - [ ] Ask: "Run `pwd; whoami; uname -n` and show me the output." You
       see `/home/you/Development`, `you` and the laptop's name.
 - [ ] Type `/onsite`. It names `laptop`, says it is connected, and
@@ -216,6 +242,12 @@ On the laptop, in the desktop app, connected to the gateway.
       the pane. **This has never been seen in the real app.**
 - [ ] Click Run. The button reads "Sent" and the command runs after
       any approval. Click Copy and paste: it is the exact command.
+- [ ] On the host, turn the `/run` setting off: the fourth command of
+      "Before you start" with `false` in place of `true`. Ask for
+      another proposed command. Within a few seconds its Run button
+      is greyed out and a line says "Run is off for this profile."
+      Copy still works. Turn the setting back on and Run comes back.
+      Note it if either change needs a restart.
 - [ ] In the pane, under "Open a folder", pick `laptop` and click
       Browse. You see the laptop's home folders. Click into one, then
       click "Start a session in ...". A new session opens, and its
@@ -288,8 +320,10 @@ hermes -p test onsite mirror laptop
 ```
 
 - [ ] The folder it named holds folders and no files. With the set-up
-      above that is `/Users/you/Onsite/laptop`, and this prints 0
-      while `ls` there shows the laptop's folder names:
+      above that is `/Users/you/Onsite/laptop`. It stands for the
+      laptop's whole disk, so your folders are under
+      `/Users/you/Onsite/laptop/home/you`. This prints 0, while `ls`
+      on that longer path shows the laptop's folder names:
 
 ```bash
 find /Users/you/Onsite/laptop -type f | wc -l
@@ -412,13 +446,13 @@ Run these from a clone of the repository, on the host. The rig uses a
 profile named `buster` unless you pass `--profile`, and needs Docker
 and `HERMES_HOME`, as in journey 12.
 
-- [ ] Unit tests: 409 pass.
+- [ ] Unit tests: 419 pass.
 
 ```bash
 uv run --no-project --with pytest --with pillow --with cryptography python -m pytest -q
 ```
 
-- [ ] Desktop tests: 35 pass and none is skipped. They borrow React
+- [ ] Desktop tests: 40 pass and none is skipped. They borrow React
       from a Hermes checkout at `~/.hermes/hermes-agent`, or the
       folder named in `HERMES_SRC`. Without one they are skipped, not
       failed.
@@ -439,7 +473,10 @@ python3 rig/run.py --apply --real you@laptop.example
 
 ## When you are done
 
-- [ ] Remove the throwaway profile: `hermes profile delete qa`.
+- [ ] Remove the throwaway profile: `hermes profile delete qa`. If
+      the app's install went into another profile by mistake, turn
+      it off there: `hermes -p <that profile> plugins disable
+      onsite`.
 - [ ] Remove the test file on the laptop:
       `ssh you@laptop.example 'rm ~/Development/onsite-qa.txt'`.
 - [ ] Take back what the journeys added to the test profile, if you
