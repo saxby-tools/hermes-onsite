@@ -79,7 +79,54 @@ def find_session_id(runtime, ids: list[str]) -> str:
     return ids[0] if ids else ""
 
 
-def describe_targets(runtime) -> list[dict[str, Any]]:
+def wants_rows(body: Any) -> bool:
+    """Whether the caller asked for every target, not only its own.
+
+    Listing them costs one login to each. The desktop half only asks
+    while its pane is open. A caller that says nothing gets the list,
+    as every desktop half before this choice existed expects.
+    """
+
+    if not isinstance(body, dict):
+        return True
+
+    return body.get("rows") is not False
+
+
+def answer_of(payload: dict[str, Any]) -> dict[str, Any]:
+    """What a status answer already knows about its own target."""
+
+    if not payload.get("ok"):
+        return {}
+
+    return {
+        payload["target"]: {
+            "connected": payload["connected"],
+            "detail": payload["detail"],
+            "latency_ms": payload["latency_ms"],
+        },
+    }
+
+
+def probe_row(runtime, spec, known: dict[str, Any]) -> dict[str, Any]:
+    # The session's own target was probed a moment ago for the same
+    # answer. A second login would only tell the same thing again.
+    if spec.name in known:
+        return known[spec.name]
+
+    probe = runtime.gate_for(spec).check()
+
+    return {
+        "connected": probe.ok,
+        "detail": probe.detail,
+        "latency_ms": probe.elapsed_ms,
+    }
+
+
+def describe_targets(
+    runtime,
+    known: dict[str, Any] | None = None,
+) -> list[dict[str, Any]]:
     try:
         config = runtime.load_config()
     except ConfigError:
@@ -88,16 +135,12 @@ def describe_targets(runtime) -> list[dict[str, Any]]:
     rows = []
 
     for spec in config.targets.values():
-        probe = runtime.gate_for(spec).check()
-
         rows.append({
             "name": spec.name,
             "kind": spec.kind,
             "label": spec.label,
-            "connected": probe.ok,
-            "detail": probe.detail,
-            "latency_ms": probe.elapsed_ms,
             "default": spec.name == config.default,
+            **probe_row(runtime, spec, known or {}),
         })
 
     return rows
@@ -109,9 +152,10 @@ def status_payload(runtime, body: Any, with_targets: bool = False) -> dict:
 
     payload = runtime.status(session_id=session_id, cwd=read_cwd(body))
     payload["api_version"] = API_VERSION
+    payload["run_allowed"] = runtime.run_allowed()
 
     if with_targets:
-        payload["rows"] = describe_targets(runtime)
+        payload["rows"] = describe_targets(runtime, answer_of(payload))
 
     return payload
 

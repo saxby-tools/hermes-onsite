@@ -76,9 +76,11 @@ class Runtime:
         session: SessionReader,
         build_environment: Callable[..., Any],
         save_settings: Callable[[dict], None] | None = None,
+        run_allowed: Callable[[], bool] | None = None,
     ):
         self._load_settings = load_settings
         self._save_settings = save_settings
+        self._run_allowed = run_allowed
         self._data_dir = data_dir
         self._session = session
         self._build_environment = build_environment
@@ -95,6 +97,19 @@ class Runtime:
         self.pins = Pins(JsonStore(pins_path))
         self.folders = Folders(JsonStore(folders_path))
         self.proposals = Proposals(JsonStore(proposals_path))
+
+    def run_allowed(self) -> bool:
+        """Whether `/run` can hand a command to the agent here.
+
+        Asked each time, because the owner can change the setting
+        while Hermes runs. With nobody to ask, the answer is yes, and
+        `/run` itself still says so if Hermes refuses.
+        """
+
+        if self._run_allowed is None:
+            return True
+
+        return bool(self._run_allowed())
 
     def default_mirror(self, name: str) -> str:
         """Where a target's folder names are kept when no place is set."""
@@ -393,4 +408,5 @@ def build_runtime() -> Runtime:
         session=session,
         build_environment=build_environment,
         save_settings=compat.save_settings,
+        run_allowed=compat.run_allowed,
     )

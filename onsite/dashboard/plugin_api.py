@@ -78,7 +78,9 @@ def load_api(package):
 def status(body: Any = Body(default=None)) -> dict:
     package, runtime = find_runtime()
 
-    return load_api(package).status_payload(runtime, body, with_targets=True)
+    api = load_api(package)
+
+    return api.status_payload(runtime, body, with_targets=api.wants_rows(body))
 
 
 @router.post("/proposals")

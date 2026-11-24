@@ -43,6 +43,9 @@ PLUGINS_DIR_NAME = "plugins"
 SESSION_ID_VAR = "HERMES_SESSION_ID"
 SESSION_KEY_VAR = "HERMES_SESSION_KEY"
 
+# Hermes' own switch for a plugin that puts a message into a chat.
+INJECTION_KEY = "allow_gateway_injection"
+
 # The plugin context of the current load. Session facts are read
 # through it, which is the documented way. It is None when only the
 # dashboard loaded the package, where there is no session to ask
@@ -70,6 +73,7 @@ __all__ = [
     "environment_key",
     "load_settings",
     "plugins_dir",
+    "run_allowed",
     "save_settings",
     "terminal_persistence",
 ]
@@ -100,6 +104,26 @@ def load_settings() -> Any:
         return config["plugins"]["entries"][PLUGIN_ID]["settings"]
     except (KeyError, TypeError):
         return None
+
+
+def run_allowed() -> bool:
+    """Whether this profile lets the plugin hand the agent a message.
+
+    `/run` needs it in the TUI and the desktop app. Hermes reads the
+    same key, from the same file, when the message is sent.
+    """
+
+    config = load_config_readonly()
+
+    try:
+        entry = config["plugins"]["entries"][PLUGIN_ID]
+    except (KeyError, TypeError):
+        return False
+
+    if not isinstance(entry, dict):
+        return False
+
+    return entry.get(INJECTION_KEY) is True
 
 
 class SettingsLocked(RuntimeError):
