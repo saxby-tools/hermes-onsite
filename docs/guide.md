@@ -29,8 +29,10 @@ the computer your folder is on and brings the result back.
 | onsite | Picks the computer from the folder you opened. |
 | Your computer | Runs the command or edits the file, as you. |
 
-One word to know: the app calls each computer a **machine**, and in
-a few places a **target**. This guide says "computer" and uses the
+A few words to know. The app calls each computer a **machine**, and
+in a few places a **target**. It calls the server the **host**. A
+**profile** is one Hermes set-up on the server, and a server can
+hold several. This guide says "computer" and "server", and uses the
 app's words only where the app does.
 
 ## Before you start
@@ -39,6 +41,9 @@ onsite has to be installed and set up once, on the server. If you
 did not do that yourself, ask the person who runs your Hermes server.
 The steps are in the README, under [Install](../README.md#install)
 and [Set up](../README.md#set-up).
+
+One thing has to be true of your own computer: the server must be
+able to log in to it over SSH. That is part of the same set-up.
 
 You can tell it is ready by looking at the bottom right corner of
 Hermes Desktop. A small chip there names a computer.
@@ -51,9 +56,11 @@ right corner, in the status bar, is a chip with a green dot. It reads
 
 <!-- /onsite:screen -->
 
-If there is no chip at all, the app is missing its half of onsite. The
-README has that step too, under
-[The desktop half](../README.md#the-desktop-half).
+If there is no chip at all, the app's half of onsite is missing or
+switched off. Open Capabilities, then Plugins, open Onsite's entry
+and look for a switch labelled Desktop. If it is there, turn it on.
+If it is not, the README has the step that puts the half in place,
+under [The desktop half](../README.md#the-desktop-half).
 
 ## Open a folder
 
@@ -107,8 +114,9 @@ does not copy your files to the server.
 
 <!-- /onsite:notice -->
 
-The list only appears for computers Hermes reaches over the network.
-A folder on the server itself opens the usual way.
+The menu lists only the computers Hermes reaches over the network.
+A folder on the server itself opens with the app's own folder
+picker, as it did before onsite.
 
 ## See where Hermes is working
 
@@ -136,9 +144,10 @@ plugin enabled."
 The chip shows the last two parts of the folder. Rest the pointer on
 it, or click it, for the whole path and for **Why**: the reason that
 computer was picked. The reasons are short, such as "the folder is in
-its mirror" or "set with /onsite". After the first command in a chat
-it reads "this session started there", because a chat stays on the
-computer it started on.
+its mirror" or "set with /onsite". A mirror is onsite's list of a
+computer's folder names, which is what you browse in the pane. After
+the first command in a chat the reason reads "this session started
+there", because a chat stays on the computer it started on.
 
 ### Move a chat to another computer
 
@@ -200,9 +209,9 @@ a click on Run: the Run button now reads "Sent".
 
 - **Run** asks Hermes to run it. The button changes to "Sent". If the
   command is risky, Hermes still asks you first. Run needs one
-  setting on the server. If Hermes answers that this client does not
-  let a plugin hand the agent a message, see the table under
-  [If something goes wrong](#if-something-goes-wrong).
+  setting on the server. Without it the button is greyed out, and a
+  line under the command starts "Run is off for this profile." See
+  the table under [If something goes wrong](#if-something-goes-wrong).
 - **Copy** puts the command on your clipboard. The button reads
   "Copied" for a moment.
 
@@ -233,6 +242,10 @@ the bottom is a button, "Add a machine".
 
 <!-- /onsite:screen -->
 
+"this machine" means the server Hermes runs on, not the computer you
+are sitting at. In the drawing the laptop is the default. Yours may
+be the server.
+
 ### Add one
 
 Click **Add a machine** and fill in the form.
@@ -254,21 +267,24 @@ three buttons: Save, Test connection and Cancel.
 | Field | What to put in it |
 | --- | --- |
 | Name | A short name you will recognise, such as "laptop". Small letters, digits and hyphens only, starting with a letter. You cannot change it later. |
-| Where it is | "Another machine, over SSH" for any computer but the server. |
-| Address | The computer's name or address on your network. |
+| Where it is | "Another machine, over SSH" for any computer but the server. The other choice, "The machine Hermes runs on", is the server itself. |
+| Address | The name or address the server uses to reach this computer. |
 | Log in as | Your user name on that computer. |
 | Port | Leave it empty unless you were told a number. |
 | Key file | Leave it empty unless you were told a file. |
 | Its screen is reached by | Leave it as it is. It only matters if you let Hermes see and use this computer's screen. |
-| Folders that belong to it | Folders whose work should happen on this computer, one on each line. Write each in full from the first slash, such as "/home/you/". |
-| Use it when no folder rule matches | Tick it for the computer you use most. |
+| Folders that belong to it | Leave it empty at first. It is for a folder that has the same path on the server and on this computer. Folders you browse to in the pane need nothing here. One folder on each line, written in full from the first slash, such as "/srv/shared/". |
+| Use it when no folder rule matches | Tick it for the computer to use when a folder is not claimed by any computer. One computer always has this tick. |
 
 Click **Test connection** before you save. It tries the computer as
 you typed it and saves nothing. You get one of these answers:
 
 - "Connected in 42 ms." It works. Click **Save**.
 - "No connection:" and a reason. Check the address and the user name,
-  and that the computer is awake.
+  and that the computer is awake. If the reason speaks of a key or a
+  password, the computer does not yet accept the server's SSH key.
+  The person who runs your server fixes that. The README says how,
+  under [Requirements](../README.md#requirements).
 - A line that names a field, such as "`laptop.host` is required for
   an ssh target". Fill that field in.
 
@@ -290,7 +306,7 @@ computer first.
 | "onsite: not set up" | onsite is off, has no computers or has a setting it cannot read, or the app could not reach the server. | Rest the pointer on the chip to read which. Open Machines and add a computer, or ask the person who runs your server. |
 | A message that names a profile, such as: This chat belongs to the "home" profile. The app asked the "work" profile, which has no onsite plugin enabled. | The app is asking a different Hermes profile than the one this chat belongs to. | Pick the profile the message names, in the Sessions tab. |
 | A line that says a folder "could not be listed on laptop", with a reason | The computer did not answer, or the folder cannot be read. | Check the chip's dot. Click Browse again. |
-| After a click on Run, or `/run 1`: "This client does not let a plugin hand the agent a message." | The server has not allowed onsite to put a message into a chat. | Ask Hermes in your own words to run the command. To fix it for good, see step 3 of [Set up](../README.md#set-up). |
+| A greyed-out Run button and "Run is off for this profile.", or after `/run 1`: "This client does not let a plugin hand the agent a message." | The server has not allowed onsite to put a message into a chat. | Ask Hermes in your own words to run the command, or use Copy. To fix it for good, see step 3 of [Set up](../README.md#set-up). |
 | "More folders than fit here. Go deeper to narrow it." | The folder has more than 500 folders in it. | Click into a folder closer to the one you want. |
 | "Could not reach the chat box. Type /run 3." | The Run button could not type for you. | Type `/run 3` in the chat yourself. |
 | No Onsite entry in Settings | Your version of the app cannot show a plugin's settings page. | Use the commands in the [README](../README.md#set-up). |
