@@ -998,6 +998,31 @@ Written Nov. 22, 2026, against Hermes v0.23.2.
   that arrives beside an existing plugin is switched off. The README
   had said to choose a part. It now says what the button does and
   where the switch is.
+- **A second walk, and one real defect.** A third reader then
+  followed the rewritten page the same way. It found that the plugin
+  never checked whether its backend was selected. With the plugin
+  enabled and set up but `terminal.backend` left alone, every command
+  runs on the host with Hermes' own backend, while `hermes onsite
+  status` looked healthy, the chip named a target, and the prompt
+  told the agent it was on one. The guide tells people to read the
+  chip before they approve a command, so a chip that names the wrong
+  computer is not a small thing.
+- **Pick.** The plugin now reads the profile's `terminal.backend`.
+  When it is not `onsite`, the desktop's status answer says so and
+  names no target, so the chip turns red with the fix in its hover
+  text. `/onsite` and `hermes onsite status` say the same, the
+  second with a failing exit code, and the prompt section is left
+  out. No target is logged in to for a status that is not in use.
+- **How it decides.** `terminal.backend` in `config.yaml` if it is
+  set. If not, the `TERMINAL_ENV` variable, which is what Hermes
+  falls back to. A profile whose backend comes from somewhere else
+  again would be called not in use by mistake. None is known.
+- **The same walk, in the docs.** The file for the desktop app is
+  now copied from the host, the direction the requirements already
+  set up. Running `init` a second time is no longer advised: it
+  drops any setting it has no flag for. The page says how to turn
+  on a Mac's SSH server, how to update and remove the plugin, and
+  that each machine that dials out needs its own port.
 - **Still open, and the owner's call.** The app and the CLI label
   the host's own target "this machine". In an app that runs on a
   laptop, that points at the wrong computer. The guide now says so.
