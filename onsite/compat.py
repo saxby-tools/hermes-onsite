@@ -1,13 +1,16 @@
-"""Every import from Hermes that the plugin relies on, in one place.
+"""What the plugin's terminal side imports from Hermes, in one place.
 
 Some of these are public plugin API and some are not. Hermes has no
 public way to reuse its local and SSH environments, and rewriting them
 would mean rewriting their process, secret and sudo handling. So the
-private imports are accepted, kept in this one file, and fenced by
+private imports are accepted, kept in this file, and fenced by
 `requires_hermes` in plugin.yaml. `hermes plugins validate` warns
 about them. That warning is expected.
 
-If Hermes moves one of these, the fix is here and nowhere else.
+If Hermes moves one of these, the fix is here. The screen driver's
+own private imports are the one exception. They are in
+`screenbackend.py`, which is only loaded when a session uses its
+screen.
 """
 
 from __future__ import annotations
@@ -22,9 +25,9 @@ from agent.terminal_env_provider import TerminalEnvironmentProvider
 from gateway.session_context import get_session_env
 from hermes_cli.config import load_config_readonly
 from hermes_constants import get_hermes_home
-from tools.environments.base import EnvironmentConnectionError
 
 # Private. See the module docstring.
+from tools.environments.base import EnvironmentConnectionError
 from tools.environments.local import LocalEnvironment
 from tools.environments.ssh import SSHEnvironment
 
