@@ -6,12 +6,12 @@ author: saxby-tools
 license: AGPL-3.0-or-later
 homepage: https://github.com/saxby-tools/hermes-onsite
 description: >
-  Open a project folder on your own computer and your always-on
-  Hermes works in it. Hermes stays on your server. Its commands and
-  file edits run on the computer the folder lives on, as you, over
-  the SSH you already have. The folder you open picks the computer.
-  Risky commands still stop at Hermes' own approval prompt. Select it
-  with `terminal.backend: onsite` and name your computers with
+  Open a project folder on your own computer and the Hermes that
+  lives on your server works in it. Its commands and file edits run
+  on the computer the folder lives on, as you, over the SSH you
+  already have. The folder you open picks the computer. Risky
+  commands still stop at Hermes' own approval prompt. Select it with
+  `terminal.backend: onsite` and name your computers with
   `hermes onsite init`, or in Settings in the desktop app.
 # The plugin reuses Hermes' local and SSH environments, which are not
 # public plugin API. The upper bound keeps it from loading on a
