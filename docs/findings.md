@@ -2,6 +2,10 @@
 
 Nov. 22, 2026. Read from the installed Hermes source, not from docs.
 
+This page is a record of that day. The plugin was named hermes-hands
+then and its command was `/hands`. Both are written here by their
+names today, onsite and `/onsite`. The counts are that day's.
+
 ## Verdict
 
 **Go on folder routing, with one addition: a path map.**
@@ -38,7 +42,7 @@ an optional `path_map` from brain paths to hand paths.
 | 3 | Do approvals stay on | Yes. `tools/approval.py` skips the gate only when the provider's `skip_container_guards` is true. The provider default is true, so the plugin sets it false. |
 | 4 | Output and timeout limits | 180 s default, 600 s foreground cap, 50,000 characters of output. Past the cap a command moves to the background. |
 | 5 | What state SSH copies to the remote | Credential files, skills and cache, into `~/.hermes` on the remote. `SSHEnvironment(sync_files=False)` turns all of it off. |
-| 6 | Where plugin config belongs | `plugins.entries.hermes-hands.settings`. Each profile loads plugins only from its own `plugins/` folder and its own `plugins.enabled` list. |
+| 6 | Where plugin config belongs | `plugins.entries.onsite.settings`. Each profile loads plugins only from its own `plugins/` folder and its own `plugins.enabled` list. |
 | 7 | Can a hook add the target to the approval prompt | No. `pre_approval_request` is an observer and its return value is ignored. |
 | 8 | Tool-media renderer and relative imports | The desktop half must be one file. Only `@hermes/plugin-sdk` and `react` resolve. The tool-media renderer needs a `MEDIA:` line and is absent from desktop 0.22.5. A transcript directive is the workable card. |
 | 9 | Does `/rollback` work with a remote target | No. Checkpoints run host `git` on the host path. They are off by default. |
@@ -86,9 +90,9 @@ These came out of the end-to-end rig, not out of reading source.
   rescan that profile. No restart is needed, and none was done.
 - **The terminal and the file tools disagree on the folder.** They
   record and read it under different keys. A hook copies it across.
-- **A slash command is given no folder.** `/hands` uses the folder
+- **A slash command is given no folder.** `/onsite` uses the folder
   noted at the session's first tool call or first prompt.
-- **A switch leaves the old machine's folder behind.** `/hands
+- **A switch leaves the old machine's folder behind.** `/onsite
   <target>` has to clear Hermes' folder record too.
 - **Editors preview edits on the host.** Over ACP, a `patch` to a
   file only the target has is refused. Not worked around.
