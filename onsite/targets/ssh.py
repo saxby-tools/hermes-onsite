@@ -13,6 +13,7 @@ from ..config import TargetSpec
 from ..config import is_absolute
 from ..config import normalize_path
 from ..health import Gate
+from ..health import STATE_CLOSED
 from ..health import TargetDown
 from ..health import last_line
 from ..routing import HOME
@@ -28,6 +29,7 @@ SETUP_TIMEOUT_SECONDS = 10
 # passed to execute() is ever retried.
 SETUP_ATTEMPTS = 2
 MASTER_EXIT_TIMEOUT_SECONDS = 2
+SWEEP_TIMEOUT_SECONDS = 3
 
 # A laptop can fall asleep between two tool calls. A command sent
 # down a connection to a sleeping peer hangs on the old connection
@@ -149,6 +151,45 @@ class OnsiteSshEnvironment(SSHEnvironment):
             self.onsite_spec.label,
             self.cwd,
         )
+
+    def _onsite_sweep(self) -> None:
+        """Take Hermes' session files off the target, if it is up.
+
+        Hermes leaves them behind. On somebody's own machine they
+        pile up, and each holds the shell's exported variables.
+        """
+
+        if not self._onsite_ready:
+            return
+
+        # A machine known to be down is not waited for. Its temp
+        # folder is emptied when it next starts.
+        if self._onsite_gate.breaker.state() != STATE_CLOSED:
+            return
+
+        script = remote.build_sweep_script(
+            getattr(self, "_snapshot_path", ""),
+            getattr(self, "_cwd_file", ""),
+        )
+
+        if not script:
+            return
+
+        try:
+            self._run_ssh(script, timeout=SWEEP_TIMEOUT_SECONDS)
+        except (subprocess.SubprocessError, OSError) as error:
+            logger.info(
+                "onsite: session files were left on %s: %s",
+                self.onsite_spec.label,
+                error,
+            )
+
+    def cleanup(self):
+        # This runs while the link is still open. Hermes closes it
+        # next.
+        self._onsite_sweep()
+
+        super().cleanup()
 
     def _run_bash(
         self,

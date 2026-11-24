@@ -15,6 +15,7 @@ This module imports nothing from Hermes.
 
 from __future__ import annotations
 
+import re
 import shlex
 
 from dataclasses import dataclass
@@ -48,6 +49,13 @@ VALID_INHIBIT_MODES = (
     INHIBIT_DELAY,
     INHIBIT_CAFFEINATE,
 )
+
+# Hermes keeps a session's shell variables in a file on the target,
+# named with an id of its own making. Only a name of this shape is
+# ever handed to `rm`.
+SESSION_FILE_RE = re.compile(r"^/[\w./-]*/hermes-(snap|cwd)-[0-9a-f]{8,64}$")
+SNAPSHOT_SUFFIX = ".sh"
+CWD_SUFFIX = ".txt"
 
 INHIBIT_WHO = "onsite"
 INHIBIT_WHY = "An onsite command is running"
@@ -203,6 +211,53 @@ def build_setup_script(spec: TargetSpec) -> str:
 
     # The user's login shell may not be POSIX. `sh` always is.
     return "sh -c " + shlex.quote("".join(parts))
+
+
+def session_file_stem(path: str, suffix: str) -> str:
+    """A session file's path without its ending, or nothing.
+
+    Nothing is returned for a path that is not plainly one of Hermes'
+    own session files, so an odd value can never widen what is
+    removed.
+    """
+
+    if not path.endswith(suffix):
+        return ""
+
+    stem = path[: -len(suffix)]
+
+    if SESSION_FILE_RE.match(stem) is None:
+        return ""
+
+    return stem
+
+
+def build_sweep_script(snapshot_path: str, cwd_path: str) -> str:
+    """Remove the files Hermes kept on a target for one session.
+
+    Hermes' SSH code writes the shell's exported variables to a file
+    in the target's temp folder and leaves it there. It also writes
+    one more per task, and a temporary one while it writes. All carry
+    the session's id, so they are matched by it.
+    """
+
+    names = []
+    snapshot = session_file_stem(snapshot_path, SNAPSHOT_SUFFIX)
+    cwd = session_file_stem(cwd_path, CWD_SUFFIX)
+
+    if snapshot:
+        names.append(shlex.quote(snapshot) + "*")
+
+    if cwd:
+        names.append(shlex.quote(cwd) + "*")
+
+    if not names:
+        return ""
+
+    # In `sh` a pattern that matches nothing is passed on as it is,
+    # and `rm -f` ignores it. A login shell such as zsh would stop
+    # the whole command there and remove nothing.
+    return "sh -c " + shlex.quote("rm -f -- " + " ".join(names))
 
 
 def looks_like_path(value: str) -> bool:

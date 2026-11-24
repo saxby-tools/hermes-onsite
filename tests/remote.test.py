@@ -72,6 +72,66 @@ def test_the_setup_script_runs_and_parses_on_this_machine():
     assert found.inhibit in remote.VALID_INHIBIT_MODES
 
 
+def test_a_sessions_files_are_swept_by_its_id(tmp_path):
+    stem = tmp_path / "hermes-snap-0123456789ab"
+    kept = tmp_path / "hermes-snap-ffffffffffff.sh"
+    mine = [
+        tmp_path / "hermes-snap-0123456789ab.sh",
+        tmp_path / "hermes-snap-0123456789ab-9f8e7d.sh",
+        tmp_path / "hermes-snap-0123456789ab.sh.tmp.Ab12Cd34Ef",
+        tmp_path / "hermes-cwd-0123456789ab.txt",
+    ]
+
+    for path in [*mine, kept]:
+        path.write_text("x")
+
+    script = remote.build_sweep_script(
+        f"{stem}.sh",
+        f"{tmp_path}/hermes-cwd-0123456789ab.txt",
+    )
+
+    run_sh(script)
+
+    assert [path.exists() for path in mine] == [False] * 4
+    assert kept.exists()
+
+
+def test_the_sweep_runs_in_sh_whatever_the_login_shell_is(tmp_path):
+    script = remote.build_sweep_script(
+        f"{tmp_path}/hermes-snap-0123456789ab.sh",
+        f"{tmp_path}/hermes-cwd-0123456789ab.txt",
+    )
+
+    # zsh stops a command at a pattern that matches nothing. One of
+    # the two patterns here matches nothing on most targets.
+    assert script.startswith("sh -c ")
+
+
+def test_a_sweep_with_no_files_to_find_still_succeeds(tmp_path):
+    script = remote.build_sweep_script(
+        f"{tmp_path}/hermes-snap-0123456789ab.sh",
+        "",
+    )
+
+    assert run_sh(script) == ""
+
+
+def test_nothing_is_swept_for_a_path_that_is_not_a_session_file():
+    odd = [
+        "",
+        "/tmp/notes.sh",
+        "/tmp/hermes-snap-.sh",
+        "/tmp/hermes-snap-0123456789ab",
+        "/tmp/hermes-snap-0123456789ab; rm -rf ~.sh",
+        "/tmp/hermes-snap-*.sh",
+        "hermes-snap-0123456789ab.sh",
+        "/tmp/a b/hermes-snap-0123456789ab.sh",
+    ]
+
+    for path in odd:
+        assert remote.build_sweep_script(path, "") == "", path
+
+
 def test_a_greeting_before_the_path_is_ignored():
     output = "\n".join([
         remote.PATH_BEGIN,
