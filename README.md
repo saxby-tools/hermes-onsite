@@ -90,29 +90,41 @@ on the host that the apps talk to. In the examples the host's target
 is named `mac` and the other is `laptop`. Both are only names. Pick
 your own.
 
+Two more. A **folder rule** is anything that ties a folder to a
+target: a prefix, a path map or a mirror, all met below. A profile's
+**Hermes home** is the folder that holds its `config.yaml`.
+
 ## Requirements
 
 - Hermes v0.23.2. A later 0.23 release will load the plugin but has
   not been tried. Hermes 0.24 will not load it. A later release of
-  onsite lifts that once it has been run there, so hold `hermes
-  update` at 0.23 until then. `hermes --version` says what you have.
-  See [Limits](#limits).
+  onsite lifts that once it has been run there. `hermes --version`
+  says what you have, and `hermes update --check` says what an
+  update would bring. Hermes will offer the update. If you take it
+  and `/onsite` is gone, that is why: set `terminal.backend` back to
+  `local` until onsite catches up. See [Limits](#limits).
 - `plugins.isolation: in_process`, which is Hermes' default.
   `hermes config get plugins.isolation` prints it. Hermes cannot run
   a terminal backend under the other setting.
 - For an SSH target: the host must be able to log in to that machine
   with a key and no prompt, and the machine needs `bash`. So the
   machine runs an SSH server and has the host's public key in its
-  `authorized_keys`. Check it from the host. This must return at
-  once, with no question:
+  `authorized_keys`. On a Mac the SSH server is one switch: System
+  Settings, General, Sharing, Remote Login. On Linux it is the
+  OpenSSH server, `sshd`.
+
+  Check it from the host, as the user Hermes runs as. This must
+  return at once, with no question:
 
   ```bash
   ssh you@laptop.example true
   ```
 
-  If it asks for a password, `ssh-copy-id you@laptop.example` on the
-  host is the usual fix. A machine the host cannot reach at all can
-  dial out to it. See
+  The first time, it asks whether to trust the machine's key. Say
+  yes once. If it asks for a password, `ssh-copy-id
+  you@laptop.example` on the host is the usual fix, after
+  `ssh-keygen` if the host has no key yet. A machine the host cannot
+  reach at all can dial out to it. See
   [A machine the host cannot reach](#a-machine-the-host-cannot-reach).
 - No Python packages of its own. It drives the `ssh` program you
   already have and uses only what Hermes ships.
@@ -144,7 +156,9 @@ What Hermes prints, so none of it surprises you:
 - Without `--enable`, a question: enable it now? Off a terminal it
   does not ask and leaves the plugin off, until you run
   `hermes plugins enable onsite`.
-- Later, `hermes plugins list` marks the plugin "provenance: drift".
+- `hermes plugins list --plain --no-bundled` then prints one line
+  that starts `enabled` and ends `onsite`. The full `hermes plugins
+  list` ends the plugin's description with "provenance: drift".
   Hermes says that of any plugin installed from one folder of a
   repository, because the copy has no `.git` folder of its own. It
   is not a sign that anything changed.
@@ -169,32 +183,38 @@ starts with "onsite" shows at the bottom right of the app's window.
 There are three ways to put it there. Only the first has been tried.
 The other two were read from Hermes' source.
 
-**By hand.** Copy one file to the computer the app runs on. In the
-app, under Capabilities, then Plugins, the folder icon beside
-"Install from Git" opens the place it goes. Its tooltip reads "Open
-Desktop plugins folder". That place is most often
-`~/.hermes/desktop-plugins`:
+**By hand.** Copy one file from the host to the computer the app
+runs on. Run both lines on the host. It can already log in to that
+computer:
 
 ```bash
-mkdir -p ~/.hermes/desktop-plugins/onsite
+ssh you@laptop.example mkdir -p .hermes/desktop-plugins/onsite
 ```
 
 ```bash
-scp host.example:.hermes/plugins/onsite/desktop/plugin.js ~/.hermes/desktop-plugins/onsite/plugin.js
+scp "$(dirname "$(hermes config path)")/plugins/onsite/desktop/plugin.js" you@laptop.example:.hermes/desktop-plugins/onsite/plugin.js
 ```
 
-That is the path for a default profile on the host. For any other,
-the `plugins` folder sits beside the file that `hermes config path`
-prints there. Name the folder on your side `onsite`. The app loads
-the file within a few seconds, switched on. If it does not, run
-"Reload desktop plugins" from the command palette. A copy made by
-hand does not follow the plugin: copy it again after an update.
+`.hermes/desktop-plugins` is where the app most often looks. To see
+the real place, open Capabilities, then Plugins, in the app and
+click the folder icon beside "Install from Git". Its tooltip reads
+"Open Desktop plugins folder". The `onsite` folder goes inside the
+folder that opens.
+
+The app loads the file within a few seconds, switched on. If it does
+not, open the command palette with Ctrl+K, or Cmd+K on a Mac, and
+run "Reload desktop plugins". A copy made by hand does not follow
+the plugin: copy it again after an update.
 
 **The app is on the host.** The app copies the part in by itself,
 switched off. Open Capabilities, then Plugins, open Onsite's entry
 and turn on the switch labelled Desktop. The switch on the card in
 the list is a different one. It turns the whole plugin on or off for
-the profile.
+the profile. If the entry has no Desktop switch yet, click Rescan,
+beside "Install from Git".
+
+Capabilities is where plugins are installed and switched on. It is
+not the Plugins list in Settings, where onsite's own pages are.
 
 **Through the app, from another computer.** In the app, open
 Capabilities, then Plugins, and click "Install from Git". Enter the
@@ -219,6 +239,32 @@ computer must have. So check that profile before you click.
   That part arrives switched off. Turn on its Desktop switch, as
   above. Leave "Force reinstall" off, or it replaces the plugin on
   the host.
+
+Whichever way you used, the test is the same. Look for the chip. If
+there is none, open Onsite's entry in Capabilities and turn on
+Desktop. If there is no such switch, the file is not on this
+computer yet.
+
+### Update and remove
+
+Neither has been tried with this plugin. Both are Hermes' own
+commands, on the host:
+
+```bash
+hermes plugins update onsite
+```
+
+After an update, a desktop part copied by hand has to be copied
+again. To remove the plugin, hand the terminal back to Hermes first,
+so that no session points at a backend that is gone:
+
+```bash
+hermes config set terminal.backend local
+```
+
+```bash
+hermes plugins remove onsite
+```
 
 ### To work on the plugin itself
 
@@ -263,12 +309,17 @@ Add `--apply` to write them. With no flags, on a terminal, it asks
 instead.
 
 - `--ssh NAME=USER@HOST` names a machine the host reaches over SSH.
-  `USER@HOST` is what you would type after `ssh` on the host.
+  `USER@HOST` is what you would type after `ssh` on the host. Add
+  `:PORT` for a port other than 22. `--key NAME=FILE` and
+  `--known-hosts NAME=FILE` name a key file and a known-hosts file
+  for one target, when your SSH setup does not already.
 - `--local NAME` names the host itself. With one such target, it is
   the default: the target used when no folder rule matches. With
   none or more than one, or to pick another, add `--default NAME`.
-- Run it again with every target to change the list. It writes the
-  whole list each time, so a target left out is removed.
+- It writes the whole list each time. A target left out is removed,
+  and so is any setting it has no flag for, such as a dial-out port
+  or `screen`. Use it for the first set-up. After that, change one
+  target in `config.yaml` or on the Machines page.
 
 Two more flags say which folders belong to a target. Most set-ups
 need neither, because a folder that is only on the target is opened
@@ -309,18 +360,21 @@ The list at the end should read `up` for each target, and `*` marks
 the default. The lines above it say where a session started in the
 folder you are standing in would run, and why. `DOWN` is followed by
 SSH's own reason. Fix that first: the `ssh` check under
-[Requirements](#requirements) must pass.
+[Requirements](#requirements) must pass. If step 2 was missed, the
+first line says onsite is set up but not in use.
 
-**5. Try it.** Open a folder that is on the laptop. Use one that
-exists there:
+**5. Try it.** The laptop must read `up` in step 4. Open a folder
+that is on the laptop. Use one that exists there:
 
 ```bash
 hermes onsite open laptop:~/work/site --apply
 ```
 
-It prints a folder on the host. Go to that folder, start `hermes`
-there and ask it to run `uname -n`. It prints the laptop's name, and
-`/onsite` says `laptop`. In Hermes Desktop the pane does the same
+It prints a folder on the host. Without `--apply` it only says where
+that folder would be. Go to the folder, start `hermes` there and ask
+it to run `uname -n`. It prints the laptop's name, and `/onsite`
+says `laptop`. If it prints the host's name, the session was started
+before step 2, or in another folder. In Hermes Desktop the pane does the same
 with a click. The [guide](docs/guide.md) shows it.
 
 After the first four steps, `config.yaml` holds these keys. The
@@ -416,7 +470,10 @@ account on the machine. Keys are needed both ways: the machine logs
 in to the host to open the link, and the host logs in to the machine
 through it. For a target that is already in the settings, `--apply`
 changes its address and port and keeps the rest. A new name is
-added beside the others.
+added beside the others. Each machine that dials out needs a port of
+its own on the host: the first gets 22022, so add `--port 22023` for
+a second. Once a link is up, the check from the host is
+`ssh -p 22022 you@127.0.0.1 true`.
 
 The service file is for a Linux machine with `systemd`. Save it
 where the output says, then
@@ -588,7 +645,7 @@ password. Neither has been tried on a Mac. See
 | Approve a risky command | Hermes' own prompt | Hermes' own prompt. |
 | Run a command the agent proposed | `/run <number>` | Run and Copy buttons, in a pane and in the transcript. |
 | Open a folder on a machine | `hermes onsite open laptop:~/work --apply`, then start `hermes` in the folder it prints | Browse the machine in the pane and start a session there. |
-| Add or change a machine | `hermes onsite init` again with every target, or edit `config.yaml` | Settings, Plugins, Onsite, then Machines. |
+| Add or change a machine | Edit `config.yaml`. `hermes onsite init` is for the first set-up: it rewrites the whole list | Settings, Plugins, Onsite, then Machines. |
 | Test a machine | `hermes onsite status` | "Test connection" in the machine's form. |
 
 The agent has a tool, `propose_command`. It saves a command with a
@@ -598,7 +655,8 @@ the terminal tool, so the approval prompt still applies.
 ## When a target is down
 
 - A tool call returns an error that names the target, within about
-  three seconds. No command is sent.
+  three seconds. No command is sent. The chip's own check allows one
+  second more, so its hover text reads "no answer in 4s".
 - Later calls fail at once for ten seconds, then one call checks
   again. Service resumes by itself when the target is back.
 - A link lost while a command is running is reported as "no exit
