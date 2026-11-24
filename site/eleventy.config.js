@@ -4,8 +4,10 @@
 // as a table and the Hermes marketplace would print it. Each page's
 // layout, address and title come from here instead: the repo's
 // README.md is the front page and uses site/layouts/home.ejs, every
-// other page uses site/layouts/page.ejs, `findings.md` becomes
-// `findings.html`, and the title is the file's first heading.
+// other page uses site/layouts/page.ejs, and the title is the file's
+// first heading. Every page but the front page gets a folder of its
+// own: `docs/guide.md` becomes `docs/guide/index.html`, so its
+// address is `docs/guide/` with no file name in it.
 //
 // Components live in site/components as a pair of files: `name.ejs`
 // draws it and `name.js` turns the block into the template's data.
@@ -133,18 +135,20 @@ function permalinkOf(page) {
     return "index.html";
   }
 
-  return `${page.filePathStem}.html`;
+  return `${page.filePathStem}/index.html`;
 }
 
-// "../" once per folder, so links work under any base path.
+// "../" once per folder, so links work under any base path. A page
+// sits in a folder named for it, so `/docs/guide` is two folders
+// down from the root.
 function rootOf(page) {
   if (page.inputPath === HOME_PAGE) {
     return "./";
   }
 
-  const depth = page.filePathStem.split("/").length - 2;
+  const depth = page.filePathStem.split("/").length - 1;
 
-  return depth > 0 ? "../".repeat(depth) : "./";
+  return "../".repeat(depth);
 }
 
 function sourceOf(inputPath) {

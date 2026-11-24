@@ -2,19 +2,25 @@
 // the site. The Markdown is written for GitHub, where every file in
 // the repo is one click away. The site only has the pages.
 //
+// Every page but the front page is served from a folder of its own:
+// `docs/guide.md` becomes `docs/guide/index.html`, so its address is
+// `docs/guide/`. A page therefore sits one folder deeper than its
+// Markdown file, and every relative link and picture on it has to be
+// written again from there.
+//
 // - A link to a Markdown file points at the page built from it:
-//   `DECISIONS.md#routing` becomes `DECISIONS.html#routing`.
+//   `DECISIONS.md#routing` becomes `DECISIONS/#routing`.
 // - A link to the front page's Markdown points at the site's root.
-// - A link to a folder that is copied to the site, such as
-//   `docs/brand/`, is left alone.
+// - A link or a picture in a folder that is copied to the site, such
+//   as `docs/brand/`, points at the copy.
 // - Any other relative link, such as `rig/results/` or `LICENSE`,
 //   points at that file on GitHub. So does a link to Markdown that
 //   is not built into a page, such as `site/README.md`.
 //
 // Links with a scheme (`https:`, `mailto:`), a leading `/` or only a
 // `#fragment` are left alone. It pairs with a permalink of
-// `<file path without .md>.html`. Adapted from the Saxby lab's plugin
-// of the same name.
+// `<file path without .md>/index.html`. Adapted from the Saxby lab's
+// plugin of the same name.
 
 import { posix } from "node:path";
 
@@ -28,11 +34,21 @@ const BLOB = "/blob/";
 
 const TREE = "/tree/";
 
-// ---- Rewriting --------------------------------------------------------
+// What each kind of token keeps its address in.
+const ADDRESS_ATTRS = {
+  link_open: "href",
+  image: "src",
+};
+
+// ---- Paths ------------------------------------------------------------
+
+function repoPathOf(pagePath) {
+  return pagePath.replace(/^\.\//, "");
+}
 
 // The path from the repo's root, given the page the link is on.
 function fromRoot(path, pagePath) {
-  const folder = posix.dirname(pagePath.replace(/^\.\//, ""));
+  const folder = posix.dirname(repoPathOf(pagePath));
 
   return posix.normalize(posix.join(folder, path));
 }
@@ -43,6 +59,34 @@ function isUnder(repoPath, folders) {
   });
 }
 
+// The folder a page is served from, from the site's root. The front
+// page is served from the root itself, which is "".
+function folderOf(repoPath, home) {
+  if (repoPath === home) {
+    return "";
+  }
+
+  return repoPath.replace(MARKDOWN_PATH, "");
+}
+
+// The way from one folder of the site to a file or folder in it.
+function wayTo(target, fromFolder) {
+  const isFolder = target === "" || target.endsWith("/");
+  const from = fromFolder === "" ? "." : fromFolder;
+  const to = target === "" ? "." : target.replace(/\/$/, "");
+  const way = posix.relative(from, to);
+
+  if (!isFolder) {
+    return way;
+  }
+
+  if (way === "") {
+    return "./";
+  }
+
+  return `${way}/`;
+}
+
 function onGitHub(repoPath, sourceUrl) {
   if (repoPath.endsWith("/")) {
     return sourceUrl.replace(BLOB, TREE) + repoPath;
@@ -51,31 +95,34 @@ function onGitHub(repoPath, sourceUrl) {
   return sourceUrl + repoPath;
 }
 
-function rewriteHref(href, pagePath, options) {
-  if (SCHEME.test(href)) {
-    return href;
+// ---- Rewriting --------------------------------------------------------
+
+function rewriteAddress(address, pagePath, options) {
+  if (SCHEME.test(address)) {
+    return address;
   }
 
-  if (href.startsWith("/")) {
-    return href;
+  if (address.startsWith("/")) {
+    return address;
   }
 
-  if (href.startsWith("#")) {
-    return href;
+  if (address.startsWith("#")) {
+    return address;
   }
 
-  const cut = href.search(/[?#]/);
-  const path = cut === -1 ? href : href.slice(0, cut);
-  const rest = cut === -1 ? "" : href.slice(cut);
+  const cut = address.search(/[?#]/);
+  const path = cut === -1 ? address : address.slice(0, cut);
+  const rest = cut === -1 ? "" : address.slice(cut);
 
   const repoPath = fromRoot(path, pagePath);
+  const pageFolder = folderOf(repoPathOf(pagePath), options.home);
 
   if (repoPath.startsWith("..")) {
-    return href;
+    return address;
   }
 
   if (isUnder(repoPath, options.keep)) {
-    return href;
+    return wayTo(repoPath, pageFolder) + rest;
   }
 
   if (isUnder(repoPath, options.skip)) {
@@ -83,11 +130,13 @@ function rewriteHref(href, pagePath, options) {
   }
 
   if (repoPath === options.home) {
-    return path.slice(0, -options.home.length) + "./" + rest;
+    return wayTo("", pageFolder) + rest;
   }
 
-  if (MARKDOWN_PATH.test(path)) {
-    return path.replace(MARKDOWN_PATH, ".html") + rest;
+  if (MARKDOWN_PATH.test(repoPath)) {
+    const target = `${folderOf(repoPath, options.home)}/`;
+
+    return wayTo(target, pageFolder) + rest;
   }
 
   return onGitHub(repoPath, options.sourceUrl) + rest;
@@ -105,17 +154,18 @@ function rewriteTokens(tokens, pagePath, options) {
       rewriteTokens(token.meta.children, pagePath, options);
     }
 
-    if (token.type !== "link_open") {
+    if (!Object.hasOwn(ADDRESS_ATTRS, token.type)) {
       continue;
     }
 
-    const href = token.attrGet("href");
+    const attr = ADDRESS_ATTRS[token.type];
+    const address = token.attrGet(attr);
 
-    if (href === null) {
+    if (address === null) {
       continue;
     }
 
-    token.attrSet("href", rewriteHref(href, pagePath, options));
+    token.attrSet(attr, rewriteAddress(address, pagePath, options));
   }
 }
 
