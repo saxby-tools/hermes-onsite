@@ -145,9 +145,13 @@ hermes -p qa onsite init --ssh laptop=you@laptop.example --local mac --prefix la
 - [ ] The same command with `--apply` writes them and prints what to
       run next: two commands, then one more that lets `/run` hand a
       command to the agent.
+- [ ] Before running them, `hermes -p qa onsite status` starts with
+      a line that says onsite is set up but not in use, and still
+      lists the targets.
 - [ ] Run all three with `-p qa` added after `hermes`. The printed
       lines leave the profile out. `hermes -p qa onsite status` then
-      shows `laptop` up and `mac` as the default.
+      has no such line, and shows `laptop` up and `mac` as the
+      default.
 - [ ] `hermes -p qa onsite init --ssh box=you@laptop.example` with
       no other flag refuses, and says to add `--default NAME`.
 - [ ] With no flags, in a terminal, `hermes -p qa onsite init` asks
@@ -446,7 +450,7 @@ Run these from a clone of the repository, on the host. The rig uses a
 profile named `buster` unless you pass `--profile`, and needs Docker
 and `HERMES_HOME`, as in journey 12.
 
-- [ ] Unit tests: 419 pass.
+- [ ] Unit tests: 421 pass.
 
 ```bash
 uv run --no-project --with pytest --with pillow --with cryptography python -m pytest -q
