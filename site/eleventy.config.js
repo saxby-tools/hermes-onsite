@@ -52,8 +52,8 @@ const SOURCE_URL =
 const SITE_URL = "https://saxby-tools.github.io/hermes-onsite/";
 
 const SITE_SUMMARY = "A community plugin for the Hermes agent. Open a " +
-  "project folder on your own computer and your always-on Hermes " +
-  "works in it, with Hermes' own approval prompts kept on.";
+  "project folder on your own computer and the Hermes that lives on " +
+  "your server works in it, with its own approval prompts kept on.";
 
 // Copied as they are. The README and the design page point at these.
 const PASSTHROUGH = [
