@@ -11,8 +11,10 @@ good bug report.
 The examples use made-up names. The host, `host.example`, is the
 machine that runs the Hermes gateway. The target, `laptop.example`,
 is a Linux laptop. Your user on both is `you`, and the test profile
-is `test`. Put your own names in. Nothing here touches another
-profile.
+is `test`. Put your own names in. Journeys 1 to 14 touch only the
+`qa` and `test` profiles. The rig, in journeys 12 and 15, swaps the
+config of the profile it is given for the length of a run. That is
+`buster` unless you pass `--profile`.
 
 ## Before you start
 
@@ -20,6 +22,32 @@ profile.
       updated or reloaded while it ran. A gateway keeps what it
       loaded: each reload leaves an old copy of the hooks behind, and
       the screen backend is only read once.
+- [ ] The `test` profile has the plugin set up. A profile set up
+      earlier needs nothing here. A new one needs these four, in
+      order:
+
+```bash
+hermes -p test plugins install saxby-tools/hermes-onsite/onsite --enable
+```
+
+```bash
+hermes -p test onsite init --ssh laptop=you@laptop.example --local mac --map laptop=/Users/you/Development=/home/you/Development --mirror laptop=/Users/you/Onsite/laptop --apply
+```
+
+```bash
+hermes -p test config set terminal.backend onsite
+```
+
+```bash
+hermes -p test config set plugins.entries.onsite.allow_gateway_injection true
+```
+
+The `--map` flag is for a folder the laptop shares with the host:
+here the host sees the laptop's `~/Development` at
+`/Users/you/Development`. With no shared folder, leave the flag out
+and use a mirrored folder from journey 9 wherever a journey asks for
+a shared one.
+
 - [ ] On the host, this prints a table with `laptop` marked `up`:
 
 ```bash
@@ -29,10 +57,15 @@ hermes -p test onsite status
 If `laptop` is `DOWN`, wake the laptop and run it again. If the
 command is not found, run `hermes -p test plugins enable onsite`.
 
+- [ ] The desktop app has its part of the plugin, on the computer the
+      app runs on. Journey 1 installs it. If the chip from journey 7
+      is already there, it is in place.
+
 ## 1. A fresh install
 
 This is the path a stranger takes, so it is tested on a profile that
-has never seen the plugin. It has not been run by anyone yet.
+has never seen the plugin. The command has been run into an empty
+Hermes home. Nobody has run it into a profile that a gateway serves.
 
 - [ ] Make a throwaway profile and install from GitHub:
 
@@ -44,14 +77,38 @@ hermes profile create qa
 hermes -p qa plugins install saxby-tools/hermes-onsite/onsite
 ```
 
-- [ ] The security scan passes and Hermes offers to enable it.
-- [ ] `hermes -p qa plugins list` shows `onsite`.
+- [ ] Hermes warns that the source is custom and unreviewed, clones
+      the one folder, and asks "Enable 'onsite' now?". No security
+      warning stops it. Answer yes.
+- [ ] `hermes -p qa plugins list` shows `onsite` as enabled.
 - [ ] The installed folder holds the plugin and nothing else: no
       `rig`, `site`, `docs` or `tests`.
 
 ```bash
 ls "$(hermes -p qa config path | xargs dirname)/plugins/onsite"
 ```
+
+Now the desktop app's part, on the computer the app runs on. **This
+has never been tried.** It was read from Hermes' source.
+
+- [ ] In the app, open Capabilities, then Plugins. The row for
+      Onsite says its desktop half is "unavailable (remote backend)",
+      or there is no desktop row yet.
+- [ ] Click "Install from Git" and enter
+      `saxby-tools/hermes-onsite/onsite`. The dialog lists "Agent
+      plugin" and "Desktop UI". Write down what it offers and what it
+      says about where each part goes.
+- [ ] Install the Desktop UI part. If you copied `plugin.js` there by
+      hand before, the app says the desktop plugin already exists.
+      Move the old `~/.hermes/desktop-plugins/onsite` folder away and
+      try again.
+- [ ] Within a few seconds the status bar shows a chip that starts
+      with "onsite". If it does not, run "Reload desktop plugins"
+      from the command palette.
+- [ ] Enter the bare address,
+      `https://github.com/saxby-tools/hermes-onsite`, in the same
+      dialog. It finds no plugin. That is expected, and worth one
+      line on how clear the message is.
 
 ## 2. Set up
 
@@ -61,10 +118,13 @@ ls "$(hermes -p qa config path | xargs dirname)/plugins/onsite"
 hermes -p qa onsite init --ssh laptop=you@laptop.example --local mac --prefix laptop=/home/you/
 ```
 
-- [ ] The same command with `--apply` writes them and prints three
-      next steps.
-- [ ] After the two commands it prints, `hermes -p qa onsite status`
-      shows `laptop` up and `mac` as the default.
+- [ ] The same command with `--apply` writes them and prints what to
+      run next: three commands, then one more that lets `/run` hand a
+      command to the agent.
+- [ ] Run the second, third and fourth of those with `-p qa` added
+      after `hermes`. The printed lines leave the profile out. Then
+      `hermes -p qa onsite status` shows `laptop` up and `mac` as the
+      default.
 - [ ] With no flags, in a terminal, `hermes -p qa onsite init` asks
       questions instead.
 
@@ -78,10 +138,15 @@ Use the `test` profile from here on.
 cd /Users/you/Development && hermes -p test --tui
 ```
 
+- [ ] Before any message, type `/onsite`. It says the session has not
+      said which folder it is in yet.
 - [ ] Ask: "Run `pwd; whoami; uname -n` and show me the output." You
       see `/home/you/Development`, `you` and the laptop's name.
 - [ ] Type `/onsite`. It names `laptop`, says it is connected, and
-      gives the reason "the session folder is in its path map".
+      gives the reason "this session started there".
+- [ ] On the host, in that same folder, `hermes -p test onsite
+      status` gives the reason the folder was picked: "the session
+      folder is in its path map".
 - [ ] Quit. Start the TUI from `/Users/you/Workspaces`. The same
       question now prints the Mac's folder and the Mac's name.
 - [ ] In that Mac session, after one message, type `/onsite laptop`.
@@ -126,26 +191,31 @@ ssh you@laptop.example 'cat ~/Development/onsite-qa.txt'
       The agent replies with a numbered command and runs nothing.
 - [ ] Type `/run 1`. The agent runs it with the terminal tool, and
       any approval prompt still applies.
-- [ ] `/run 9` says there is no such command and lists what is
-      waiting.
+- [ ] `/run 9` says "There is no proposed command #9." and lists the
+      numbers it knows.
+- [ ] If `/run 1` answers that this client does not let a plugin hand
+      the agent a message, the fourth command of "Before you start"
+      was not run for this profile. Run it and try again. No restart
+      should be needed. Note it if one is.
 
 ## 7. Hermes Desktop
 
 On the laptop, in the desktop app, connected to the gateway.
 
-- [ ] Run "Reload desktop plugins" from the command palette.
-- [ ] In the **Sessions** tab, pick the test profile from the row
-      of profile squares at the bottom of the sidebar. Open a folder
-      under `/Users/you/Development`.
+- [ ] In the **Sessions** tab, pick the test profile. The profiles
+      are a row of squares at the bottom of the sidebar, or a menu in
+      the status bar. Open a folder under `/Users/you/Development`.
 - [ ] The status bar shows a chip that reads `onsite: laptop`. Its
-      tooltip gives the folder and the reason.
-- [ ] Click the chip. A pane opens with the target, its state in
-      milliseconds, the folder, and a list of targets.
+      tooltip has four lines: where tools run, the state, the folder
+      and the reason.
+- [ ] Click the chip. A pane opens that reads "Onsite" at the top,
+      with the machine, its state in milliseconds, the folder, the
+      reason, and a list of machines.
 - [ ] Ask the agent to propose a command. A run card appears in the
       transcript with Run and Copy buttons, and the same command in
       the pane. **This has never been seen in the real app.**
-- [ ] Click Run. The command runs after any approval. Click Copy and
-      paste: it is the exact command.
+- [ ] Click Run. The button reads "Sent" and the command runs after
+      any approval. Click Copy and paste: it is the exact command.
 - [ ] In the pane, under "Open a folder", pick `laptop` and click
       Browse. You see the laptop's home folders. Click into one, then
       click "Start a session in ...". A new session opens, and its
@@ -153,9 +223,10 @@ On the laptop, in the desktop app, connected to the gateway.
 - [ ] Ask that session for `pwd`. It prints the folder you picked.
 - [ ] Open Settings, then Plugins, then Onsite. Both machines are
       listed, and a line names the profile these settings belong to.
-      The "Applies to" row at the top does not change it: the page
-      follows the profile picked in the Sessions tab. **Never seen in
-      the real app.**
+      The page follows the profile picked in the Sessions tab. If
+      Settings shows an "Applies to" row of profiles anywhere, it
+      does not change this page. Note where you see that row.
+      **Never seen in the real app.**
 - [ ] Open Machines, under Onsite in the list on the left. The same
       two machines have Edit and Remove buttons.
 - [ ] Click Edit on `laptop`, then "Test connection". It says
@@ -163,15 +234,18 @@ On the laptop, in the desktop app, connected to the gateway.
 - [ ] Add a machine named `spare` of the kind "The machine Hermes
       runs on" and save. It appears in the list. Remove it. It is
       gone, and gone from the profile's `config.yaml`.
-- [ ] The Remove button for the default machine is greyed out.
+- [ ] The Remove button for the default machine is greyed out. With
+      the set-up above that is `mac`.
 - [ ] Click Edit on `laptop`. A field named "Its screen is reached
       by" offers three choices. Pick the screen sharing one, save,
       and see `screen: sharing` under the laptop in `config.yaml`.
       Set it back to the first choice and the line is gone.
-- [ ] Switch to the **Bots** tab and open the test profile's chat. If
-      the app's active profile is another one, the pane says which
-      profile this chat belongs to and which one it asked. That
-      message is right, not a bug.
+- [ ] Switch to the **Bots** tab and open the test profile's chat.
+      If the app's active profile is another one that has no onsite
+      plugin, the pane says which profile this chat belongs to and
+      which one it asked. That message is right, not a bug. If the
+      other profile has onsite too, the pane shows that profile's
+      answer and says nothing. That is the known gap in issue 8.
 
 ## 8. When the laptop goes away
 
@@ -196,37 +270,34 @@ been tested.** The rig only fakes it.
 
 ## 9. A folder that exists only on the laptop
 
-- [ ] Open one deep folder with no set-up at all. It prints a
-      folder on the host:
+- [ ] Open one folder that is on the laptop and not on the host. Pick
+      one that exists. It prints a folder on the host:
 
 ```bash
 hermes -p test onsite open laptop:~/Downloads --apply
 ```
 
-- [ ] On the host, copy the laptop's folder names. Add `--apply`
-      after the dry run looks right:
-
-```bash
-hermes -p test onsite mirror
-```
-
-- [ ] `/Users/you/Onsite/laptop` holds folders and no files:
-
-```bash
-find /Users/you/Onsite -type f | wc -l
-```
-
-- [ ] Open one deep folder by name. It prints a folder on the host:
-
-```bash
-hermes -p test onsite open laptop:~/Downloads/some-project --apply
-```
-
 - [ ] Start the TUI in the folder it printed. `pwd` prints the real
       folder on the laptop, and `ls` shows the laptop's files.
-- [ ] In the desktop app's folder picker, browse to that folder under
-      `/Users/you/Onsite/laptop`, pick it, and see the chip read
-      `onsite: laptop`.
+- [ ] Copy the laptop's folder names to the host. Run it once as
+      shown, a dry run, then again with `--apply`. It says how many
+      folders and where:
+
+```bash
+hermes -p test onsite mirror laptop
+```
+
+- [ ] The folder it named holds folders and no files. With the set-up
+      above that is `/Users/you/Onsite/laptop`, and this prints 0
+      while `ls` there shows the laptop's folder names:
+
+```bash
+find /Users/you/Onsite/laptop -type f | wc -l
+```
+
+- [ ] In the desktop app's own folder picker, browse to a folder
+      under `/Users/you/Onsite/laptop`, pick it, and see the chip
+      read `onsite: laptop`.
 
 ## 10. A machine that dials out
 
@@ -242,7 +313,8 @@ hermes -p test onsite dial-out laptop-out --server you@host.example --user you
       stays running and prints nothing. If it asks for a password,
       the laptop has no key for the host yet; stop and note it.
 - [ ] On the host, run the same command with `--apply`, then
-      `hermes -p test onsite status`. `laptop-out` is `up`.
+      `hermes -p test onsite status`. `laptop-out` is `up`, and
+      `laptop` and `mac` are still listed.
 - [ ] Stop the `ssh` line on the laptop. Status shows `laptop-out`
       down within two seconds, with "Connection refused".
 
@@ -255,6 +327,8 @@ hermes -p test onsite dial-out laptop-out --server you@host.example --user you
 hermes -p test onsite mcp laptop files --apply -- npx -y @modelcontextprotocol/server-filesystem /home/you/Development
 ```
 
+- [ ] `hermes -p test mcp list` shows `laptop_files`. If it landed in
+      another profile, note which.
 - [ ] In a new laptop session, ask the agent to list a folder with
       the `mcp__laptop_files__` tools. It works, behind Hermes'
       prompt if the tool can write.
@@ -264,6 +338,9 @@ hermes -p test onsite mcp laptop files --apply -- npx -y @modelcontextprotocol/s
 
 ## 12. Screen control
 
+The rig needs Docker, and `HERMES_HOME` set to the folder that holds
+`profiles/`. Run it from a clone of the repository, on the host.
+
 - [ ] Check the laptop. It names the desktop, says whether Hermes'
       screen driver is there and whether screen sharing answers,
       names the route it would use, and adds notes for that route:
@@ -272,10 +349,9 @@ hermes -p test onsite mcp laptop files --apply -- npx -y @modelcontextprotocol/s
 hermes -p test onsite screen laptop
 ```
 
-- [ ] Run the rig's screen phase from a clone of the repository. It
-      builds a container with its own desktop and drives that, not
-      your screen. Ten checks pass. This needs the gateway restart
-      from "Before you start":
+- [ ] Run the rig's screen phase. It builds a container with its own
+      desktop and drives that, not your screen. Ten checks pass. This
+      needs the gateway restart from "Before you start":
 
 ```bash
 python3 rig/run.py --apply --desk --phase screen
@@ -333,7 +409,8 @@ Never tested.
 ## 15. The automatic tests
 
 Run these from a clone of the repository, on the host. The rig uses a
-profile named `buster` unless you pass `--profile`.
+profile named `buster` unless you pass `--profile`, and needs Docker
+and `HERMES_HOME`, as in journey 12.
 
 - [ ] Unit tests: 409 pass.
 
@@ -341,7 +418,10 @@ profile named `buster` unless you pass `--profile`.
 uv run --no-project --with pytest --with pillow --with cryptography python -m pytest -q
 ```
 
-- [ ] Desktop tests: 35 pass.
+- [ ] Desktop tests: 35 pass and none is skipped. They borrow React
+      from a Hermes checkout at `~/.hermes/hermes-agent`, or the
+      folder named in `HERMES_SRC`. Without one they are skipped, not
+      failed.
 
 ```bash
 node --test tests/desktop.test.mjs
@@ -362,4 +442,9 @@ python3 rig/run.py --apply --real you@laptop.example
 - [ ] Remove the throwaway profile: `hermes profile delete qa`.
 - [ ] Remove the test file on the laptop:
       `ssh you@laptop.example 'rm ~/Development/onsite-qa.txt'`.
+- [ ] Take back what the journeys added to the test profile, if you
+      do not want to keep it: the `laptop-out` target from journey
+      10, and `screen: sharing` and `computer_use.backend` from
+      journey 12. The mirror folders from journey 9 are empty and
+      can stay or go.
 - [ ] Send back every empty box with what you saw.
