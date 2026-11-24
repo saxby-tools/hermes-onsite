@@ -16,6 +16,7 @@ screen.
 from __future__ import annotations
 
 import logging
+import os
 
 from pathlib import Path
 from typing import Any
@@ -46,6 +47,10 @@ SESSION_KEY_VAR = "HERMES_SESSION_KEY"
 # Hermes' own switch for a plugin that puts a message into a chat.
 INJECTION_KEY = "allow_gateway_injection"
 
+# Where Hermes looks for the terminal backend when config.yaml does
+# not name one. `hermes config set terminal.backend` writes both.
+BACKEND_ENV_VAR = "TERMINAL_ENV"
+
 # The plugin context of the current load. Session facts are read
 # through it, which is the documented way. It is None when only the
 # dashboard loaded the package, where there is no session to ask
@@ -63,6 +68,7 @@ __all__ = [
     "SSHEnvironment",
     "TerminalEnvironmentProvider",
     "anchor_file_tools",
+    "backend_selected",
     "bind",
     "current_session_cwd",
     "current_session_id",
@@ -104,6 +110,25 @@ def load_settings() -> Any:
         return config["plugins"]["entries"][PLUGIN_ID]["settings"]
     except (KeyError, TypeError):
         return None
+
+
+def backend_selected() -> bool:
+    """Whether this profile's sessions use this plugin's backend.
+
+    The plugin can be enabled and set up while Hermes still runs
+    every command with its own backend, on the host. Anything that
+    names a session's machine has to know that first.
+    """
+
+    terminal = (load_config_readonly() or {}).get("terminal")
+    name = terminal.get("backend") if isinstance(terminal, dict) else None
+
+    if isinstance(name, str) and name.strip():
+        return name.strip() == BACKEND_NAME
+
+    # Nothing in the file. Hermes then goes by this variable, and by
+    # its own backend when that is unset too.
+    return os.environ.get(BACKEND_ENV_VAR, "") == BACKEND_NAME
 
 
 def run_allowed() -> bool:

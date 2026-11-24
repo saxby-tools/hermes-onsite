@@ -25,6 +25,11 @@ def build_section(runtime: Runtime):
     def render(info) -> str:
         from .compat import current_session_cwd
 
+        # With another backend selected the session runs on the host.
+        # A note that names a target would mislead the agent.
+        if not runtime.in_use():
+            return ""
+
         try:
             config = runtime.load_config()
         except ConfigError:

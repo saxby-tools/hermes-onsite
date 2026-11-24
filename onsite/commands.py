@@ -108,6 +108,9 @@ def build_onsite_command(ctx, runtime: Runtime):
             session_key,
         )
 
+        if not runtime.in_use():
+            return messages.NOT_IN_USE
+
         if not target:
             return messages.format_status(
                 runtime.status(key, session_id, folder)
@@ -199,6 +202,15 @@ def cli_status(runtime: Runtime, args) -> int:
     folder = os.getcwd()
     status = runtime.status(cwd=folder)
 
+    # The targets are still worth checking before the backend is
+    # selected, so the list is printed. The warning comes first, and
+    # the command does not report success.
+    in_use = runtime.in_use()
+
+    if not in_use:
+        print(messages.NOT_IN_USE)
+        print()
+
     if not status.get("ok"):
         print(status.get("error"))
         return EXIT_USAGE
@@ -207,6 +219,9 @@ def cli_status(runtime: Runtime, args) -> int:
     rows = [describe_row(spec) for spec in config.targets.values()]
 
     print(messages.format_cli_status(folder, status, rows))
+
+    if not in_use:
+        return EXIT_USAGE
 
     if not status.get("connected"):
         return EXIT_DOWN

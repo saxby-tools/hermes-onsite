@@ -147,6 +147,48 @@ def test_run_is_taken_as_allowed_when_nobody_can_say(tmp_path):
     assert api.status_payload(build(tmp_path), {})["run_allowed"] is True
 
 
+def test_no_target_is_named_or_probed_when_another_backend_is_selected(
+    tmp_path,
+):
+    session = runtime.SessionReader(cwd=lambda: "", session_id=lambda: "")
+    probes = []
+
+    built = runtime.Runtime(
+        load_settings=lambda: SETTINGS,
+        data_dir=tmp_path,
+        session=session,
+        build_environment=lambda *args: object(),
+        backend_selected=lambda: False,
+    )
+
+    spec = built.load_config().target("laptop")
+
+    built._gates[
+        (spec.name, spec.kind, spec.host, spec.user, spec.port)
+    ] = health.Gate(
+        spec,
+        probe=lambda target: (
+            probes.append(target.name)
+            or health.ProbeResult(True, "", 12)
+        ),
+    )
+
+    payload = api.status_payload(
+        built,
+        {"cwd": "/home/dev/app"},
+        with_targets=True,
+    )
+
+    assert payload["ok"] is False
+    assert "terminal.backend onsite" in payload["error"]
+    assert "target" not in payload
+    assert probes == []
+
+
+def test_a_runtime_with_nobody_to_ask_counts_as_in_use(tmp_path):
+    assert build(tmp_path).in_use() is True
+
+
 def test_rows_are_listed_unless_the_caller_declines_them():
     assert api.wants_rows(None) is True
     assert api.wants_rows({}) is True

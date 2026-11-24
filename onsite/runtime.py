@@ -77,10 +77,12 @@ class Runtime:
         build_environment: Callable[..., Any],
         save_settings: Callable[[dict], None] | None = None,
         run_allowed: Callable[[], bool] | None = None,
+        backend_selected: Callable[[], bool] | None = None,
     ):
         self._load_settings = load_settings
         self._save_settings = save_settings
         self._run_allowed = run_allowed
+        self._backend_selected = backend_selected
         self._data_dir = data_dir
         self._session = session
         self._build_environment = build_environment
@@ -97,6 +99,19 @@ class Runtime:
         self.pins = Pins(JsonStore(pins_path))
         self.folders = Folders(JsonStore(folders_path))
         self.proposals = Proposals(JsonStore(proposals_path))
+
+    def in_use(self) -> bool:
+        """Whether Hermes runs this profile's commands through onsite.
+
+        Asked each time. When it is false, every command runs on the
+        host with Hermes' own backend, whatever the settings here say,
+        so nothing may name a target as the place a session runs.
+        """
+
+        if self._backend_selected is None:
+            return True
+
+        return bool(self._backend_selected())
 
     def run_allowed(self) -> bool:
         """Whether `/run` can hand a command to the agent here.
@@ -409,4 +424,5 @@ def build_runtime() -> Runtime:
         build_environment=build_environment,
         save_settings=compat.save_settings,
         run_allowed=compat.run_allowed,
+        backend_selected=compat.backend_selected,
     )

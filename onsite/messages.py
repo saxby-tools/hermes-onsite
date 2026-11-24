@@ -85,6 +85,13 @@ FOLDER_UNKNOWN = (
     "is settled at its first message, so this may change."
 )
 
+NOT_IN_USE = (
+    "onsite is set up but not in use. This profile's terminal backend "
+    "is not `onsite`, so every command runs on the host. On the host, "
+    "run `hermes config set terminal.backend onsite`. It applies to "
+    "sessions started after that."
+)
+
 INJECTION_HINT = (
     "This client does not let a plugin hand the agent a message. To "
     "allow it, run `hermes config set "

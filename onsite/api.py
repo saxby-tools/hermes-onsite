@@ -12,6 +12,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from . import messages
 from . import mirror
 from .config import ConfigError
 from .config import KIND_SSH
@@ -147,6 +148,15 @@ def describe_targets(
 
 
 def status_payload(runtime, body: Any, with_targets: bool = False) -> dict:
+    # A chip that named a target here would be wrong about where the
+    # next command runs. No target is asked anything either.
+    if not runtime.in_use():
+        return {
+            "ok": False,
+            "error": messages.NOT_IN_USE,
+            "api_version": API_VERSION,
+        }
+
     ids = read_ids(body)
     session_id = find_session_id(runtime, ids)
 
