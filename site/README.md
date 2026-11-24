@@ -176,10 +176,16 @@ second turns them into `docs/brand/banner.png`, `static/social.png`
 and the icons in `static/`: the mark at 16, 32, 48, 180, 192 and 512
 pixels. It needs `rsvg-convert` and ImageMagick.
 
-The plate, `docs/brand/plate-head.png`, comes from a museum photo by
-way of `docs/brand/make-plates.sh`. That script and
-`docs/brand/plate-hand.png` also hold a second plate, a marble hand,
-which is no longer used.
+The hero's plate, `docs/brand/plate-table.png`, comes from an
+engraving in the Cleveland Museum of Art by way of
+`docs/brand/make-plate-table.sh`. The script names the picture and
+where to fetch it. Run it before `make-brand.py`, because the banner
+and the share picture show the plate.
+
+`docs/brand/plate-head.png`, the marble head, comes from a museum
+photo by way of `docs/brand/make-plates.sh`. That script and
+`docs/brand/plate-hand.png` also hold a marble hand, which is no
+longer used.
 
 The icon in the masthead's Source button is GitHub's own mark, from
 its Octicons set. Its license is in `static/icons/`.
