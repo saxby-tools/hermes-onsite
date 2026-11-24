@@ -4,4 +4,4 @@ description: >-
   Screen control on the machine an onsite session runs on. Select
   it with computer_use.backend: onsite-screen. A session on the
   host keeps the host's screen. Needs the onsite plugin enabled.
-author: Claude Code, for saxby-tools
+author: saxby-tools
