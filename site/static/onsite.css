@@ -467,8 +467,11 @@ code {
   white-space: nowrap;
 }
 
-/* The README's first paragraph is the headline. */
-.hero__text h1 + p {
+/* The README's first paragraph of words is the headline. When a
+ * banner picture sits between it and the heading, the headline is the
+ * paragraph after the picture. */
+.hero__text h1 + p:not(:has(> img:only-child)),
+.hero__text h1 + p:has(> img:only-child) + p {
   margin-bottom: var(--space-4);
   font-family: var(--font-display);
   font-size: var(--size-title);
@@ -492,7 +495,8 @@ code {
   color: var(--color-field-muted);
 }
 
-.hero__text h1 + p,
+.hero__text h1 + p:not(:has(> img:only-child)),
+.hero__text h1 + p:has(> img:only-child) + p,
 .hero__text .status,
 .hero__text li strong {
   color: var(--color-field-text);
