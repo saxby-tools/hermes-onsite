@@ -270,6 +270,17 @@ No sandbox. An SSH target can do anything its user can.
 
 <!-- /onsite:notice -->
 
+The glossary card is a callout too. It holds the words a page leans
+on, one to a block, so a reader can find them again.
+
+<!-- onsite:notice {"kind": "terms"} -->
+
+- **Host.** The server Hermes runs on.
+- **Target.** A computer Hermes' tools can run on.
+- **Profile.** One Hermes set-up on the host.
+
+<!-- /onsite:notice -->
+
 ### Diagram
 
 <!-- onsite:diagram {
