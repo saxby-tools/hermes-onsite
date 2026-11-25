@@ -551,25 +551,39 @@ code {
 /* ---- Contents ------------------------------------------------------- */
 
 /* The "On this page" bar. It sticks under the masthead, is one row
- * tall, and scrolls sideways when its links do not fit. */
+ * tall, and scrolls sideways when its links do not fit.
+ *
+ * The links start in line with the page's column and run on to the
+ * bar's own edge, so they leave the window instead of stopping short
+ * of it. Each end of the row fades into the bar.
+ *
+ * `--contents-inset` is how far the column's text sits in from the
+ * bar's edge. `100cqi` is the bar's own width, which is why the bar
+ * is a container. `--contents-lead` is the clear space before the
+ * first link, and the width of the fade at that end. */
 
 .contents {
+  --contents-inset: max(
+    var(--gutter),
+    calc((100cqi - var(--column)) / 2 + var(--gutter))
+  );
+  --contents-lead: var(--space-4);
+  --contents-fade: var(--space-5);
+
   position: sticky;
   top: var(--top-height);
   z-index: 1;
   border-bottom: 1px solid var(--color-line);
   background: var(--color-ground-raised);
+  container-type: inline-size;
 }
 
 .contents__inner {
   display: flex;
   flex-wrap: nowrap;
   align-items: center;
-  gap: var(--space-4);
-  max-width: var(--column);
   height: var(--contents-height);
-  margin: 0 auto;
-  padding: 0 var(--gutter);
+  padding-left: var(--contents-inset);
 }
 
 .contents__title {
@@ -577,10 +591,10 @@ code {
   color: var(--color-text-muted);
 }
 
-/* The four backgrounds are the scroll shadows. The first two are
- * covers in the bar's own colour that travel with the links, so each
- * hides its shadow only while the list is scrolled to that end. The
- * last two are the shadows, which stay put at the edges. */
+/* The mask is the fade. It stays put while the links scroll under
+ * it, and it lets the bar's own ground show through, so it has no
+ * colour of its own to keep in step. The scroll padding keeps a link
+ * that takes the keyboard's focus clear of both fades. */
 .contents__list {
   display: flex;
   flex: 1;
@@ -592,19 +606,18 @@ code {
   margin: 0;
   padding: 0;
   overflow-x: auto;
+  scroll-padding-inline: var(--contents-lead) var(--contents-fade);
   list-style: none;
   font-size: var(--size-small);
   white-space: nowrap;
   scrollbar-width: none;
-  background:
-    linear-gradient(to right, var(--color-ground-raised) 40%, transparent)
-      left center / 2.5rem 100% no-repeat local,
-    linear-gradient(to left, var(--color-ground-raised) 40%, transparent)
-      right center / 2.5rem 100% no-repeat local,
-    linear-gradient(to right, var(--color-line), transparent)
-      left center / 1rem 100% no-repeat scroll,
-    linear-gradient(to left, var(--color-line), transparent)
-      right center / 1rem 100% no-repeat scroll;
+  mask-image: linear-gradient(
+    to right,
+    transparent,
+    #000 var(--contents-lead),
+    #000 calc(100% - var(--contents-fade)),
+    transparent
+  );
 }
 
 .contents__list::-webkit-scrollbar {
@@ -614,6 +627,17 @@ code {
 .contents__list li {
   flex: none;
   padding: var(--space-2) 0;
+}
+
+/* The space at each end is on the first and last links, not on the
+ * row, so it scrolls away with them. The last link stops in line
+ * with the column, and never inside the fade. */
+.contents__list li:first-child {
+  padding-left: var(--contents-lead);
+}
+
+.contents__list li:last-child {
+  padding-right: max(var(--contents-inset), var(--contents-fade));
 }
 
 /* ---- Sections and pages --------------------------------------------- */
@@ -1689,6 +1713,16 @@ main {
     overflow: hidden;
     clip-path: inset(50%);
     white-space: nowrap;
+  }
+
+  /* With its label gone the row of links runs from one edge of the
+   * window to the other. The first link keeps the gutter. */
+  .contents {
+    --contents-lead: var(--gutter);
+  }
+
+  .contents__inner {
+    padding-left: 0;
   }
 }
 
