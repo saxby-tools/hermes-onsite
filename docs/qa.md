@@ -36,7 +36,7 @@ ssh you@laptop.example true
       any it is not given. A new profile needs these four, in order:
 
 ```bash
-hermes -p test plugins install saxby-tools/hermes-onsite/onsite --enable
+hermes -p test plugins install https://github.com/saxby-tools/hermes-onsite/tree/main/onsite --enable
 ```
 
 ```bash
@@ -83,7 +83,7 @@ hermes profile create qa
 ```
 
 ```bash
-hermes -p qa plugins install saxby-tools/hermes-onsite/onsite
+hermes -p qa plugins install https://github.com/saxby-tools/hermes-onsite/tree/main/onsite
 ```
 
 - [ ] Hermes warns that the source is custom and unreviewed, clones
@@ -100,39 +100,38 @@ ls "$(hermes -p qa config path | xargs dirname)/plugins/onsite"
 Now the desktop app's part, on the computer the app runs on. **This
 has never been tried.** It was read from Hermes' source.
 
-The app's "Install from Git" installs both parts of the plugin with
-one button. The agent plugin goes into the profile set under
-"Install for profile". **Set that to `qa` and check it before each
-click.** A click with another profile picked installs the plugin
-there and turns it on.
+- [ ] In the app, open Capabilities, then Plugins, and click "Install
+      from Git". Paste this and click "Review repository":
 
-- [ ] In the app, open Capabilities, then Plugins. Note what the row
-      for the plugin says about its desktop half. With a remote host
-      it should read "unavailable (remote backend)".
-- [ ] Click "Install from Git" and enter
-      `saxby-tools/hermes-onsite/onsite`. The dialog lists "Agent
-      plugin" and "Desktop UI", with a line under each on where it
-      goes. Set "Install for profile" to `qa`. Leave "Force
-      reinstall" off.
-- [ ] Click Install. Because `qa` already has the plugin, the dialog
-      reports that the agent plugin already exists, and still fetches
-      the Desktop UI. Write down its exact words.
-- [ ] If you copied `plugin.js` there by hand before, the app says
-      the desktop plugin already exists. Move the old
+```text
+https://github.com/saxby-tools/hermes-onsite/tree/main/onsite/desktop
+```
+
+- [ ] The dialog lists one part, "Desktop UI", and no agent plugin.
+      Write down what it says about where it goes.
+- [ ] Click Install. If you copied `plugin.js` there by hand before,
+      the app says the desktop plugin already exists. Move the old
       `~/.hermes/desktop-plugins/onsite` folder away and try again.
-- [ ] The desktop part arrives switched off. Open the plugin's entry
-      in Capabilities, Plugins and turn on the switch labelled
-      Desktop. The status bar then shows a chip that starts with
-      "onsite".
+- [ ] Within a few seconds the status bar shows a chip that starts
+      with "onsite". If it does not, open the plugin's entry in
+      Capabilities, Plugins and turn on the switch labelled Desktop.
+      Note which it took.
 - [ ] Enter the bare address,
       `https://github.com/saxby-tools/hermes-onsite`, in the same
-      dialog. It finds no plugin. That is expected, and worth one
-      line on how clear the message is.
-- [ ] Optional, the whole install through the app: make a second
-      throwaway profile, `hermes profile create qa2`, and run
-      "Install from Git" with "Install for profile" set to `qa2`. It
-      should install the agent plugin there, turn it on, and turn the
-      desktop part on with it. Remove `qa2` when done.
+      dialog. It says no plugin artifacts were found. That is
+      expected.
+
+The other way installs both parts from the app. It puts the agent
+plugin into the profile set under "Install for profile". **Check
+that profile before the click.** A click with another profile picked
+installs the plugin there and turns it on.
+
+- [ ] Optional: make a second throwaway profile, `hermes profile
+      create qa2`. In "Install from Git", paste
+      `https://github.com/saxby-tools/hermes-onsite/tree/main/onsite`.
+      The dialog lists "Agent plugin" and "Desktop UI". Set "Install
+      for profile" to `qa2` and click Install. Both parts should
+      install and turn on. Remove `qa2` when done.
 
 ## 2. Set up
 
