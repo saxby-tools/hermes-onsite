@@ -31,7 +31,7 @@ Then install it on the server. Until it is in the Hermes catalog,
 that is:
 
 ```bash
-hermes plugins install saxby-tools/hermes-onsite/onsite --enable
+hermes plugins install https://github.com/saxby-tools/hermes-onsite/tree/main/onsite --enable
 ```
 
 Then, still on the server:
@@ -69,13 +69,17 @@ it to run `uname -n`. It should print your computer's name. In
 Hermes Desktop, click the onsite chip at the bottom right. A pane
 opens where you browse to the folder.
 
-Hermes Desktop loads the plugin's desktop part from the computer the
-app runs on, and it may arrive switched off. If no chip that starts
-with "onsite" shows at the bottom right of the app, open
-Capabilities, then Plugins, open Onsite's entry and turn on its
-Desktop switch. If there is no such switch, the part is not on that
-computer yet. The repository's README says how to put it there,
-under "The desktop half".
+Hermes Desktop needs the plugin's desktop part on the computer the
+app runs on. In the app, open Capabilities, then Plugins, click
+"Install from Git" and paste:
+
+```text
+https://github.com/saxby-tools/hermes-onsite/tree/main/onsite/desktop
+```
+
+It is done when a chip that starts with "onsite" shows at the bottom
+right of the app. If none shows, open Onsite's entry in Capabilities,
+Plugins and turn on its Desktop switch.
 
 ## What it touches
 
