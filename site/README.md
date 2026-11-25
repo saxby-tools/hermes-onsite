@@ -112,7 +112,7 @@ Each component's own file lists its options at the top.
 
 | Component | Wraps | Draws |
 | --- | --- | --- |
-| `notice` | Paragraphs | A callout: `note`, `limit` or `untested` |
+| `notice` | Paragraphs, or a list of terms | A callout: `note`, `limit`, `untested`, or `terms` for a glossary card |
 | `chips` | A list | A row of status chips |
 | `diagram` | A text drawing | The "how a tool call travels" drawing |
 | `screen` | A screen described in words | A drawing of that screen of the app, in a window frame |
