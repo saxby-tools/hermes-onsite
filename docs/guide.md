@@ -62,7 +62,7 @@ If there is no chip at all, the app's half of onsite is missing or
 switched off. Open Capabilities, then Plugins, open Onsite's entry
 and look for a switch labelled Desktop. If it is there, turn it on.
 If it is not, the README has the step that puts the half in place,
-under [The desktop half](../README.md#the-desktop-half).
+under [Install](../README.md#install).
 
 ## Open a folder
 
