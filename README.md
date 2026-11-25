@@ -82,17 +82,28 @@ A session picks its target once, from the folder it was opened in:
 A session never moves to another machine by itself. If its target is
 down, tool calls fail with an error that names the target.
 
-Four words, used the same way from here on. The **host** is the
-server Hermes runs on. A **target** is a computer its tools can run
-on: the host itself, or one it reaches over SSH. The desktop app
-calls a target a **machine**. The **gateway** is the Hermes service
-on the host that the apps talk to. In the examples the host's target
-is named `mac` and the other is `laptop`. Both are only names. Pick
-your own.
+<!-- onsite:notice {"kind": "terms"} -->
 
-Two more. A **folder rule** is anything that ties a folder to a
-target: a prefix, a path map or a mirror, all met below. A profile's
-**Hermes home** is the folder that holds its `config.yaml`.
+- **Host.** The server Hermes runs on. This page also calls it the
+  server.
+- **Target.** A computer Hermes' tools can run on: the host itself,
+  or one it reaches over SSH. The desktop app calls it a machine.
+- **Profile.** One Hermes set-up on the host, with its own settings
+  and plugins. A host can hold several.
+- **Gateway.** The Hermes service on the host that the apps talk to.
+- **Agent plugin.** The part of onsite that runs on the host.
+- **Desktop UI.** The part of onsite that runs inside the Hermes
+  Desktop app, on the computer the app is on.
+- **Folder rule.** Anything that ties a folder to a target: a
+  prefix, a path map or a mirror.
+- **Mirror.** A folder on the host that stands for a target's
+  folders.
+- **Hermes home.** The folder that holds a profile's `config.yaml`.
+
+<!-- /onsite:notice -->
+
+In the examples the host's target is named `mac` and the other is
+`laptop`. Both are only names.
 
 ## Requirements
 
@@ -131,61 +142,69 @@ target: a prefix, a path map or a mirror, all met below. A profile's
 
 ## Install
 
-onsite has two parts. The plugin goes on the host, where Hermes
-runs. The desktop app's part goes on the computer the app runs on.
+onsite has two parts. The agent plugin runs on the server. The
+desktop UI runs in the Hermes Desktop app, on the computer the app is
+on. A set-up that only uses a terminal needs the agent plugin alone.
 
-### On the host
+A profile loads plugins only from its own folder. For any profile but
+the default, write `hermes -p <profile>` in place of `hermes`, here
+and in every command on this page.
 
-A profile loads plugins only from its own `plugins/` folder. For a
-named profile, write `hermes -p <profile>` in place of `hermes`,
-here and in every command on this page.
+### Option 1 (recommended): two installs, one on the server and one in the desktop app
 
-```bash
-hermes plugins install saxby-tools/hermes-onsite/onsite --enable
-```
+1. On the server, run:
 
-That installs one folder of this repository, `onsite/`, which is the
-plugin. The test rig, the site and these docs stay on GitHub.
+   ```bash
+   hermes plugins install https://github.com/saxby-tools/hermes-onsite/tree/main/onsite --enable
+   ```
 
-What Hermes prints, so none of it surprises you:
+2. In the desktop app, open Capabilities, then Plugins, and click
+   "Install from Git".
+3. Paste this address and click "Review repository":
 
-- A warning that the source is custom and unreviewed. That holds
-  until the plugin is in the Hermes catalog.
-- "Installing Python dependencies". That is Hermes preparing its own
-  runtime. onsite adds no package.
-- Without `--enable`, a question: enable it now? Off a terminal it
-  does not ask and leaves the plugin off, until you run
-  `hermes plugins enable onsite`.
-- `hermes plugins list --plain --no-bundled` then prints one line
-  that starts `enabled` and ends `onsite`. The full `hermes plugins
-  list` ends the plugin's description with "provenance: drift".
-  Hermes says that of any plugin installed from one folder of a
-  repository, because the copy has no `.git` folder of its own. It
-  is not a sign that anything changed.
+   ```text
+   https://github.com/saxby-tools/hermes-onsite/tree/main/onsite/desktop
+   ```
 
-No restart is needed. Hermes loads a newly enabled plugin into a
-gateway that is already running, and says so. `/onsite` works at
-once. The agent's `propose_command` tool reaches sessions started
-after that. Enabling into a live gateway has been done many times in
-testing. If `/onsite` is unknown in a new chat anyway, restart the
-gateway.
+4. Click Install.
 
-The install line itself has been run into an empty Hermes home, and
-the set-up below then worked there. It has not been run into a
-profile that a live gateway serves.
+It is done when a chip that starts with "onsite" shows at the bottom
+right of the app.
 
-### The desktop half
+### Option 2: one install, all from the desktop app
 
-Hermes Desktop loads a plugin's desktop part from the computer the
-app runs on, never from the host. It is in place when a chip that
-starts with "onsite" shows at the bottom right of the app's window.
+For a profile that does not have onsite yet.
 
-There are three ways to put it there. Only the first has been tried.
-The other two were read from Hermes' source.
+1. In the desktop app, open Capabilities, then Plugins, and click
+   "Install from Git".
+2. Paste this address and click "Review repository":
 
-**By hand.** Copy one file from the host to the computer the app
-runs on. Run both lines on the host. It can already log in to that
-computer:
+   ```text
+   https://github.com/saxby-tools/hermes-onsite/tree/main/onsite
+   ```
+
+3. The dialog lists two parts, "Agent plugin" and "Desktop UI".
+   Under "Install for profile", pick the profile to install into.
+4. Click Install. Both parts install and turn on.
+
+### Troubleshooting
+
+| What happens | What to do |
+| --- | --- |
+| The dialog says "No agent or desktop plugin artifacts found in this repository." | The address is missing its folder. Paste the whole address from the option, through `/onsite` or `/onsite/desktop`. |
+| No chip after the install | Open Capabilities, then Plugins, open Onsite and turn on the switch labelled Desktop. |
+| Onsite has no Desktop switch | The desktop UI is not on this computer. Run steps 2 to 4 of option 1 again. If the app is on the server itself, click Rescan, beside "Install from Git". |
+| Option 2 says the agent plugin already exists | That profile has it. The desktop UI was still installed. Turn on its Desktop switch. Leave "Force reinstall" off, or it replaces the plugin on the server. |
+| "Install from Git" cannot fetch the address | The computer needs `git`. Without it, copy the desktop UI by hand, below. |
+| `hermes onsite` is not a command | The plugin is installed but off. Run `hermes plugins enable onsite`. |
+| `/onsite` is unknown in a new chat | Restart the Hermes gateway. A running gateway should pick the plugin up without one. |
+| Hermes warns about a custom, unreviewed source | Expected until onsite is in the Hermes catalog. |
+| `hermes plugins list` says "provenance: drift" | Expected. Hermes says it of any plugin installed from a folder of a repository. |
+
+#### Copy the desktop UI by hand
+
+Run both lines on the server. They put one file on the computer the
+app runs on:
 
 ```bash
 ssh you@laptop.example mkdir -p .hermes/desktop-plugins/onsite
@@ -195,68 +214,25 @@ ssh you@laptop.example mkdir -p .hermes/desktop-plugins/onsite
 scp "$(dirname "$(hermes config path)")/plugins/onsite/desktop/plugin.js" you@laptop.example:.hermes/desktop-plugins/onsite/plugin.js
 ```
 
-`.hermes/desktop-plugins` is where the app most often looks. To see
-the real place, open Capabilities, then Plugins, in the app and
-click the folder icon beside "Install from Git". Its tooltip reads
-"Open Desktop plugins folder". The `onsite` folder goes inside the
-folder that opens.
+<!-- onsite:notice {"kind": "untested"} -->
 
-The app loads the file within a few seconds, switched on. If it does
-not, open the command palette with Ctrl+K, or Cmd+K on a Mac, and
-run "Reload desktop plugins". A copy made by hand does not follow
-the plugin: copy it again after an update.
+The command in option 1 has been run into an empty Hermes home. The
+two addresses have not yet been pasted into the real app. The copy
+by hand is the only way the desktop UI has been installed so far.
 
-**The app is on the host.** The app copies the part in by itself,
-switched off. Open Capabilities, then Plugins, open Onsite's entry
-and turn on the switch labelled Desktop. The switch on the card in
-the list is a different one. It turns the whole plugin on or off for
-the profile. If the entry has no Desktop switch yet, click Rescan,
-beside "Install from Git".
-
-Capabilities is where plugins are installed and switched on. It is
-not the Plugins list in Settings, where onsite's own pages are.
-
-**Through the app, from another computer.** In the app, open
-Capabilities, then Plugins, and click "Install from Git". Enter the
-plugin's folder. The bare repository address finds nothing, because
-the plugin is not at its top:
-
-```text
-saxby-tools/hermes-onsite/onsite
-```
-
-The dialog lists two parts, "Agent plugin" and "Desktop UI", and one
-button installs both. You cannot pick one. The agent plugin goes to
-the host, into the profile set under "Install for profile". The
-desktop part goes onto this computer, fetched with `git`, which this
-computer must have. So check that profile before you click.
-
-- If that profile has no onsite yet, this one step is the whole
-  install. It takes the place of the command under "On the host" and
-  turns both parts on.
-- If that profile already has onsite, the dialog reports that the
-  agent plugin already exists and still fetches the desktop part.
-  That part arrives switched off. Turn on its Desktop switch, as
-  above. Leave "Force reinstall" off, or it replaces the plugin on
-  the host.
-
-Whichever way you used, the test is the same. Look for the chip. If
-there is none, open Onsite's entry in Capabilities and turn on
-Desktop. If there is no such switch, the file is not on this
-computer yet.
+<!-- /onsite:notice -->
 
 ### Update and remove
 
 Neither has been tried with this plugin. Both are Hermes' own
-commands, on the host:
+commands, run on the server:
 
 ```bash
 hermes plugins update onsite
 ```
 
-After an update, a desktop part copied by hand has to be copied
-again. To remove the plugin, hand the terminal back to Hermes first,
-so that no session points at a backend that is gone:
+To remove the plugin, hand the terminal back to Hermes first, so
+that no session points at a backend that is gone:
 
 ```bash
 hermes config set terminal.backend local
@@ -268,7 +244,7 @@ hermes plugins remove onsite
 
 ### To work on the plugin itself
 
-Clone the repository on the host and link the one folder into a
+Clone the repository on the server and link the one folder into a
 profile:
 
 ```bash
@@ -286,12 +262,6 @@ ln -s "$PWD/hermes-onsite/onsite" "$(dirname "$(hermes config path)")/plugins/on
 ```bash
 hermes plugins enable onsite
 ```
-
-The link is how every test here was run. The same link on the
-computer the app runs on, into that computer's own Hermes home,
-makes the app copy `desktop/plugin.js` in and reload it each time it
-is saved. It arrives switched off: turn on its Desktop switch once.
-That was read from Hermes' source and has not been tried.
 
 ## Set up
 
