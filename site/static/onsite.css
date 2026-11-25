@@ -926,6 +926,38 @@ main {
   margin-bottom: 0;
 }
 
+/* The glossary card. Wider than a paragraph, so the terms can sit
+   side by side, each one a small block with its name on top. */
+.callout-terms {
+  max-width: none;
+  padding: var(--space-4);
+  border-left-color: var(--color-text);
+}
+
+.callout-terms ul {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+  gap: var(--space-3) var(--space-4);
+  margin: var(--space-3) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.callout-terms li {
+  margin: 0;
+  padding-top: var(--space-2);
+  border-top: 1px solid var(--color-line);
+}
+
+.callout-terms li > strong:first-child {
+  display: block;
+  margin-bottom: var(--space-1);
+  font-family: var(--font-display);
+  font-weight: 500;
+  letter-spacing: var(--track);
+  text-transform: uppercase;
+}
+
 /* ---- Diagram -------------------------------------------------------- */
 
 .diagram {
