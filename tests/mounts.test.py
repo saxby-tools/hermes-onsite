@@ -364,3 +364,61 @@ def test_a_linux_mount_for_another_address_is_remounted(
 
     assert kept["link"] == remote.build_sftp_arguments(SPEC)
 
+
+def test_a_folder_that_is_there_is_found_at_once(tmp_path):
+    slept = []
+
+    seen = mounts.look_for_folder(tmp_path, sleep=slept.append)
+
+    assert seen == mounts.FOLDER_THERE
+    assert slept == []
+
+
+def test_a_folder_that_is_not_there_is_not_waited_for(tmp_path):
+    slept = []
+
+    (tmp_path / "file.txt").write_text("x")
+
+    for path in (tmp_path / "nope", tmp_path / "file.txt"):
+        seen = mounts.look_for_folder(path, sleep=slept.append)
+
+        assert seen == mounts.FOLDER_MISSING
+
+    assert slept == []
+
+
+def test_a_target_that_just_woke_is_given_a_moment(tmp_path, monkeypatch):
+    answers = [OSError(5, "Input/output error")] * 3
+    real_stat = os.stat
+    slept = []
+
+    def flaky(path):
+        if answers:
+            raise answers.pop()
+
+        return real_stat(path)
+
+    monkeypatch.setattr(mounts.os, "stat", flaky)
+
+    seen = mounts.look_for_folder(tmp_path, sleep=slept.append)
+
+    assert seen == mounts.FOLDER_THERE
+    assert len(slept) == 3
+
+
+def test_a_target_that_stays_away_is_given_up_on(tmp_path, monkeypatch):
+    now = [0.0]
+
+    def refuse(path):
+        raise OSError(60, "Operation timed out")
+
+    def sleep(seconds):
+        now[0] += seconds
+
+    monkeypatch.setattr(mounts.os, "stat", refuse)
+
+    seen = mounts.look_for_folder(tmp_path, clock=lambda: now[0], sleep=sleep)
+
+    assert seen == mounts.FOLDER_AWAY
+    assert now[0] >= mounts.WAKE_SECONDS
+

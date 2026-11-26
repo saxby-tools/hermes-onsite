@@ -336,6 +336,23 @@ def test_a_folder_that_is_not_there_is_not_opened(tmp_path, monkeypatch):
     assert "/home/dev/nope is not a folder on laptop" in payload["error"]
 
 
+def test_a_target_that_is_away_is_told_apart_from_a_missing_folder(
+    tmp_path,
+    monkeypatch,
+):
+    mounted(monkeypatch, tmp_path)
+    monkeypatch.setattr(
+        mounts,
+        "look_for_folder",
+        lambda folder: mounts.FOLDER_AWAY,
+    )
+
+    payload = api.open_payload(Harness(tmp_path).runtime, {"target": "laptop"})
+
+    assert payload["ok"] is False
+    assert "is not answering. It may be asleep." in payload["error"]
+
+
 def test_a_path_cannot_climb_out_of_the_mount(tmp_path, monkeypatch):
     root, _ = mounted(monkeypatch, tmp_path)
     (tmp_path / "secret").mkdir()

@@ -86,7 +86,9 @@ POSIX_RENAME = b"posix-rename@openssh.com"
 # other servers take this much.
 CHUNK = 32768
 
-CALL_SECONDS = 20
+# How long one answer may take. A target that fell asleep is given
+# up on after this, not after the link's own longer patience.
+CALL_SECONDS = 8
 HEADER = struct.Struct(">I")
 MAX_PACKET = 1 << 20
 

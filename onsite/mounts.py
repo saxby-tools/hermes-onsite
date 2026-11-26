@@ -28,6 +28,7 @@ import os
 import platform
 import shutil
 import signal
+import stat as statmod
 import subprocess
 import sys
 import time
@@ -94,6 +95,17 @@ INSTALL_LINES = (
     (("nixos",), "nix-env -iA nixos.sshfs"),
 )
 INSTALL_FALLBACK = "install the `sshfs` package with your package manager"
+
+
+# What looking for a folder under a mount can find.
+FOLDER_THERE = "there"
+FOLDER_MISSING = "missing"
+FOLDER_AWAY = "away"
+
+# A target that was away is given this long to answer again. Its
+# mount notices it is back within a few seconds, not at once.
+WAKE_SECONDS = 8.0
+WAKE_POLL_SECONDS = 0.5
 
 
 class MountError(RuntimeError):
@@ -237,6 +249,38 @@ def mount_points(system: str) -> set[str]:
 
 def is_mounted(root: Path, system: str) -> bool:
     return str(root) in mount_points(system)
+
+
+def look_for_folder(
+    folder: Path,
+    clock=time.monotonic,
+    sleep=time.sleep,
+) -> str:
+    """Whether a folder is there on a mounted target.
+
+    A folder that is not there is said at once. A target that does
+    not answer is asked again for a few seconds, because one that
+    just woke up fails the first reads through its mount.
+    """
+
+    until = clock() + WAKE_SECONDS
+
+    while True:
+        try:
+            found = os.stat(folder)
+        except (FileNotFoundError, NotADirectoryError):
+            return FOLDER_MISSING
+        except OSError:
+            if clock() >= until:
+                return FOLDER_AWAY
+
+            sleep(WAKE_POLL_SECONDS)
+            continue
+
+        if statmod.S_ISDIR(found.st_mode):
+            return FOLDER_THERE
+
+        return FOLDER_MISSING
 
 
 def prepare_root(root: Path) -> None:

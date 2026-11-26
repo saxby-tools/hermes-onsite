@@ -235,11 +235,16 @@ class Runtime:
             raise mounts.MountError(str(error)) from None
 
         folder = to_host(found.root, shown)
+        seen = mounts.look_for_folder(folder)
 
-        if not folder.is_dir():
+        if seen == mounts.FOLDER_MISSING:
             raise mounts.MountError(
-                f"{shown} is not a folder on {spec.label}, or the "
-                "target is not answering."
+                f"{shown} is not a folder on {spec.label}."
+            )
+
+        if seen == mounts.FOLDER_AWAY:
+            raise mounts.MountError(
+                f"{spec.label} is not answering. It may be asleep."
             )
 
         return folder, shown
