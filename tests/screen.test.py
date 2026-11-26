@@ -5,7 +5,7 @@ from __future__ import annotations
 import pytest
 
 from onsite import config
-from onsite import mirror
+from onsite import oneshot
 from onsite import screen
 
 
@@ -66,7 +66,7 @@ def test_the_first_copy_of_a_name_wins():
 
 def test_a_target_that_cannot_be_asked_says_so(monkeypatch):
     def refuse(spec, script, timeout):
-        raise mirror.MirrorError("Connection refused")
+        raise oneshot.RemoteError("Connection refused")
 
     monkeypatch.setattr(screen, "run_remote", refuse)
 

@@ -29,8 +29,8 @@ from .config import SCREEN_AUTO
 from .config import SCREEN_DRIVER
 from .config import SCREEN_SHARING
 from .config import TargetSpec
-from .mirror import MirrorError
-from .mirror import run_remote
+from .oneshot import RemoteError
+from .oneshot import run_remote
 from .remote import QUIET_PATH_LINES
 
 
@@ -155,7 +155,7 @@ def parse_probe(raw: bytes) -> Seat:
 def read_seat(spec: TargetSpec) -> Seat:
     try:
         raw = run_remote(spec, PROBE_SCRIPT, PROBE_TIMEOUT_SECONDS)
-    except MirrorError as error:
+    except RemoteError as error:
         raise ScreenError(f"{spec.label} could not be asked: {error}") from None
 
     return parse_probe(raw)

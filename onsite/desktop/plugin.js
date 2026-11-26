@@ -84,15 +84,10 @@ const SCREEN_ROUTES = [
 // The host's settings for a screen. A machine Hermes runs on keeps
 // Hermes' own, so these are dropped for it.
 const SCREEN_KEYS = ['screen', 'screen_port']
-const HOME_FOLDER = '~'
 
 const INPUT_CLASS =
   'w-full rounded border border-(--ui-border) bg-transparent px-2 py-1 ' +
   'text-[0.8125rem]'
-const ROW_CLASS =
-  'flex w-full items-center gap-2 rounded px-2 py-1 text-left ' +
-  'hover:bg-(--chrome-action-hover)'
-
 const EMPTY_MACHINE = {
   name: '',
   kind: KIND_SSH,
@@ -101,7 +96,7 @@ const EMPTY_MACHINE = {
   port: '',
   key: '',
   prefixes: '',
-  mirror: '',
+  mount: '',
   screen: SCREEN_AUTO,
   isDefault: false,
   isNew: true
@@ -123,7 +118,7 @@ const REASONS = {
   pinned: 'this session started there',
   prefix: 'the folder is under one of its prefixes',
   path_map: 'the folder is in its path map',
-  mirror: 'the folder is in its mirror',
+  mount: 'the folder is on its disk',
   default: 'no folder rule matched'
 }
 
@@ -650,32 +645,8 @@ function StatusLines({ status }) {
   })
 }
 
-function TargetList({ rows }) {
-  if (!Array.isArray(rows) || rows.length === 0) {
-    return null
-  }
-
-  return jsx('ul', {
-    className: 'flex flex-col gap-0.5',
-    children: rows.map(row =>
-      jsxs(
-        'li',
-        {
-          className: 'flex items-center gap-1.5',
-          children: [
-            jsx(Dot, { tone: row.connected ? TONE_UP : TONE_DOWN }),
-            jsx('span', { children: row.label }),
-            row.default ? jsx('span', { className: TEXT_MUTED, children: '(default)' }) : null
-          ]
-        },
-        row.name
-      )
-    )
-  })
-}
-
 /* ------------------------------------------------------------------ */
-/* 4. FOLDER BROWSER                                                   */
+/* 4. MACHINES                                                         */
 /* ------------------------------------------------------------------ */
 
 async function send(path, body) {
@@ -696,18 +667,6 @@ function folderName(path) {
   return parts[parts.length - 1]
 }
 
-function joinFolder(path, name) {
-  if (path === '/') {
-    return `/${name}`
-  }
-
-  return `${path}/${name}`
-}
-
-function sshTargets(rows) {
-  return (rows ?? []).filter(row => row.kind === KIND_SSH).map(row => row.name)
-}
-
 function canStartSessions() {
   if (typeof sdk.host?.request !== 'function') {
     return false
@@ -717,8 +676,9 @@ function canStartSessions() {
 }
 
 // Starts a new session in a folder on the host, the way Hermes' own
-// chat plugin does. The folder is the host's stand-in for the folder
-// on the machine, so the session runs there.
+// chat plugin does. The folder is where the machine's disk is mounted
+// on the host, so the session runs in the real folder on the machine,
+// and the app's own folder picker and file tree open on its files.
 async function openSessionAt(cwd, title) {
   if (!canStartSessions()) {
     await copyText(cwd)
@@ -746,61 +706,26 @@ async function openSessionAt(cwd, title) {
   return true
 }
 
-function FolderRow({ label, onPick }) {
-  return jsx('button', {
-    type: 'button',
-    className: ROW_CLASS,
-    'data-onsite-folder': label,
-    onClick: onPick,
-    children: label
-  })
-}
-
-function FolderBrowser({ rows }) {
-  const names = sshTargets(rows)
-  const [picked, setPicked] = useState('')
-  const [listing, setListing] = useState(null)
-  const [message, setMessage] = useState('')
+// One machine in the pane. A machine reached over SSH gets a button
+// that opens a session in its start folder. The app's own picker then
+// starts there, so nobody has to know where the host mounted it.
+function PaneMachine({ row }) {
   const [busy, setBusy] = useState(false)
+  const [message, setMessage] = useState('')
 
-  if (names.length === 0) {
-    return null
-  }
-
-  const target = names.includes(picked) ? picked : names[0]
-
-  const load = async path => {
+  const start = async () => {
     setBusy(true)
     setMessage('')
 
     try {
-      const answer = await send('/browse', { target, path })
+      const answer = await send('/open', { target: row.name })
 
       if (answer?.ok) {
-        setListing(answer)
-      } else {
-        setMessage(answer?.error || 'That folder could not be listed.')
-      }
-    } catch (error) {
-      setMessage(describeError(error))
-    }
-
-    setBusy(false)
-  }
-
-  const openHere = async () => {
-    setBusy(true)
-    setMessage('')
-
-    try {
-      const answer = await send('/open', { target, path: listing.path })
-
-      if (answer?.ok) {
-        const title = `${folderName(listing.path)} on ${target}`
+        const title = `${folderName(answer.path)} on ${row.name}`
 
         await openSessionAt(answer.cwd, title)
       } else {
-        setMessage(answer?.error || 'That folder could not be opened.')
+        setMessage(answer?.error || 'That machine could not be opened.')
       }
     } catch (error) {
       setMessage(describeError(error))
@@ -809,85 +734,49 @@ function FolderBrowser({ rows }) {
     setBusy(false)
   }
 
-  const choose = event => {
-    setPicked(event.target.value)
-    setListing(null)
-    setMessage('')
-  }
+  const problem = message || row.mount_error || ''
 
-  return jsxs('div', {
-    className: 'flex flex-col gap-1',
-    'data-onsite-browser': true,
+  return jsxs('li', {
+    className: 'flex flex-col gap-0.5',
+    'data-onsite-machine-row': row.name,
     children: [
-      jsx('div', { className: 'font-medium', children: 'Open a folder' }),
       jsxs('div', {
-        className: 'flex items-center gap-2',
+        className: 'flex items-center gap-1.5',
         children: [
-          jsx('select', {
-            className: INPUT_CLASS,
-            'aria-label': 'Machine',
-            value: target,
-            onChange: choose,
-            children: names.map(name =>
-              jsx('option', { value: name, children: name }, name)
-            )
-          }),
-          jsx('button', {
-            type: 'button',
-            className: BUTTON_CLASS,
-            'data-onsite-browse': true,
-            disabled: busy,
-            onClick: () => load(HOME_FOLDER),
-            children: 'Browse'
-          })
+          jsx(Dot, { tone: row.connected ? TONE_UP : TONE_DOWN }),
+          jsx('span', { children: row.label }),
+          row.default ? jsx('span', { className: TEXT_MUTED, children: '(default)' }) : null,
+          row.kind === KIND_SSH
+            ? jsx('button', {
+                type: 'button',
+                className: joinClasses(BUTTON_CLASS, 'ml-auto'),
+                'data-onsite-new-session': row.name,
+                disabled: busy,
+                onClick: start,
+                children: 'New session'
+              })
+            : null
         ]
       }),
-      message
-        ? jsx('div', { className: TEXT_MUTED, role: 'alert', children: message })
-        : null,
-      listing
-        ? jsxs('div', {
-            className: 'flex flex-col',
-            children: [
-              jsx('div', {
-                className: joinClasses(TEXT_SMALL, TEXT_MUTED, 'break-all'),
-                'data-onsite-path': true,
-                children: listing.path
-              }),
-              listing.parent
-                ? jsx(FolderRow, {
-                    label: '..',
-                    onPick: () => load(listing.parent)
-                  })
-                : null,
-              listing.folders.map(name =>
-                jsx(
-                  FolderRow,
-                  {
-                    label: name,
-                    onPick: () => load(joinFolder(listing.path, name))
-                  },
-                  name
-                )
-              ),
-              listing.more
-                ? jsx('div', {
-                    className: joinClasses(TEXT_SMALL, TEXT_MUTED),
-                    children: 'More folders than fit here. Go deeper to narrow it.'
-                  })
-                : null,
-              jsx('button', {
-                type: 'button',
-                className: joinClasses(BUTTON_CLASS, 'mt-1 self-start'),
-                'data-onsite-open': true,
-                disabled: busy,
-                onClick: openHere,
-                children: `Start a session in ${folderName(listing.path)}`
-              })
-            ]
+      problem
+        ? jsx('div', {
+            className: joinClasses(TEXT_SMALL, TEXT_MUTED, 'whitespace-pre-wrap'),
+            role: 'alert',
+            children: problem
           })
         : null
     ]
+  })
+}
+
+function PaneMachines({ rows }) {
+  if (!Array.isArray(rows) || rows.length === 0) {
+    return null
+  }
+
+  return jsx('ul', {
+    className: 'flex flex-col gap-1',
+    children: rows.map(row => jsx(PaneMachine, { row }, row.name))
   })
 }
 
@@ -912,12 +801,11 @@ function OnsitePane() {
     children: [
       jsx('div', { className: 'font-medium', children: 'Onsite' }),
       jsx(StatusLines, { status }),
-      jsx(TargetList, { rows: status?.rows }),
+      jsx(PaneMachines, { rows: status?.rows }),
       jsx('div', {
         className: joinClasses(TEXT_SMALL, TEXT_MUTED),
         children: 'Move this session with /onsite <target>.'
       }),
-      jsx(FolderBrowser, { rows: status?.rows }),
       jsx('div', { className: 'font-medium', children: 'Proposed commands' }),
       pending.length === 0
         ? jsx('div', {
@@ -995,7 +883,7 @@ function machineToForm(name, block, isDefault) {
     port: block?.port === undefined ? '' : String(block.port),
     key: block?.key ?? '',
     prefixes: (block?.prefixes ?? []).join('\n'),
-    mirror: block?.mirror ?? '',
+    mount: block?.mount ?? '',
     screen: block?.screen ?? SCREEN_AUTO,
     isDefault,
     isNew: false,
@@ -1016,7 +904,7 @@ function formToTarget(form) {
     delete target.user
     delete target.port
     delete target.key
-    delete target.mirror
+    delete target.mount
 
     for (const key of SCREEN_KEYS) {
       delete target[key]
@@ -1028,7 +916,7 @@ function formToTarget(form) {
   target.host = form.host.trim()
   target.user = form.user.trim()
   target.key = form.key.trim()
-  target.mirror = form.mirror.trim()
+  target.mount = form.mount.trim()
   target.port = form.port.trim() === '' ? '' : Number(form.port)
   target.screen = form.screen === SCREEN_AUTO ? '' : form.screen
 

@@ -1,8 +1,9 @@
 """What the status endpoint answers, as plain functions.
 
 The desktop half asks where a session runs and what the agent has
-proposed. It also edits the list of machines, tests one, and browses a
-machine's folders to open one. Each is answered here so it can be
+proposed. It also edits the list of machines, tests one, and says
+where a machine's disk is mounted on the host, so a session can be
+started in one of its folders. Each is answered here so it can be
 tested with no web server. `dashboard/plugin_api.py` only wraps them.
 
 This module imports nothing from Hermes.
@@ -13,7 +14,7 @@ from __future__ import annotations
 from typing import Any
 
 from . import messages
-from . import mirror
+from . import mounts
 from .config import ConfigError
 from .config import KIND_SSH
 from .config import KNOWN_TARGET_KEYS
@@ -28,9 +29,6 @@ MAX_IDS = 6
 MAX_ID_CHARS = 512
 MAX_CWD_CHARS = 4096
 MAX_NAME_CHARS = 32
-MAX_FOLDERS = 500
-
-HOME_FOLDER = "~"
 
 
 def clean_text(value: Any, limit: int) -> str:
@@ -124,6 +122,24 @@ def probe_row(runtime, spec, known: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def mount_problem(runtime, spec) -> str:
+    """Why a target's files cannot be shown on the host, or nothing.
+
+    Asking mounts the disk if it is not mounted, so the folder picker
+    and the file tree can reach it by the time a person looks.
+    """
+
+    if spec.kind != KIND_SSH:
+        return ""
+
+    try:
+        runtime.mount(spec)
+    except mounts.MountError as error:
+        return str(error)
+
+    return ""
+
+
 def describe_targets(
     runtime,
     known: dict[str, Any] | None = None,
@@ -141,6 +157,7 @@ def describe_targets(
             "kind": spec.kind,
             "label": spec.label,
             "default": spec.name == config.default,
+            "mount_error": mount_problem(runtime, spec),
             **probe_row(runtime, spec, known or {}),
         })
 
@@ -343,44 +360,14 @@ def find_ssh_target(runtime, body: Any):
 
 
 def read_folder(body: Any) -> str:
-    folder = clean_text(body.get("path"), MAX_CWD_CHARS)
+    """The folder asked for, or nothing for the target's start folder."""
 
-    return folder or HOME_FOLDER
-
-
-def parent_of(folder: str) -> str:
-    if folder == "/":
-        return ""
-
-    return folder.rsplit("/", 1)[0] or "/"
-
-
-def browse_payload(runtime, body: Any) -> dict:
-    """The folders inside one folder on a machine."""
-
-    spec, problem = find_ssh_target(runtime, body)
-
-    if problem is not None:
-        return problem
-
-    try:
-        listing = mirror.list_children(spec, read_folder(body))
-    except mirror.MirrorError as error:
-        return failure(str(error))
-
-    return {
-        "ok": True,
-        "api_version": API_VERSION,
-        "target": spec.name,
-        "path": listing.home,
-        "parent": parent_of(listing.home),
-        "folders": list(listing.folders[:MAX_FOLDERS]),
-        "more": len(listing.folders) > MAX_FOLDERS,
-    }
+    return clean_text(body.get("path"), MAX_CWD_CHARS)
 
 
 def open_payload(runtime, body: Any) -> dict:
-    """Give a folder on a machine a place on the host to open it from."""
+    """Where a folder on a machine is on the host, so a session can be
+    started in it. With no folder named, the machine's start folder."""
 
     spec, problem = find_ssh_target(runtime, body)
 
@@ -388,19 +375,15 @@ def open_payload(runtime, body: Any) -> dict:
         return problem
 
     try:
-        folder, result = mirror.open_folder(spec, read_folder(body), True)
-    except mirror.MirrorError as error:
+        folder, shown = runtime.host_folder(spec, read_folder(body))
+    except mounts.MountError as error:
         return failure(str(error))
-
-    if result.skipped:
-        return failure(
-            f"{folder} is taken by something else on this machine."
-        )
 
     return {
         "ok": True,
         "api_version": API_VERSION,
         "target": spec.name,
         "cwd": str(folder),
+        "path": shown,
     }
 

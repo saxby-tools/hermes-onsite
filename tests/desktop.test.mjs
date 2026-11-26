@@ -591,31 +591,40 @@ test('a failed send tells the user what to type instead', { skip: SKIP }, async 
 })
 
 /* ------------------------------------------------------------------ */
-/* 4. FOLDER BROWSER                                                   */
+/* 4. MACHINES IN THE PANE                                             */
 /* ------------------------------------------------------------------ */
 
 const TWO_MACHINES = {
   ...UP,
   rows: [
-    { name: 'laptop', kind: 'ssh', label: 'laptop (dev@laptop.example)', connected: true },
-    { name: 'mac', kind: 'local', label: 'mac (this machine)', connected: true }
+    {
+      name: 'laptop',
+      kind: 'ssh',
+      label: 'laptop (dev@laptop.example)',
+      connected: true,
+      mount_error: ''
+    },
+    {
+      name: 'mac',
+      kind: 'local',
+      label: 'mac (this machine)',
+      connected: true,
+      mount_error: ''
+    }
   ]
 }
 
-const LISTINGS = {
-  '~': { ok: true, path: '/home/dev', parent: '/home', folders: ['notes', 'work'] },
-  '/home/dev/work': { ok: true, path: '/home/dev/work', parent: '/home/dev', folders: [] }
-}
+const MOUNT = '/host/plugin-data/onsite/mount/laptop'
 
-async function openBrowser() {
+async function openPaneMachines() {
   const made = await setup()
 
   made.backend.status = TWO_MACHINES
-  made.backend.routes['/browse'] = body => LISTINGS[body.path]
   made.backend.routes['/open'] = body => ({
     ok: true,
     target: body.target,
-    cwd: `/host/mirror/laptop${body.path}`
+    cwd: `${MOUNT}/home/dev`,
+    path: '/home/dev'
   })
 
   await made.settle(made.made.intervals[0])
@@ -625,83 +634,93 @@ async function openBrowser() {
   return { ...made, box }
 }
 
-test('the pane offers folders only for machines reached over SSH', { skip: SKIP }, async () => {
-  const { box } = await openBrowser()
-  const options = [...box.querySelectorAll('[data-onsite-browser] option')]
+test('only a machine reached over SSH gets a New session button', { skip: SKIP }, async () => {
+  const { box } = await openPaneMachines()
+  const buttons = [...box.querySelectorAll('[data-onsite-new-session]')]
 
-  assert.deepEqual(options.map(option => option.value), ['laptop'])
+  assert.deepEqual(
+    buttons.map(button => button.getAttribute('data-onsite-new-session')),
+    ['laptop']
+  )
+  assert.equal(buttons[0].textContent, 'New session')
+  assert.equal(box.querySelectorAll('[data-onsite-machine-row]').length, 2)
 })
 
-test('browsing asks the machine, one folder at a time', { skip: SKIP }, async () => {
-  const { box, click, made } = await openBrowser()
+test('the pane has no folder list of its own', { skip: SKIP }, async () => {
+  const { box } = await openPaneMachines()
 
-  await click(box.querySelector('[data-onsite-browse]'))
-
-  const names = () =>
-    [...box.querySelectorAll('[data-onsite-folder]')].map(row => row.textContent)
-
-  assert.deepEqual(names(), ['..', 'notes', 'work'])
-  assert.equal(box.querySelector('[data-onsite-path]').textContent, '/home/dev')
-
-  await click(box.querySelector('[data-onsite-folder="work"]'))
-
-  assert.equal(box.querySelector('[data-onsite-path]').textContent, '/home/dev/work')
-
-  const asked = made.requests.filter(([route]) => route === '/browse')
-
-  assert.deepEqual(asked.map(([, options]) => options.body), [
-    { target: 'laptop', path: '~' },
-    { target: 'laptop', path: '/home/dev/work' }
-  ])
+  assert.equal(box.querySelector('[data-onsite-browser]'), null)
+  assert.equal(box.querySelector('select'), null)
+  assert.doesNotMatch(box.textContent, /Open a folder|Browse/)
 })
 
-test('picking a folder starts a session in its place on the host', { skip: SKIP }, async () => {
-  const { box, calls, click } = await openBrowser()
+test('New session opens the machine where a login lands, on its mount', { skip: SKIP }, async () => {
+  const { box, calls, click, made } = await openPaneMachines()
 
-  await click(box.querySelector('[data-onsite-browse]'))
-  await click(box.querySelector('[data-onsite-folder="work"]'))
-  await click(box.querySelector('[data-onsite-open]'))
+  await click(box.querySelector('[data-onsite-new-session="laptop"]'))
 
+  const asked = made.requests.filter(([route]) => route === '/open')
+
+  assert.deepEqual(asked.map(([, options]) => options.body), [{ target: 'laptop' }])
   assert.deepEqual(calls.rpc, [
-    ['session.create', { cwd: '/host/mirror/laptop/home/dev/work', cwd_explicit: true }],
-    ['session.title', { session_id: 'runtime-new', title: 'work on laptop' }]
+    ['session.create', { cwd: `${MOUNT}/home/dev`, cwd_explicit: true }],
+    ['session.title', { session_id: 'runtime-new', title: 'dev on laptop' }]
   ])
   assert.deepEqual(calls.opened, [['stored-new', { expectHistory: false }]])
 })
 
 test('a session is started in the profile the app is on', { skip: SKIP }, async () => {
-  const { box, calls, click, host } = await openBrowser()
+  const { box, calls, click, host } = await openPaneMachines()
 
   host.state.profile = atom('buster')
 
-  await click(box.querySelector('[data-onsite-browse]'))
-  await click(box.querySelector('[data-onsite-open]'))
+  await click(box.querySelector('[data-onsite-new-session="laptop"]'))
 
   assert.equal(calls.rpc[0][1].profile, 'buster')
 })
 
 test('an app that cannot start sessions is given the folder to open', { skip: SKIP }, async () => {
-  const { box, calls, click, host, made } = await openBrowser()
+  const { box, calls, click, host, made } = await openPaneMachines()
 
   delete host.request
 
-  await click(box.querySelector('[data-onsite-browse]'))
-  await click(box.querySelector('[data-onsite-open]'))
+  await click(box.querySelector('[data-onsite-new-session="laptop"]'))
 
-  assert.deepEqual(made.copied, ['/host/mirror/laptop/home/dev'])
+  assert.deepEqual(made.copied, [`${MOUNT}/home/dev`])
   assert.equal(calls.opened.length, 0)
   assert.match(JSON.stringify(calls.notify), /Open this folder to work there/)
 })
 
-test('a machine that cannot be listed says why', { skip: SKIP }, async () => {
-  const { backend, box, click } = await openBrowser()
+test('a machine that cannot be opened says why', { skip: SKIP }, async () => {
+  const { backend, box, calls, click } = await openPaneMachines()
 
-  backend.routes['/browse'] = () => ({ ok: false, error: 'Connection refused' })
+  backend.routes['/open'] = () => ({ ok: false, error: 'Connection refused' })
 
-  await click(box.querySelector('[data-onsite-browse]'))
+  await click(box.querySelector('[data-onsite-new-session="laptop"]'))
 
   assert.equal(box.querySelector('[role="alert"]').textContent, 'Connection refused')
-  assert.equal(box.querySelector('[data-onsite-open]'), null)
+  assert.deepEqual(calls.rpc, [])
+})
+
+test('a disk that could not be mounted is said beside its machine', { skip: SKIP }, async () => {
+  const made = await setup()
+  const rows = TWO_MACHINES.rows.map(row => ({ ...row }))
+
+  rows[0].mount_error =
+    'laptop cannot be mounted: this server has no `sshfs`. ' +
+    'Install it, then try again: sudo apt install sshfs'
+  made.backend.status = { ...TWO_MACHINES, rows }
+
+  await made.settle(made.made.intervals[0])
+
+  const box = await made.mount(made.made.contributions.pane.render())
+  const row = box.querySelector('[data-onsite-machine-row="laptop"]')
+
+  assert.match(row.querySelector('[role="alert"]').textContent, /sudo apt install sshfs/)
+  assert.equal(
+    box.querySelector('[data-onsite-machine-row="mac"] [role="alert"]'),
+    null
+  )
 })
 
 /* ------------------------------------------------------------------ */
@@ -836,7 +855,7 @@ test('saving keeps the settings the form does not show', { skip: SKIP }, async (
     user: 'dev',
     port: '',
     key: '',
-    mirror: '',
+    mount: '',
     screen: '',
     prefixes: ['/home/dev/'],
     path_map: { '/Users/dev/Development': '/home/dev/Development' }

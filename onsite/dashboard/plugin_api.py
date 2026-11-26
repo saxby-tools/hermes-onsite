@@ -118,13 +118,6 @@ def test_target(body: Any = Body(default=None)) -> dict:
     return load_api(package).test_target_payload(runtime, body)
 
 
-@router.post("/browse")
-def browse(body: Any = Body(default=None)) -> dict:
-    package, runtime = find_runtime()
-
-    return load_api(package).browse_payload(runtime, body)
-
-
 @router.post("/open")
 def open_folder(body: Any = Body(default=None)) -> dict:
     package, runtime = find_runtime()

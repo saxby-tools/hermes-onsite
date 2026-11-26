@@ -7,8 +7,9 @@ The rules, in order:
    target's `prefixes` or through the left side of its `path_map`.
 3. Otherwise the default target is used.
 
-A target's `mirror` is one more map entry: that folder on the host
-stands for the root of the target's disk.
+A target's `mount` is one more map entry: the folder on the host
+where the target's whole disk is mounted. A session opened under it
+runs in the real folder on the target.
 
 A brain and a hand rarely agree on paths, so a route also carries the
 folder to start in on the target. This module is pure. It imports
@@ -18,12 +19,14 @@ nothing from Hermes and touches no network.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from pathlib import Path
 
 from .config import OnsiteConfig
 from .config import KIND_LOCAL
 from .config import TargetSpec
 from .config import is_absolute
 from .config import normalize_path
+from .paths import to_target
 
 
 HOME = "~"
@@ -33,7 +36,7 @@ REASON_OVERRIDE = "override"
 REASON_PINNED = "pinned"
 REASON_PREFIX = "prefix"
 REASON_PATH_MAP = "path_map"
-REASON_MIRROR = "mirror"
+REASON_MOUNT = "mount"
 REASON_DEFAULT = "default"
 
 
@@ -86,10 +89,21 @@ def map_entries(spec: TargetSpec) -> list[tuple[str, str, str]]:
         for source, destination in spec.path_map
     ]
 
-    if spec.mirror:
-        entries.append((spec.mirror, ROOT, REASON_MIRROR))
+    if spec.mount:
+        entries.append((spec.mount, ROOT, REASON_MOUNT))
 
     return entries
+
+
+def map_through(path: str, source: str, destination: str, reason: str) -> str:
+    """A host path as the target path one map entry makes of it."""
+
+    # A mount is the target's own disk. Its paths go through the one
+    # module that knows a host folder from a target folder.
+    if reason == REASON_MOUNT:
+        return to_target(Path(source), Path(path)) or destination
+
+    return swap_prefix(path, source, destination)
 
 
 def map_path(path: str, spec: TargetSpec) -> str | None:
@@ -97,19 +111,19 @@ def map_path(path: str, spec: TargetSpec) -> str | None:
 
     best = None
 
-    for source, destination, _ in map_entries(spec):
-        if not is_under(path, source):
+    for entry in map_entries(spec):
+        if not is_under(path, entry[0]):
             continue
 
-        if best is not None and len(source) <= len(best[0]):
+        if best is not None and len(entry[0]) <= len(best[0]):
             continue
 
-        best = (source, destination)
+        best = entry
 
     if best is None:
         return None
 
-    return swap_prefix(path, best[0], best[1])
+    return map_through(path, *best)
 
 
 def has_prefix_for(path: str, spec: TargetSpec) -> bool:
@@ -165,7 +179,7 @@ def collect_candidates(path: str, config: OnsiteConfig) -> list[Candidate]:
                 length=len(source),
                 order=order,
                 target=spec.name,
-                cwd=swap_prefix(path, source, destination),
+                cwd=map_through(path, source, destination, reason),
                 reason=reason,
             ))
 

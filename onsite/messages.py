@@ -19,7 +19,7 @@ from .moves import Move
 from .proposals import Proposal
 from .rfb import SECURITY_PASSWORD
 from .routing import REASON_DEFAULT
-from .routing import REASON_MIRROR
+from .routing import REASON_MOUNT
 from .routing import REASON_OVERRIDE
 from .routing import REASON_PATH_MAP
 from .routing import REASON_PINNED
@@ -35,15 +35,13 @@ REASON_TEXT = {
     REASON_PINNED: "this session started there",
     REASON_PREFIX: "the session folder is under one of its prefixes",
     REASON_PATH_MAP: "the session folder is in its path map",
-    REASON_MIRROR: "the session folder is in its mirror",
+    REASON_MOUNT: "the session folder is on its disk",
     REASON_DEFAULT: "no folder rule matched, so the default was used",
 }
 
 # Hermes adds a move note to the user's own message. These words tell
 # the agent the user did not type it. The rig looks for them too.
 MOVE_NOTE_OPENING = "Note from the onsite plugin, not typed by the user"
-
-MAX_SKIPPED_SHOWN = 5
 SCREEN_PLUGIN = "onsite-screen"
 
 ROUTE_WORDS = {
@@ -67,12 +65,13 @@ SHARING_NO_WINDOWS = (
     "list or focus apps. Click the window in a capture instead."
 )
 
-MIRROR_NOT_SET = (
-    "No such target to mirror. Only a target reached over SSH has a "
-    "mirror. `hermes onsite status` lists the targets."
+NOTHING_TO_MOUNT = (
+    "No such target to mount. Only a target reached over SSH has a "
+    "disk to mount. `hermes onsite status` lists the targets."
 )
 OPEN_USAGE = (
-    "Name the folder as TARGET:FOLDER, such as laptop:~/work."
+    "Name a target, or a folder on one as TARGET:FOLDER, such as "
+    "laptop:~/work."
 )
 
 SWITCH_HINT = (
@@ -392,76 +391,24 @@ def format_cli_status(
     return "\n".join(lines)
 
 
-def format_skipped(mode: str, skipped: tuple[str, ...]) -> list[str]:
-    if not skipped:
-        return []
+def format_mounted(spec: TargetSpec, root: str, start: str) -> str:
+    """The output of `hermes onsite mount` for one target that is up."""
 
-    lines = [
-        f"{mode} left alone, because something else has the name or "
-        "it would land outside the mirror:",
-    ]
+    lines = [f"{spec.label} is mounted at:", f"  {root}"]
 
-    for folder in skipped[:MAX_SKIPPED_SHOWN]:
-        lines.append(f"  {folder}")
-
-    hidden = len(skipped) - MAX_SKIPPED_SHOWN
-
-    if hidden > 0:
-        lines.append(f"  and {hidden} more")
-
-    return lines
-
-
-def format_mirror_result(
-    mode: str,
-    spec: TargetSpec,
-    depth: int,
-    result,
-    apply: bool,
-) -> str:
-    """The output of `hermes onsite mirror` for one target."""
-
-    verb = "made" if apply else "would make"
-
-    lines = [
-        f"{mode} {spec.label}: folders under its home, "
-        f"{depth} levels deep.",
-        f"{mode} {verb} {result.made} empty folders under {result.root}. "
-        f"{result.kept} were already there.",
-    ]
-
-    lines += format_skipped(mode, result.skipped)
-
-    if not apply:
-        lines.append(f"{mode} nothing was made. Add --apply to make them.")
+    if start:
+        lines += ["A new session on it starts in:", f"  {start}"]
 
     return "\n".join(lines)
 
 
-def format_open_result(
-    mode: str,
-    spec: TargetSpec,
-    target_folder: str,
-    host_folder: str,
-    result,
-    apply: bool,
-) -> str:
+def format_opened(spec: TargetSpec, target_folder: str, host: str) -> str:
     """The output of `hermes onsite open`."""
 
-    if result.skipped:
-        return "\n".join(format_skipped(mode, result.skipped))
-
-    if not apply:
-        return "\n".join([
-            f"{mode} {target_folder} on {spec.label} would be opened at:",
-            host_folder,
-            f"{mode} nothing was made. Add --apply to make it.",
-        ])
-
     return "\n".join([
-        f"{mode} {target_folder} on {spec.label} is opened at:",
-        host_folder,
-        f"{mode} start a session in that folder to work there.",
+        f"{target_folder} on {spec.label} is here on this host:",
+        host,
+        "Start a session in that folder to work there.",
     ])
 
 

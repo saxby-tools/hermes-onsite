@@ -13,7 +13,7 @@ from pathlib import Path
 
 from . import mcptools
 from . import messages
-from . import mirror
+from . import mounts
 from . import screen
 from . import screenshare
 from . import wizard
@@ -247,7 +247,8 @@ def gather_settings(args) -> dict:
         key=args.key,
         known_hosts=args.known_hosts,
         default=args.default,
-        mirror=args.mirror,
+        mount=args.mount,
+        start=args.start,
     )
 
 
@@ -285,71 +286,82 @@ def cli_init(runtime: Runtime, args) -> int:
     return EXIT_OK
 
 
-def mirror_targets(config, name: str | None) -> list[TargetSpec]:
-    """The targets one `hermes onsite mirror` run covers."""
+def mount_targets(config, name: str | None) -> list[TargetSpec]:
+    """The targets one `hermes onsite mount` run covers."""
 
     if name is None:
-        return [spec for spec in config.targets.values() if spec.mirror]
+        return [spec for spec in config.targets.values() if spec.mount]
 
     if name not in config.targets:
         return []
 
-    return [config.target(name)]
+    spec = config.target(name)
+
+    return [spec] if spec.mount else []
 
 
-def cli_mirror(runtime: Runtime, args) -> int:
+def mount_one(runtime: Runtime, spec: TargetSpec) -> int:
+    try:
+        found = runtime.mount(spec)
+    except mounts.MountError as error:
+        print(error)
+        return EXIT_DOWN
+
+    start = ""
+
+    try:
+        start = str(runtime.start_folder(spec))
+    except mounts.MountError:
+        # The mount is up and the target is not answering yet. The
+        # start folder is known once it does.
+        start = ""
+
+    print(messages.format_mounted(spec, str(found.root), start))
+
+    return EXIT_OK
+
+
+def cli_mount(runtime: Runtime, args) -> int:
     try:
         config = runtime.load_config()
     except ConfigError as error:
         print(error)
         return EXIT_USAGE
 
-    specs = mirror_targets(config, args.target)
+    specs = mount_targets(config, args.target)
 
     if not specs:
-        print(messages.MIRROR_NOT_SET)
+        print(messages.NOTHING_TO_MOUNT)
         return EXIT_USAGE
 
-    mode = MODE_LIVE if args.apply else MODE_DRY
     code = EXIT_OK
 
     for spec in specs:
-        depth = args.depth or spec.mirror_depth
-
-        try:
-            result = mirror.sync(spec, depth, args.apply)
-        except mirror.MirrorError as error:
-            print(f"{mode} {spec.label} could not be mirrored: {error}")
-            code = EXIT_DOWN
+        if args.stop:
+            runtime.unmount(spec)
+            print(f"{spec.label} is no longer mounted.")
             continue
 
-        print(messages.format_mirror_result(
-            mode, spec, depth, result, args.apply,
-        ))
+        code = max(code, mount_one(runtime, spec))
 
     return code
 
 
-def split_target_folder(value: str) -> tuple[str, str] | None:
-    name, separator, folder = value.partition(TARGET_FOLDER_SEPARATOR)
+def split_target_folder(value: str) -> tuple[str, str]:
+    """`laptop:~/work` as a target and a folder. A bare name is the
+    target's own start folder."""
 
-    if not separator:
-        return None
-
-    if not name or not folder:
-        return None
+    name, _, folder = value.partition(TARGET_FOLDER_SEPARATOR)
 
     return name, folder
 
 
 def cli_open(runtime: Runtime, args) -> int:
-    pair = split_target_folder(args.folder)
+    name, target_folder = split_target_folder(args.folder)
 
-    if pair is None:
+    if not name:
         print(messages.OPEN_USAGE)
         return EXIT_USAGE
-
-    name, target_folder = pair
 
     try:
         config = runtime.load_config()
@@ -362,20 +374,14 @@ def cli_open(runtime: Runtime, args) -> int:
         return EXIT_USAGE
 
     spec = config.target(name)
-    mode = MODE_LIVE if args.apply else MODE_DRY
 
     try:
-        folder, result = mirror.open_folder(spec, target_folder, args.apply)
-    except mirror.MirrorError as error:
-        print(f"{mode} {error}")
+        folder, shown = runtime.host_folder(spec, target_folder)
+    except mounts.MountError as error:
+        print(error)
         return EXIT_DOWN
 
-    print(messages.format_open_result(
-        mode, spec, target_folder, str(folder), result, args.apply,
-    ))
-
-    if result.skipped:
-        return EXIT_USAGE
+    print(messages.format_opened(spec, shown, str(folder)))
 
     return EXIT_OK
 
@@ -565,11 +571,20 @@ def setup_cli(parser) -> None:
         help="a known_hosts file for NAME alone.",
     )
     init.add_argument(
-        "--mirror",
+        "--mount",
         action="append",
         default=[],
         metavar="NAME=/HOST/FOLDER",
-        help="a folder on this machine that mirrors NAME's folder names.",
+        help="where on this host NAME's disk is mounted. Default: a "
+        "folder in the plugin's own data.",
+    )
+    init.add_argument(
+        "--start",
+        action="append",
+        default=[],
+        metavar="NAME=/TARGET/FOLDER",
+        help="the folder on NAME a new session opens in. Default: "
+        "the folder a login there lands in.",
     )
     init.add_argument(
         "--default",
@@ -582,44 +597,32 @@ def setup_cli(parser) -> None:
         help="write the settings. Without it, they are only shown.",
     )
 
-    mirrored = actions.add_parser(
-        "mirror",
-        help="copy a target's folder names, not its files, to this "
-        "machine. A dry run unless --apply is given.",
+    mounted = actions.add_parser(
+        "mount",
+        help="mount a target's disk on this host, so its real files "
+        "show in the folder picker and the file tree.",
     )
-    mirrored.add_argument(
+    mounted.add_argument(
         "target",
         nargs="?",
-        help="the target to mirror. Default: every target reached "
+        help="the target to mount. Default: every target reached "
         "over SSH.",
     )
-    mirrored.add_argument(
-        "--depth",
-        type=int,
-        metavar="LEVELS",
-        help="how many levels under the home folder. Default: the "
-        "target's `mirror_depth`, which is 3 unless set.",
-    )
-    mirrored.add_argument(
-        "--apply",
+    mounted.add_argument(
+        "--stop",
         action="store_true",
-        help="make the folders. Without it, they are only counted.",
+        help="take the mount down. Nothing on the target changes.",
     )
 
     opened = actions.add_parser(
         "open",
-        help="make one folder on a target openable from this machine. "
-        "A dry run unless --apply is given.",
+        help="say where a folder on a target is on this host, so a "
+        "session can be started in it.",
     )
     opened.add_argument(
         "folder",
-        metavar="TARGET:FOLDER",
-        help="a folder on a target, such as laptop:~/work/site.",
-    )
-    opened.add_argument(
-        "--apply",
-        action="store_true",
-        help="make the folder. Without it, its place is only shown.",
+        metavar="TARGET[:FOLDER]",
+        help="a target, or a folder on one, such as laptop:~/work/site.",
     )
 
     served = actions.add_parser(
@@ -666,8 +669,8 @@ def build_cli_handler(ctx, runtime: Runtime):
         if action == "init":
             return cli_init(runtime, args)
 
-        if action == "mirror":
-            return cli_mirror(runtime, args)
+        if action == "mount":
+            return cli_mount(runtime, args)
 
         if action == "open":
             return cli_open(runtime, args)

@@ -1,4 +1,4 @@
-"""The routes behind the machines form and the folder browser."""
+"""The routes behind the machines form and a machine's mounted disk."""
 
 from __future__ import annotations
 
@@ -9,7 +9,7 @@ import pytest
 from onsite import api
 from onsite import config
 from onsite import health
-from onsite import mirror
+from onsite import mounts
 from onsite import runtime
 
 
@@ -55,44 +55,52 @@ NEW_MACHINE = {
     "user": "dev",
     "port": 2222,
     "key": "",
-    "mirror": "   ",
+    "mount": "   ",
     "prefixes": [],
 }
 
 
-# ---- a mirror with no set-up ------------------------------------------
+# ---- a mount with no set-up -------------------------------------------
 
 
-def test_an_ssh_target_gets_a_mirror_without_asking(tmp_path):
+def test_an_ssh_target_gets_a_mount_root_without_asking(tmp_path):
     spec = Harness(tmp_path).runtime.load_config().target("laptop")
 
-    assert spec.mirror == str(tmp_path / "mirror" / "laptop")
+    assert spec.mount == str(tmp_path / "mount" / "laptop")
 
 
-def test_a_mirror_named_in_the_settings_is_kept(tmp_path):
+def test_a_mount_root_named_in_the_settings_is_kept(tmp_path):
     settings = copy.deepcopy(SETTINGS)
-    settings["targets"]["laptop"]["mirror"] = "/Users/dev/Onsite/laptop"
+    settings["targets"]["laptop"]["mount"] = "/srv/onsite/laptop"
 
     spec = Harness(tmp_path, settings).runtime.load_config().target("laptop")
 
-    assert spec.mirror == "/Users/dev/Onsite/laptop"
+    assert spec.mount == "/srv/onsite/laptop"
 
 
-def test_a_local_target_gets_no_mirror(tmp_path):
+def test_a_local_target_has_no_disk_to_mount(tmp_path):
     spec = Harness(tmp_path).runtime.load_config().target("mac")
 
-    assert spec.mirror == ""
+    assert spec.mount == ""
 
 
-def test_a_folder_in_the_default_mirror_runs_on_the_target(tmp_path):
+def test_a_folder_under_the_mount_runs_on_the_target(tmp_path):
     harness = Harness(tmp_path)
-    folder = tmp_path / "mirror" / "laptop" / "srv" / "site"
+    folder = tmp_path / "mount" / "laptop" / "srv" / "site"
 
     status = harness.runtime.status(cwd=str(folder))
 
     assert status["target"] == "laptop"
     assert status["cwd"] == "/srv/site"
-    assert status["reason"] == "mirror"
+    assert status["reason"] == "mount"
+
+
+def test_the_mount_root_itself_is_the_targets_root(tmp_path):
+    harness = Harness(tmp_path)
+    status = harness.runtime.status(cwd=str(tmp_path / "mount" / "laptop"))
+
+    assert status["target"] == "laptop"
+    assert status["cwd"] == "/"
 
 
 # ---- the machines form ------------------------------------------------
@@ -104,7 +112,7 @@ def test_the_form_is_given_the_settings_as_written(tmp_path):
     assert payload["ok"] is True
     assert payload["default"] == "mac"
     assert payload["targets"]["laptop"]["host"] == "laptop.example"
-    assert "mirror" not in payload["targets"]["laptop"]
+    assert "mount" not in payload["targets"]["laptop"]
     assert payload["problem"] == ""
 
 
@@ -250,84 +258,175 @@ def test_a_machine_with_no_address_is_not_tried(tmp_path, monkeypatch):
     assert payload["ok"] is False
 
 
-# ---- browsing a machine and opening a folder --------------------------
+# ---- a machine's disk on the host --------------------------------------
 
 
-def test_browsing_lists_the_folders_inside_one(tmp_path, monkeypatch):
+def mounted(monkeypatch, tmp_path, home="/home/dev"):
+    """Stand in for the mount: a folder on disk that plays the
+    target's whole disk, with a few folders in it."""
+
+    root = tmp_path / "mount" / "laptop"
     asked = []
 
-    def fake_children(spec, folder):
-        asked.append((spec.name, folder))
+    for folder in ("home/dev/work/site", "srv/data"):
+        (root / folder).mkdir(parents=True, exist_ok=True)
 
-        return mirror.Listing(home="/home/dev/work", folders=("a", "b"))
+    def fake_ensure(spec, mount_root, data_dir, system=None):
+        asked.append(spec.name)
 
-    monkeypatch.setattr(mirror, "list_children", fake_children)
+        return mounts.Mounted(mount_root, home)
 
-    payload = api.browse_payload(
-        Harness(tmp_path).runtime, {"target": "laptop", "path": "~/work"},
+    monkeypatch.setattr(mounts, "ensure", fake_ensure)
+
+    return root, asked
+
+
+def test_with_no_folder_named_a_machine_opens_where_a_login_lands(
+    tmp_path,
+    monkeypatch,
+):
+    root, _ = mounted(monkeypatch, tmp_path)
+    payload = api.open_payload(Harness(tmp_path).runtime, {"target": "laptop"})
+
+    assert payload["ok"] is True
+    assert payload["cwd"] == str(root / "home" / "dev")
+    assert payload["path"] == "/home/dev"
+
+
+def test_a_start_folder_in_the_settings_wins(tmp_path, monkeypatch):
+    root, _ = mounted(monkeypatch, tmp_path)
+    settings = copy.deepcopy(SETTINGS)
+    settings["targets"]["laptop"]["start"] = "/srv/data"
+
+    payload = api.open_payload(
+        Harness(tmp_path, settings).runtime,
+        {"target": "laptop"},
     )
 
-    assert asked == [("laptop", "~/work")]
-    assert payload["path"] == "/home/dev/work"
-    assert payload["parent"] == "/home/dev"
-    assert payload["folders"] == ["a", "b"]
-    assert payload["more"] is False
+    assert payload["cwd"] == str(root / "srv" / "data")
 
 
-def test_browsing_starts_at_home(tmp_path, monkeypatch):
-    asked = []
-    monkeypatch.setattr(
-        mirror,
-        "list_children",
-        lambda spec, folder: asked.append(folder)
-        or mirror.Listing(home="/home/dev", folders=()),
-    )
-
-    api.browse_payload(Harness(tmp_path).runtime, {"target": "laptop"})
-
-    assert asked == ["~"]
-
-
-@pytest.mark.parametrize("folder, parent", [
-    ("/home/dev", "/home"),
-    ("/home", "/"),
-    ("/", ""),
+@pytest.mark.parametrize("asked, shown", [
+    ("~/work/site", "/home/dev/work/site"),
+    ("~", "/home/dev"),
+    ("/srv/data", "/srv/data"),
+    ("/srv/../srv/data/", "/srv/data"),
 ])
-def test_the_way_up_stops_at_the_root(folder, parent):
-    assert api.parent_of(folder) == parent
+def test_a_folder_is_found_under_the_mount(tmp_path, monkeypatch, asked, shown):
+    root, _ = mounted(monkeypatch, tmp_path)
+    payload = api.open_payload(
+        Harness(tmp_path).runtime,
+        {"target": "laptop", "path": asked},
+    )
+
+    assert payload["ok"] is True
+    assert payload["path"] == shown
+    assert payload["cwd"] == str(root) + shown
 
 
-def test_this_machine_is_not_browsed(tmp_path):
-    payload = api.browse_payload(Harness(tmp_path).runtime, {"target": "mac"})
+def test_a_folder_that_is_not_there_is_not_opened(tmp_path, monkeypatch):
+    mounted(monkeypatch, tmp_path)
+
+    payload = api.open_payload(
+        Harness(tmp_path).runtime,
+        {"target": "laptop", "path": "~/nope"},
+    )
+
+    assert payload["ok"] is False
+    assert "/home/dev/nope is not a folder on laptop" in payload["error"]
+
+
+def test_a_path_cannot_climb_out_of_the_mount(tmp_path, monkeypatch):
+    root, _ = mounted(monkeypatch, tmp_path)
+    (tmp_path / "secret").mkdir()
+
+    payload = api.open_payload(
+        Harness(tmp_path).runtime,
+        {"target": "laptop", "path": "/../../secret"},
+    )
+
+    assert payload["ok"] is False
+    assert str(root) not in payload.get("cwd", "")
+
+
+def test_a_target_that_did_not_say_where_a_login_lands(tmp_path, monkeypatch):
+    mounted(monkeypatch, tmp_path, home="")
+
+    payload = api.open_payload(Harness(tmp_path).runtime, {"target": "laptop"})
+
+    assert payload["ok"] is False
+    assert "did not say where a login starts" in payload["error"]
+
+
+def test_this_machine_has_no_disk_to_open(tmp_path):
+    payload = api.open_payload(Harness(tmp_path).runtime, {"target": "mac"})
 
     assert payload["ok"] is False
     assert "is this machine" in payload["error"]
 
 
-def test_a_machine_that_is_down_says_so(tmp_path, monkeypatch):
-    def refuse(spec, folder):
-        raise mirror.MirrorError("Connection refused")
+def test_a_mount_that_fails_says_why_and_is_not_retried_at_once(
+    tmp_path,
+    monkeypatch,
+):
+    tries = []
 
-    monkeypatch.setattr(mirror, "list_children", refuse)
+    def refuse(spec, mount_root, data_dir, system=None):
+        tries.append(spec.name)
 
-    payload = api.browse_payload(Harness(tmp_path).runtime, {"target": "laptop"})
+        raise mounts.MountError("this server has no `sshfs`. Install it")
 
-    assert payload == api.failure("Connection refused")
+    monkeypatch.setattr(mounts, "ensure", refuse)
+
+    harness = Harness(tmp_path)
+
+    for _ in range(3):
+        payload = api.open_payload(harness.runtime, {"target": "laptop"})
+
+        assert payload["ok"] is False
+        assert "has no `sshfs`" in payload["error"]
+
+    assert tries == ["laptop"]
 
 
-def test_opening_a_folder_gives_the_host_a_place_for_it(tmp_path, monkeypatch):
-    monkeypatch.setattr(
-        mirror,
-        "run_remote",
-        lambda spec, script, timeout: b"/home/dev/work/site\0",
+def test_the_machine_list_says_which_disks_could_not_be_mounted(
+    tmp_path,
+    monkeypatch,
+):
+    def refuse(spec, mount_root, data_dir, system=None):
+        raise mounts.MountError("no `sshfs`")
+
+    monkeypatch.setattr(mounts, "ensure", refuse)
+
+    harness = Harness(tmp_path)
+    spec = harness.runtime.load_config().target("laptop")
+
+    harness.runtime._gates[
+        (spec.name, spec.kind, spec.host, spec.user, spec.port)
+    ] = health.Gate(
+        spec,
+        probe=lambda target: health.ProbeResult(True, "", 12),
     )
 
-    payload = api.open_payload(
-        Harness(tmp_path).runtime, {"target": "laptop", "path": "~/work/site"},
+    payload = api.status_payload(harness.runtime, {}, with_targets=True)
+    rows = {row["name"]: row for row in payload["rows"]}
+
+    assert rows["laptop"]["mount_error"] == "no `sshfs`"
+    assert rows["mac"]["mount_error"] == ""
+
+
+def test_listing_the_machines_mounts_each_ssh_disk(tmp_path, monkeypatch):
+    _, asked = mounted(monkeypatch, tmp_path)
+    harness = Harness(tmp_path)
+    spec = harness.runtime.load_config().target("laptop")
+
+    harness.runtime._gates[
+        (spec.name, spec.kind, spec.host, spec.user, spec.port)
+    ] = health.Gate(
+        spec,
+        probe=lambda target: health.ProbeResult(True, "", 12),
     )
 
-    place = tmp_path / "mirror" / "laptop" / "home/dev/work/site"
+    api.status_payload(harness.runtime, {}, with_targets=True)
 
-    assert payload["ok"] is True
-    assert payload["cwd"] == str(place)
-    assert place.is_dir()
+    assert asked == ["laptop"]

@@ -13,6 +13,7 @@ from __future__ import annotations
 import copy
 import logging
 import threading
+import time
 
 from collections.abc import Mapping
 from dataclasses import dataclass
@@ -21,6 +22,7 @@ from pathlib import Path
 from typing import Any
 from typing import Callable
 
+from . import mounts
 from . import routing
 from .config import ConfigError
 from .config import KIND_SSH
@@ -31,6 +33,10 @@ from .config import parse_config
 from .health import Gate
 from .moves import Move
 from .moves import Moves
+from .paths import PathError
+from .paths import TARGET_ROOT
+from .paths import clean_target
+from .paths import to_host
 from .pins import Folders
 from .pins import Pins
 from .pins import SOURCE_OVERRIDE
@@ -45,9 +51,15 @@ logger = logging.getLogger(__name__)
 PINS_FILE = "pins.json"
 FOLDERS_FILE = "folders.json"
 PROPOSALS_FILE = "proposals.json"
-MIRRORS_DIR = "mirror"
 
 CLEAR_OVERRIDE = "auto"
+
+# How long a mount that failed is left alone before it is tried again.
+MOUNT_RETRY_SECONDS = 30.0
+
+# How a person writes "where a login on the target lands".
+HOME_MARK = "~"
+HOME_PREFIX = "~/"
 
 
 @dataclass(frozen=True)
@@ -88,6 +100,8 @@ class Runtime:
         self._build_environment = build_environment
         self._gates: dict[tuple, Gate] = {}
         self._gates_lock = threading.Lock()
+        self._mount_failures: dict[str, tuple[float, str]] = {}
+        self._mounts_lock = threading.Lock()
 
         pins_path = None if data_dir is None else data_dir / PINS_FILE
         folders_path = None if data_dir is None else data_dir / FOLDERS_FILE
@@ -126,34 +140,127 @@ class Runtime:
 
         return bool(self._run_allowed())
 
-    def default_mirror(self, name: str) -> str:
-        """Where a target's folder names are kept when no place is set."""
+    def default_mount(self, name: str) -> str:
+        """Where a target's disk is mounted when no place is set."""
 
         if self._data_dir is None:
             return ""
 
-        return str(self._data_dir / MIRRORS_DIR / name)
+        return str(mounts.default_root(self._data_dir, name))
 
-    def with_default_mirrors(self, config: OnsiteConfig) -> OnsiteConfig:
-        """Give every SSH target a mirror, so any of its folders can
-        be opened with no set-up. A mirror named in the settings is
-        kept as it is."""
+    def with_default_mounts(self, config: OnsiteConfig) -> OnsiteConfig:
+        """Give every SSH target a mount root, so any of its folders
+        can be opened with no set-up. A place named in the settings
+        is kept as it is."""
 
         targets = {}
 
         for name, spec in config.targets.items():
-            if spec.kind == KIND_SSH and not spec.mirror:
-                spec = replace(spec, mirror=self.default_mirror(name))
+            if spec.kind == KIND_SSH and not spec.mount:
+                spec = replace(spec, mount=self.default_mount(name))
 
             targets[name] = spec
 
         return OnsiteConfig(default=config.default, targets=targets)
 
+    def mount(self, spec: TargetSpec) -> mounts.Mounted:
+        """A target's disk on the host, mounted now if it was not.
+
+        A failure is remembered for a little while. The status chip
+        asks every few seconds, and a server that lacks a program
+        would otherwise be asked to start it every time.
+        """
+
+        if spec.kind != KIND_SSH or not spec.mount:
+            raise mounts.MountError(f"{spec.label} has no disk to mount")
+
+        if self._data_dir is None:
+            raise mounts.MountError("this process has no data folder")
+
+        now = time.monotonic()
+
+        with self._mounts_lock:
+            failed = self._mount_failures.get(spec.name)
+
+        if failed is not None and now - failed[0] < MOUNT_RETRY_SECONDS:
+            raise mounts.MountError(failed[1])
+
+        try:
+            found = mounts.ensure(spec, Path(spec.mount), self._data_dir)
+        except mounts.MountError as error:
+            with self._mounts_lock:
+                self._mount_failures[spec.name] = (now, str(error))
+
+            raise
+
+        with self._mounts_lock:
+            self._mount_failures.pop(spec.name, None)
+
+        return found
+
+    def host_folder(
+        self,
+        spec: TargetSpec,
+        target_folder: str = "",
+    ) -> tuple[Path, str]:
+        """Where a folder on a target is on the host, and its full
+        path on the target.
+
+        Nothing given is the target's start folder. `~` and `~/x` are
+        under the folder a login on the target lands in. The folder
+        has to be there: it is looked for through the mount.
+        """
+
+        found = self.mount(spec)
+        wanted = target_folder.strip()
+
+        if wanted in ("", HOME_MARK):
+            wanted = spec.start if not wanted else ""
+
+        if wanted.startswith(HOME_PREFIX):
+            wanted = f"{found.home}/{wanted[len(HOME_PREFIX):]}"
+
+        if not wanted:
+            wanted = found.home
+
+        if not wanted or not wanted.startswith(TARGET_ROOT):
+            raise mounts.MountError(
+                f"{spec.label} did not say where a login starts. "
+                "It may be asleep. Give the folder's full path."
+            )
+
+        try:
+            shown = clean_target(wanted)
+        except PathError as error:
+            raise mounts.MountError(str(error)) from None
+
+        folder = to_host(found.root, shown)
+
+        if not folder.is_dir():
+            raise mounts.MountError(
+                f"{shown} is not a folder on {spec.label}, or the "
+                "target is not answering."
+            )
+
+        return folder, shown
+
+    def start_folder(self, spec: TargetSpec) -> Path:
+        """The folder on the host a new session on a target opens in:
+        the one the settings name, or the target's own."""
+
+        return self.host_folder(spec)[0]
+
+    def unmount(self, spec: TargetSpec) -> None:
+        if not spec.mount or self._data_dir is None:
+            return
+
+        mounts.stop(spec, Path(spec.mount), self._data_dir)
+
     def load_config(self) -> OnsiteConfig:
         """Read the settings fresh, so an edit applies to the next
         session with no restart."""
 
-        return self.with_default_mirrors(parse_config(self._load_settings()))
+        return self.with_default_mounts(parse_config(self._load_settings()))
 
     def raw_settings(self) -> dict:
         """The settings as written, for a form that edits them."""
