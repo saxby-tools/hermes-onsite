@@ -249,6 +249,10 @@ On the laptop, in the desktop app, connected to the gateway.
       app.**
 - [ ] Ask that session for `pwd`. It prints your home folder on the
       laptop.
+- [ ] Open the app's command palette. Under Projects there is one
+      for the laptop's home folder, named `laptop` unless you made
+      one for that folder before. Pick it and start a new chat in
+      it. The chat's folder menu has "Change working directory".
 - [ ] Change the session's folder with the app's own folder picker.
       The picker opens in your home folder on the laptop and lists
       the laptop's real folders. Pick `Development`. The app's file
