@@ -99,7 +99,7 @@ def test_port_key_and_host_key_alias_are_passed():
 
 
 def test_a_local_target_is_sent_to_the_ordinary_command():
-    with pytest.raises(mcptools.McpError, match="is this machine"):
+    with pytest.raises(mcptools.McpError, match="is the Hermes server"):
         mcptools.build_ssh_arguments(CONFIG.target("mac"), ["server"])
 
 

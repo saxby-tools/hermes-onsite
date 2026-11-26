@@ -73,6 +73,10 @@ const MACHINES_PAGE_TITLE = 'Machines'
 const KIND_SSH = 'ssh'
 const KIND_LOCAL = 'local'
 
+// The same words as LOCAL_LABEL in config.py. Never "this machine":
+// the app is often open on a different computer than Hermes.
+const LOCAL_LABEL = 'Hermes server'
+
 // How a machine's screen is reached. `auto` is what the host assumes
 // when the setting is absent, so it is saved as an empty value.
 const SCREEN_AUTO = 'auto'
@@ -933,7 +937,7 @@ function formToTarget(form) {
 
 function describeMachine(block) {
   if (block?.kind === KIND_LOCAL) {
-    return 'this machine'
+    return LOCAL_LABEL
   }
 
   return `${block?.user ?? '?'}@${block?.host ?? '?'}`

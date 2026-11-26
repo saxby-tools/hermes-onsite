@@ -164,7 +164,7 @@ def interview(read: Callable[[str], str]) -> dict[str, Any]:
     )
     source = ask(
         read,
-        "A folder on THIS machine that is the same folder there "
+        "A folder on the Hermes server that is the same folder there "
         "(blank for none)",
     )
 
@@ -181,7 +181,7 @@ def interview(read: Callable[[str], str]) -> dict[str, Any]:
 
     local_name = ask(
         read,
-        "Name for this machine, used for everything else",
+        "Name for the Hermes server, used for everything else",
         DEFAULT_LOCAL_NAME,
     )
 

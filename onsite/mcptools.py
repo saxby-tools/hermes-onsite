@@ -76,8 +76,8 @@ def build_ssh_arguments(spec: TargetSpec, words: list[str]) -> list[str]:
 
     if spec.kind != KIND_SSH:
         raise McpError(
-            f"`{spec.name}` is this machine. Add its MCP servers with "
-            "`hermes mcp add` as usual."
+            f"`{spec.name}` is the Hermes server. Add its MCP servers "
+            "with `hermes mcp add` as usual."
         )
 
     if not words:

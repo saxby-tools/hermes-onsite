@@ -378,7 +378,8 @@ def find_ssh_target(runtime, body: Any):
 
     if spec.kind != KIND_SSH:
         return None, failure(
-            f"`{name}` is this machine. Its folders open the usual way."
+            f"`{name}` is the Hermes server. Its folders open the usual "
+            "way."
         )
 
     return spec, None

@@ -578,7 +578,7 @@ def format_screen_install(
         "Then choose it as this profile's screen backend:",
         f"  hermes config set computer_use.backend {SCREEN_PLUGIN}",
         "",
-        "A session on this machine keeps this machine's screen. A "
+        "A session on the Hermes server keeps the server's screen. A "
         "session on a target",
         "gets that target's screen. Check a target with "
         "`hermes onsite screen <target>`.",

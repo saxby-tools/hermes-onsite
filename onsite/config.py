@@ -24,6 +24,11 @@ BACKEND_NAME = "onsite"
 
 KIND_LOCAL = "local"
 KIND_SSH = "ssh"
+
+# What the app and the CLI call the target that is the computer
+# Hermes runs on. Never "this machine": the app is often open on a
+# different computer, where those words point at the wrong one.
+LOCAL_LABEL = "Hermes server"
 VALID_KINDS = (KIND_LOCAL, KIND_SSH)
 
 PATH_MODE_INTERACTIVE = "interactive"
@@ -141,7 +146,7 @@ class TargetSpec:
     @property
     def label(self) -> str:
         if self.kind == KIND_LOCAL:
-            return f"{self.name} (this machine)"
+            return f"{self.name} ({LOCAL_LABEL})"
 
         return f"{self.name} ({self.user}@{self.host})"
 

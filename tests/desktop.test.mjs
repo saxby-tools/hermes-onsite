@@ -44,7 +44,7 @@ const UP = {
   reason: 'path_map',
   rows: [
     { name: 'laptop', label: 'laptop (dev@laptop.example)', connected: true },
-    { name: 'mac', label: 'mac (this machine)', connected: true, default: true }
+    { name: 'mac', label: 'mac (Hermes server)', connected: true, default: true }
   ]
 }
 
@@ -447,7 +447,7 @@ test('the pane keeps its machine list when an answer comes without one', { skip:
   await settle(made.intervals[0])
 
   assert.equal(rows.length, 2)
-  assert.match(box.textContent, /mac \(this machine\)/)
+  assert.match(box.textContent, /mac \(Hermes server\)/)
 })
 
 test('a window out of sight does not ask the host', { skip: SKIP }, async () => {
@@ -620,7 +620,7 @@ const TWO_MACHINES = {
     {
       name: 'mac',
       kind: 'local',
-      label: 'mac (this machine)',
+      label: 'mac (Hermes server)',
       connected: true,
       mount_error: ''
     }
@@ -802,7 +802,7 @@ test('the entry itself opens on a summary of the machines', { skip: SKIP }, asyn
   const rows = [...home.querySelectorAll('[data-onsite-summary]')]
 
   assert.deepEqual(rows.map(row => row.getAttribute('data-onsite-summary')), ['laptop', 'mac'])
-  assert.match(rows[1].textContent, /this machine.*\(default\)/)
+  assert.match(rows[1].textContent, /Hermes server.*\(default\)/)
   assert.equal(home.querySelector('[data-onsite-edit]'), null)
   assert.match(home.textContent, /on the Machines page/)
 })
@@ -838,7 +838,7 @@ test('the page lists the machines in the settings', { skip: SKIP }, async () => 
 
   assert.deepEqual(rows.map(row => row.getAttribute('data-onsite-machine')), ['laptop', 'mac'])
   assert.match(rows[0].textContent, /dev@laptop\.example/)
-  assert.match(rows[1].textContent, /this machine.*\(default\)/)
+  assert.match(rows[1].textContent, /Hermes server.*\(default\)/)
 })
 
 test('the default machine cannot be removed from the page', { skip: SKIP }, async () => {
@@ -941,7 +941,7 @@ test('removing a machine asks the host to take it out', { skip: SKIP }, async ()
   assert.deepEqual(options.body, { name: 'laptop' })
 })
 
-test('this machine has no address fields', { skip: SKIP }, async () => {
+test('the Hermes server has no address fields', { skip: SKIP }, async () => {
   const { box, click } = await openMachines()
 
   await click(box.querySelector('[data-onsite-edit="mac"]'))

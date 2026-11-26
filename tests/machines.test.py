@@ -380,7 +380,7 @@ def test_this_machine_has_no_disk_to_open(tmp_path):
     payload = api.open_payload(Harness(tmp_path).runtime, {"target": "mac"})
 
     assert payload["ok"] is False
-    assert "is this machine" in payload["error"]
+    assert "is the Hermes server" in payload["error"]
 
 
 def test_a_mount_that_fails_says_why_and_is_not_retried_at_once(

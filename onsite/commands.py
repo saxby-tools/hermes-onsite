@@ -455,7 +455,7 @@ def cli_screen(runtime: Runtime, args) -> int:
 
     if spec.kind == KIND_LOCAL:
         print(
-            f"`{spec.name}` is this machine. Check its screen with "
+            f"`{spec.name}` is the Hermes server. Check its screen with "
             "`hermes computer-use doctor`."
         )
         return EXIT_USAGE
@@ -540,7 +540,7 @@ def setup_cli(parser) -> None:
         action="append",
         default=[],
         metavar="NAME",
-        help="this machine.",
+        help="the Hermes server.",
     )
     init.add_argument(
         "--prefix",
