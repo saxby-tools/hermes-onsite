@@ -212,6 +212,51 @@ def test_the_folder_above_a_mount_is_closed_to_other_users(tmp_path):
     assert (root.parent.stat().st_mode & 0o777) == 0o700
 
 
+def test_a_folder_that_was_already_there_is_never_changed(tmp_path):
+    parent = tmp_path / "somebodys-home"
+    parent.mkdir()
+    os.chmod(parent, 0o755)
+
+    mounts.prepare_root(parent / "laptop")
+
+    assert (parent / "laptop").is_dir()
+    assert (parent.stat().st_mode & 0o777) == 0o755
+
+
+def test_a_folder_that_cannot_be_made_is_an_error_with_its_reason(tmp_path):
+    blocker = tmp_path / "a-file"
+    blocker.write_text("")
+
+    with pytest.raises(mounts.MountError) as caught:
+        mounts.prepare_root(blocker / "mount" / "laptop")
+
+    assert "cannot be made on this server" in str(caught.value)
+
+
+def test_a_mac_never_mounts_where_other_accounts_can_look(
+    tmp_path,
+    monkeypatch,
+):
+    parent = tmp_path / "shared"
+    parent.mkdir()
+    os.chmod(parent, 0o755)
+    started = []
+
+    monkeypatch.setattr(mounts, "mount_points", lambda system: set())
+    monkeypatch.setattr(
+        mounts,
+        "start_helper",
+        lambda *args: started.append(args) or {},
+    )
+
+    with pytest.raises(mounts.MountError) as caught:
+        mounts.ensure(SPEC, parent / "laptop", tmp_path, system="Darwin")
+
+    assert "other accounts on this server can open" in str(caught.value)
+    assert str(parent) in str(caught.value)
+    assert started == []
+
+
 def test_state_is_replaced_whole_and_survives_garbage(tmp_path):
     path = tmp_path / "state" / "laptop.json"
 
