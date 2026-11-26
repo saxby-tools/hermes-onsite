@@ -17,6 +17,11 @@ description: >
 # is not public plugin API. It has been run on 0.23.2 only. The upper
 # bound keeps it from loading at 0.24, where that code may move.
 requires_hermes: ">=0.23.2,<0.24"
+# The server's system. Hermes also runs on Windows, but onsite has
+# never been run there, and it refuses to load on one.
+platforms:
+  - linux
+  - macos
 # The one secret the plugin reads, through Hermes. Hermes does not
 # ask for it at install: it goes in the profile's `.env`. It is read
 # each time a screen-sharing link opens, and by `hermes onsite
