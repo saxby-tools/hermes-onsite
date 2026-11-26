@@ -450,6 +450,17 @@ test('the pane keeps its machine list when an answer comes without one', { skip:
   assert.match(box.textContent, /mac \(Hermes server\)/)
 })
 
+test('the pane paints the same surface as the panes beside it', { skip: SKIP }, async () => {
+  const { made, mount, settle } = await setup()
+  const box = await mount(made.contributions.pane.render())
+
+  await settle()
+
+  const pane = box.querySelector('[data-onsite-pane]')
+
+  assert.match(pane.className, /bg-\(--ui-sidebar-surface-background\)/)
+})
+
 test('a window out of sight does not ask the host', { skip: SKIP }, async () => {
   const { made, settle } = await setup()
   let state = 'hidden'

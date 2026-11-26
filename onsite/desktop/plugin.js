@@ -133,6 +133,13 @@ const SESSION_ATOMS = ['focusedStoredSessionId', 'focusedSessionId', 'activeSess
 const TEXT_SMALL = 'text-[0.6875rem]'
 const TEXT_MUTED = 'text-(--ui-text-tertiary)'
 
+// The pane paints the same surface as the Sessions and Files panes.
+// The app gives a pane no background of its own, so without this it
+// shows the lighter chat surface under the darker tab strip.
+const PANE_CLASS =
+  'flex h-full flex-col gap-3 overflow-y-auto p-3 text-[0.8125rem] ' +
+  'bg-(--ui-sidebar-surface-background)'
+
 const BUTTON_CLASS =
   'rounded border border-(--ui-border) px-2 py-0.5 text-[0.75rem] ' +
   'hover:bg-(--chrome-action-hover) disabled:opacity-50'
@@ -808,7 +815,7 @@ function OnsitePane() {
   }, [])
 
   return jsxs('div', {
-    className: 'flex h-full flex-col gap-3 overflow-y-auto p-3 text-[0.8125rem]',
+    className: PANE_CLASS,
     'data-onsite-pane': true,
     children: [
       jsx('div', { className: 'font-medium', children: 'Onsite' }),
