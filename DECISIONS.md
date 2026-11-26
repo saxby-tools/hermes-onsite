@@ -1158,11 +1158,17 @@ a mount in the real app.
   background, so it showed the chat's lighter surface under the
   darker tab strip. It now paints the same surface as the Sessions
   and Files panes.
-- **Found on the way.** Hermes loads a plugin's routes for the
-  desktop app once, when its backend starts. Turning the plugin
-  off and on reloads the agent's half and not those routes. A
-  change to `api.py`, or to anything it uses, needs a restart of
-  the backend to show in the app.
+- **Found on the way.** The plugin's routes for the desktop app
+  run in a helper process per profile, which Hermes' dashboard
+  service starts. Turning the plugin off and on reloads the
+  agent's half and not that helper. Restarting the gateway does
+  not either. The owner was told to restart Hermes, restarted the
+  gateway, and saw no change. Stopping the helper is what works:
+  Hermes starts a fresh one with the new code in seconds.
+- **A used title.** Hermes refuses a session title that another
+  session has. "New session" gave every session on a machine the
+  same title, so the second click failed. It now takes the first
+  free one: "you on laptop", then "you on laptop 2".
 
 ## Open decisions from the brief
 
