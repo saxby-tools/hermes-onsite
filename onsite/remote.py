@@ -39,6 +39,12 @@ STDIO_ALIVE_COUNT = 3
 # A forward ends at the target's own loopback address.
 FORWARD_ADDRESS = "127.0.0.1"
 
+# The file server every OpenSSH install ships, and how soon a link to
+# it is given up on: two missed answers, five seconds apart.
+SFTP_SUBSYSTEM = "sftp"
+SFTP_ALIVE_INTERVAL = 5
+SFTP_ALIVE_COUNT = 2
+
 INHIBIT_NONE = "none"
 INHIBIT_BLOCK = "block"
 INHIBIT_DELAY = "delay"
@@ -194,6 +200,25 @@ def build_forward_arguments(spec: TargetSpec, port: int) -> list[str]:
         "-o", "Compression=yes",
         "-W", f"{FORWARD_ADDRESS}:{port}",
         f"{spec.user}@{spec.host}",
+    ]
+
+
+def build_sftp_arguments(spec: TargetSpec) -> list[str]:
+    """Everything after `ssh` for a link to the target's file server.
+
+    The mount on the host is fed through this link. A target that
+    falls asleep must be noticed fast, or everything that reads the
+    mount waits on it. OpenSSH keeps the first value it sees for an
+    option, so the two keepalive options here win over the slower
+    ones the other links use.
+    """
+
+    return [
+        "-o", f"ServerAliveInterval={SFTP_ALIVE_INTERVAL}",
+        "-o", f"ServerAliveCountMax={SFTP_ALIVE_COUNT}",
+        *build_link_options(spec),
+        f"{spec.user}@{spec.host}",
+        "-s", SFTP_SUBSYSTEM,
     ]
 
 
