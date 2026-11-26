@@ -36,8 +36,11 @@ from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
 
+from . import sftp
 from .config import DEFAULT_SSH_PORT
 from .config import TargetSpec
+from .link import LinkError
+from .link import SshLink
 from .remote import SFTP_ALIVE_COUNT
 from .remote import SFTP_ALIVE_INTERVAL
 from .remote import build_sftp_arguments
@@ -77,6 +80,7 @@ HELPER_WAIT_SECONDS = 12.0
 HELPER_POLL_SECONDS = 0.05
 STOP_WAIT_SECONDS = 5.0
 COMMAND_SECONDS = 20
+HOME_SECONDS = 10
 PRIVATE_DIR_MODE = 0o700
 
 # The line that installs sshfs, by the names a distribution gives
@@ -337,11 +341,22 @@ def start_helper(spec: TargetSpec, root: Path, state: Path) -> dict:
     return {"error": f"the mount helper did not start. See {log}"}
 
 
+def serves(found: dict, spec: TargetSpec) -> bool:
+    """Whether a mount was made for this target as it is set up now.
+
+    A mount outlives an edit to the settings. One made for another
+    address or another account would show the wrong machine's files
+    under this target's name.
+    """
+
+    return found.get("link") == build_sftp_arguments(spec)
+
+
 def ensure_mac(spec: TargetSpec, root: Path, state: Path) -> Mounted:
     found = read_state(state)
     live = is_alive(found.get("pid")) and not found.get("error")
 
-    if live and is_mounted(root, SYSTEM_MAC):
+    if live and serves(found, spec) and is_mounted(root, SYSTEM_MAC):
         return Mounted(root, str(found.get("home") or ""))
 
     # Something is left from a helper that died, or from a mount
@@ -428,12 +443,58 @@ def build_sshfs_command(spec: TargetSpec, root: Path) -> list[str]:
     ]
 
 
-def ensure_linux(spec: TargetSpec, root: Path) -> Mounted:
-    if is_mounted(root, SYSTEM_LINUX):
-        return Mounted(root, "")
+def unmount_linux(root: Path) -> None:
+    for program in FUSERMOUNTS:
+        if shutil.which(program) is None:
+            continue
+
+        subprocess.run(
+            [program, "-u", str(root)],
+            capture_output=True,
+            timeout=COMMAND_SECONDS,
+            check=False,
+        )
+        return
+
+
+def ask_home(spec: TargetSpec) -> str:
+    """Where a login on the target lands, as the target tells it.
+
+    sshfs is given the target's root and does not say. So the target
+    is asked once, over the plugin's own SFTP client. Nothing here is
+    worked out from a user name.
+    """
+
+    try:
+        link = SshLink(build_sftp_arguments(spec), timeout=HOME_SECONDS)
+    except LinkError:
+        return ""
+
+    client = sftp.Client(link)
+
+    try:
+        client.start()
+
+        return client.realpath(".")
+    except sftp.SftpError:
+        return ""
+    finally:
+        client.close()
+
+
+def ensure_linux(spec: TargetSpec, root: Path, state: Path) -> Mounted:
+    found = read_state(state)
+    mounted = is_mounted(root, SYSTEM_LINUX)
+
+    if mounted and serves(found, spec):
+        return Mounted(root, str(found.get("home") or ""))
 
     if shutil.which(SSHFS) is None:
         raise missing_sshfs(spec)
+
+    # Mounted for this target as it was set up before.
+    if mounted:
+        unmount_linux(root)
 
     prepare_root(root)
 
@@ -457,21 +518,11 @@ def ensure_linux(spec: TargetSpec, root: Path) -> Mounted:
 
         raise MountError(f"{spec.label} could not be mounted: {reason}")
 
-    return Mounted(root, "")
+    home = ask_home(spec)
 
+    write_state(state, {"link": build_sftp_arguments(spec), "home": home})
 
-def unmount_linux(root: Path) -> None:
-    for program in FUSERMOUNTS:
-        if shutil.which(program) is None:
-            continue
-
-        subprocess.run(
-            [program, "-u", str(root)],
-            capture_output=True,
-            timeout=COMMAND_SECONDS,
-            check=False,
-        )
-        return
+    return Mounted(root, home)
 
 
 # ---- both ---------------------------------------------------------------
@@ -500,7 +551,7 @@ def ensure(
 
     with locked(state):
         if system == SYSTEM_LINUX:
-            return ensure_linux(spec, root)
+            return ensure_linux(spec, root, state)
 
         return ensure_mac(spec, root, state)
 

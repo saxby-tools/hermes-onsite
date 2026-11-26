@@ -107,6 +107,7 @@ class Helper:
             "port": self.port,
             "mount_point": str(self.root),
             "home": self.home,
+            "link": self.ssh_arguments,
             "error": error,
         })
 

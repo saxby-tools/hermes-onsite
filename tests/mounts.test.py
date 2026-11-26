@@ -167,6 +167,10 @@ def test_a_linux_mount_that_is_up_is_left_alone(tmp_path, monkeypatch):
     root = tmp_path / "root"
     ran = []
 
+    mounts.write_state(
+        mounts.state_file(tmp_path, "laptop"),
+        {"link": remote.build_sftp_arguments(SPEC), "home": "/home/dev"},
+    )
     monkeypatch.setattr(mounts, "mount_points", lambda system: {str(root)})
     monkeypatch.setattr(mounts.subprocess, "run", lambda *a, **k: ran.append(a))
 
@@ -262,7 +266,12 @@ def test_a_mac_mount_that_is_up_is_answered_from_the_state_file(
 
     mounts.write_state(
         mounts.state_file(tmp_path, "laptop"),
-        {"pid": os.getpid(), "home": "/home/dev", "error": ""},
+        {
+            "pid": os.getpid(),
+            "home": "/home/dev",
+            "link": remote.build_sftp_arguments(SPEC),
+            "error": "",
+        },
     )
     monkeypatch.setattr(mounts, "mount_points", lambda system: {str(root)})
     monkeypatch.setattr(
@@ -275,3 +284,83 @@ def test_a_mac_mount_that_is_up_is_answered_from_the_state_file(
 
     assert found == mounts.Mounted(root, "/home/dev")
     assert started == []
+
+
+def test_a_mount_made_for_another_address_is_replaced(tmp_path, monkeypatch):
+    root = tmp_path / "m" / "root"
+    moved = config.TargetSpec(
+        name="laptop",
+        kind=config.KIND_SSH,
+        host="new-address.example",
+        user="dev",
+        connect_timeout=3,
+    )
+    steps = []
+
+    mounts.write_state(
+        mounts.state_file(tmp_path, "laptop"),
+        {
+            "pid": os.getpid(),
+            "home": "/home/dev",
+            "link": remote.build_sftp_arguments(SPEC),
+            "error": "",
+        },
+    )
+    monkeypatch.setattr(mounts, "mount_points", lambda system: {str(root)})
+    monkeypatch.setattr(
+        mounts,
+        "stop_helper",
+        lambda found: steps.append("stop"),
+    )
+    monkeypatch.setattr(
+        mounts,
+        "unmount",
+        lambda path, force=False: steps.append("unmount"),
+    )
+    monkeypatch.setattr(
+        mounts,
+        "start_helper",
+        lambda spec, path, state: steps.append(spec.host)
+        or {"pid": 1, "home": "/home/dev"},
+    )
+
+    mounts.ensure(moved, root, tmp_path, system="Darwin")
+
+    assert steps == ["stop", "unmount", "new-address.example"]
+
+
+def test_a_linux_mount_for_another_address_is_remounted(
+    tmp_path,
+    monkeypatch,
+):
+    root = tmp_path / "m" / "root"
+    steps = []
+
+    class Done:
+        returncode = 0
+        stdout = ""
+        stderr = ""
+
+    def run(command, **kwargs):
+        steps.append(command[0])
+
+        return Done()
+
+    mounts.write_state(
+        mounts.state_file(tmp_path, "laptop"),
+        {"link": ["old", "arguments"], "home": "/home/old"},
+    )
+    monkeypatch.setattr(mounts, "mount_points", lambda system: {str(root)})
+    monkeypatch.setattr(mounts.shutil, "which", lambda name: f"/usr/bin/{name}")
+    monkeypatch.setattr(mounts.subprocess, "run", run)
+    monkeypatch.setattr(mounts, "ask_home", lambda spec: "/home/dev")
+
+    found = mounts.ensure(SPEC, root, tmp_path, system="Linux")
+
+    assert steps == ["fusermount3", "sshfs"]
+    assert found == mounts.Mounted(root, "/home/dev")
+
+    kept = mounts.read_state(mounts.state_file(tmp_path, "laptop"))
+
+    assert kept["link"] == remote.build_sftp_arguments(SPEC)
+
