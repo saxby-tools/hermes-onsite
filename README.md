@@ -393,7 +393,7 @@ plugins:
 | `path` | ssh | `interactive` (default) or `none`. See below. |
 | `inhibit_sleep` | ssh | Default true. See below. |
 | `connect_timeout` | ssh | Seconds. Default 3. |
-| `mount` | ssh | The folder on the host where the target's disk is mounted. Default: `plugin-data/onsite/mount/<name>` in the profile's Hermes home. |
+| `mount` | ssh | The folder on the host where the target's disk is mounted. Default: `~/.local/share/onsite/mount/<profile>/<name>` in the home folder of the account Hermes runs as. |
 | `start` | ssh | The folder on the target a new session opens in. A full path. Default: the folder a login there lands in, your home folder. |
 | `screen` | ssh | How its screen is reached: `auto` (default), `driver` or `sharing`. See [Screen control](#screen-control-on-a-target). |
 | `screen_port` | ssh | The port its screen sharing listens on. Default 5900. |
@@ -448,16 +448,28 @@ It prints where that folder is on the host. Start `hermes` there.
 With a name alone, `hermes onsite open laptop`, it is the target's
 start folder.
 
-**Where it is mounted.** In the plugin's data folder, at
-`plugin-data/onsite/mount/<target>` beside the profile's
-`config.yaml`. Nothing is added to your home folder. The target's
-root is the top of the mount, so `/home/you/work` on the laptop is
-`.../mount/laptop/home/you/work` on the host. To mount it somewhere
-else, add `--mount laptop=/Users/you/Mounts/laptop` to the `init`
-command, or set `mount` in the target's settings. On a macOS host
-the folder above it, here `Mounts`, must be one that only your
-account can open. The plugin makes it that way when it is not there
-yet. It never changes a folder that is.
+**Where it is mounted.** On the host, at
+`~/.local/share/onsite/mount/<profile>/<target>`. That is the
+standard folder for a program's own data, in the home folder of the
+account Hermes runs as. Nothing is added to the top of that home
+folder. `<profile>` is the name of the profile's folder, and
+`hermes` for the default one. The target's root is the top of the
+mount, so `/home/you/work` on the laptop is
+`.../mount/<profile>/laptop/home/you/work` on the host. To mount it
+somewhere else, add
+`--mount laptop=/Users/you/Mounts/laptop` to the `init` command, or
+set `mount` in the target's settings. On a macOS host the folder
+above it, here `Mounts`, must be one that only your account can
+open. The plugin makes it that way when it is not there yet. It
+never changes a folder that is.
+
+The mounts are kept out of the Hermes home on purpose. Deleting a
+profile deletes everything under its folder, and that would reach
+through a mount into the target's own files. For the same reason,
+do not name a mount place in a folder that gets emptied, such as a
+cache or a temporary folder, or inside a git repository. Take a
+mount down with `hermes onsite mount --stop` before you delete the
+folder it is in.
 
 **Where a new session starts.** In the folder a login on the target
 lands in, which is your home folder there. The plugin asks the
@@ -725,9 +737,10 @@ It files each target's host key on first contact: in your
 `known_hosts`, or in the file a target's `known_hosts` setting
 names. It writes three small files under `plugin-data/onsite/` in
 the profile's Hermes home: which target each session is pinned to,
-each session's folder, and the commands the agent has proposed. The
-mounts are under that same folder, in `mount/`, or where you name,
-with one small state file per target in `mount-state/`.
+each session's folder, and the commands the agent has proposed. One
+small state file per mount is there too, in `mount-state/`. The
+mounts themselves are in `~/.local/share/onsite/mount/`, or where
+you name.
 `hermes onsite screen-install
 --apply` makes one link, `plugins/onsite-screen`, in the profile's
 Hermes home. `hermes onsite mcp --apply` adds an MCP server to the
