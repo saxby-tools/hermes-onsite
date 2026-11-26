@@ -63,8 +63,8 @@ description: >-
   writes a small file to the target's /tmp for each environment it
   builds, holding the shell's exported variables, functions and
   aliases; the plugin removes it when that environment is closed.
-  Writes a few small state files under plugin-data/onsite, where
-  the mounts are too. /run puts a message into the chat, which needs
+  Writes a few small state files under plugin-data/onsite. The
+  mounts are in ~/.local/share/onsite/mount. /run puts a message into the chat, which needs
   allow_gateway_injection. Serves seven routes to the desktop app
   under /api/plugins/onsite. Two write the plugin's own settings and
   one mounts a target's disk. Adds a section to the system prompt that
