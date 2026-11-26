@@ -693,6 +693,53 @@ test('New session opens the machine where a login lands, on its mount', { skip: 
   assert.deepEqual(calls.opened, [['stored-new', { expectHistory: false }]])
 })
 
+test('a second session on a machine gets a title that is free', { skip: SKIP }, async () => {
+  const { box, calls, click, host } = await openPaneMachines()
+  const taken = new Set(['dev on laptop', 'dev on laptop 2'])
+  const answer = host.request
+
+  host.request = async (method, params) => {
+    const made = await answer(method, params)
+
+    if (method === 'session.title' && taken.has(params.title)) {
+      throw new Error(`Title '${params.title}' is already in use by session 1`)
+    }
+
+    return made
+  }
+
+  await click(box.querySelector('[data-onsite-new-session="laptop"]'))
+
+  const titles = calls.rpc.filter(([method]) => method === 'session.title')
+
+  assert.equal(titles[titles.length - 1][1].title, 'dev on laptop 3')
+  assert.deepEqual(calls.opened, [['stored-new', { expectHistory: false }]])
+  assert.equal(box.querySelector('[role="alert"]'), null)
+})
+
+test('a title refused for another reason is said, not retried', { skip: SKIP }, async () => {
+  const { box, calls, click, host } = await openPaneMachines()
+  const answer = host.request
+
+  host.request = async (method, params) => {
+    const made = await answer(method, params)
+
+    if (method === 'session.title') {
+      throw new Error('title required')
+    }
+
+    return made
+  }
+
+  await click(box.querySelector('[data-onsite-new-session="laptop"]'))
+
+  const titles = calls.rpc.filter(([method]) => method === 'session.title')
+
+  assert.equal(titles.length, 1)
+  assert.equal(calls.opened.length, 0)
+  assert.match(box.querySelector('[role="alert"]').textContent, /title required/)
+})
+
 test('a session is started in the profile the app is on', { skip: SKIP }, async () => {
   const { box, calls, click, host } = await openPaneMachines()
 

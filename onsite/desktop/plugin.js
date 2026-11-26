@@ -46,6 +46,12 @@ const POLL_MS = 5000
 const REQUEST_TIMEOUT_MS = 8000
 const COPIED_MS = 1500
 
+// Hermes refuses a title that another session already has. A second
+// session on the same machine gets a number after its title. The
+// refusal has no code of its own, so it is known by its words.
+const TITLE_TRIES = 50
+const TITLE_TAKEN = /already in use/i
+
 // Shown on a proposed command when the host will not let `/run` hand
 // it to the agent. The command is the one the README gives.
 const RUN_OFF_NOTE =
@@ -694,6 +700,40 @@ function canStartSessions() {
   return typeof sdk.host?.openSession === 'function'
 }
 
+function numberedTitle(title, attempt) {
+  if (attempt === 1) {
+    return title
+  }
+
+  return `${title} ${attempt}`
+}
+
+// Gives a new session the first title that is free: "you on laptop",
+// then "you on laptop 2", and so on. Without a title the session has
+// no saved row, and the app cannot open it.
+async function titleSession(sessionId, title) {
+  let refusal = null
+
+  for (let attempt = 1; attempt <= TITLE_TRIES; attempt += 1) {
+    try {
+      await sdk.host.request('session.title', {
+        session_id: sessionId,
+        title: numberedTitle(title, attempt)
+      })
+
+      return
+    } catch (error) {
+      if (!TITLE_TAKEN.test(describeError(error))) {
+        throw error
+      }
+
+      refusal = error
+    }
+  }
+
+  throw refusal
+}
+
 // Starts a new session in a folder on the host, the way Hermes' own
 // chat plugin does. The folder is where the machine's disk is mounted
 // on the host, so the session runs in the real folder on the machine,
@@ -715,11 +755,7 @@ async function openSessionAt(cwd, title) {
 
   const made = await sdk.host.request('session.create', request)
 
-  // A new session has no saved row until it has a title or a prompt.
-  await sdk.host.request('session.title', {
-    session_id: made.session_id,
-    title
-  })
+  await titleSession(made.session_id, title)
   await sdk.host.openSession(made.stored_session_id, { expectHistory: false })
 
   return true
