@@ -1028,6 +1028,30 @@ Written Nov. 22, 2026, against Hermes v0.23.2.
   laptop, that points at the wrong computer. The guide now says so.
   A better label is a naming choice and was left alone.
 
+### 58. Windows servers are refused, and dial-out is parked on a branch
+
+- **Owner's call, Nov. 25.** Ship sooner. Nothing goes out that has
+  not had the same scrutiny as the main path. "I don't want any
+  issues being reported about a non-functional piece not working."
+- **Windows.** Hermes' README says native Windows is fully
+  supported, so a Windows server is in scope in the end. The plugin
+  has never run on one and nobody here has one to test on. So it is
+  said three ways: `platforms` in `plugin.yaml` and in the catalog
+  draft, which makes a catalog install refuse on Windows; a plain
+  refusal when the plugin is loaded on one; and a line in the
+  README's Requirements.
+- **Dial-out.** The command that set up a machine the server cannot
+  reach was built to match rivals and was only ever checked through
+  a stand-in link. It is gone from `main`: `dialout.py`, its tests,
+  the `dial-out` subcommand and its docs. The work is kept on the
+  branch `feature/dial-out`, at the commit before this one.
+- **What is lost meanwhile.** A computer the server cannot reach, by
+  network or VPN, cannot be a target. The README says so.
+- **Kept.** The host-key alias for a target on a loopback address.
+  The rig's own machines use it.
+- **Reverse.** Merge `feature/dial-out`, after it has been walked
+  from the laptop's side.
+
 ## Open decisions from the brief
 
 | # | Decision | What the build did |
