@@ -678,6 +678,14 @@ test('the pane has no folder list of its own', { skip: SKIP }, async () => {
   assert.doesNotMatch(box.textContent, /Open a folder|Browse/)
 })
 
+function sessionCalls(calls) {
+  return calls.rpc.filter(([method]) => method.startsWith('session.'))
+}
+
+function projectCalls(calls) {
+  return calls.rpc.filter(([method]) => method.startsWith('projects.'))
+}
+
 test('New session opens the machine where a login lands, on its mount', { skip: SKIP }, async () => {
   const { box, calls, click, made } = await openPaneMachines()
 
@@ -686,11 +694,44 @@ test('New session opens the machine where a login lands, on its mount', { skip: 
   const asked = made.requests.filter(([route]) => route === '/open')
 
   assert.deepEqual(asked.map(([, options]) => options.body), [{ target: 'laptop' }])
-  assert.deepEqual(calls.rpc, [
+  assert.deepEqual(sessionCalls(calls), [
     ['session.create', { cwd: `${MOUNT}/home/dev`, cwd_explicit: true }],
     ['session.title', { session_id: 'runtime-new', title: 'dev on laptop' }]
   ])
   assert.deepEqual(calls.opened, [['stored-new', { expectHistory: false }]])
+})
+
+test('New session files the machine under the app\'s own Projects', { skip: SKIP }, async () => {
+  const { box, calls, click } = await openPaneMachines()
+
+  await click(box.querySelector('[data-onsite-new-session="laptop"]'))
+
+  assert.deepEqual(projectCalls(calls), [
+    [
+      'projects.create',
+      { name: 'laptop', folders: [`${MOUNT}/home/dev`], primary_path: `${MOUNT}/home/dev` }
+    ]
+  ])
+})
+
+test('a project Hermes refuses does not stop the session', { skip: SKIP }, async () => {
+  const { box, calls, click, host } = await openPaneMachines()
+  const answer = host.request
+
+  host.request = async (method, params) => {
+    const made = await answer(method, params)
+
+    if (method.startsWith('projects.')) {
+      throw new Error("folder already belongs to project 'mine'")
+    }
+
+    return made
+  }
+
+  await click(box.querySelector('[data-onsite-new-session="laptop"]'))
+
+  assert.equal(calls.opened.length, 1)
+  assert.equal(box.querySelector('[role="alert"]'), null)
 })
 
 test('a second session on a machine gets a title that is free', { skip: SKIP }, async () => {

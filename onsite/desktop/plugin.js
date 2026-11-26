@@ -700,6 +700,42 @@ function canStartSessions() {
   return typeof sdk.host?.openSession === 'function'
 }
 
+// Files a machine's start folder under the app's own Projects, named
+// after the machine. The app hides its "Change working directory" item
+// on a saved chat that lives on a secondary connection, and its folder
+// picker starts in the server's home, many folders from the mount. A
+// project is the app's own way round both: pick the machine in the
+// project list and a new chat starts in its folder, with the app's
+// own folder menu.
+//
+// Hermes refuses a second project for a folder that already has one,
+// so asking every time is safe: the first project keeps its name. A
+// project is a convenience. An older Hermes has none, and a refusal
+// here must not stop the session from opening, so it is not reported.
+async function fileUnderProjects(name, cwd) {
+  if (typeof sdk.host?.request !== 'function') {
+    return
+  }
+
+  const scope = {}
+  const profile = activeProfile()
+
+  if (profile !== '') {
+    scope.profile = profile
+  }
+
+  try {
+    await sdk.host.request('projects.create', {
+      ...scope,
+      name,
+      folders: [cwd],
+      primary_path: cwd
+    })
+  } catch {
+    // See above: the session opens without a project.
+  }
+}
+
 function numberedTitle(title, attempt) {
   if (attempt === 1) {
     return title
@@ -778,6 +814,7 @@ function PaneMachine({ row }) {
       if (answer?.ok) {
         const title = `${folderName(answer.path)} on ${row.name}`
 
+        await fileUnderProjects(row.name, answer.cwd)
         await openSessionAt(answer.cwd, title)
       } else {
         setMessage(answer?.error || 'That machine could not be opened.')
