@@ -55,8 +55,8 @@ SCREEN_PASSWORD_ENV = "ONSITE_SCREEN_PASSWORD"
 # `/onsite auto` clears an override, so no target may take the name.
 RESERVED_TARGET_NAMES = ("auto",)
 
-# A machine that dials out is reached at a port on the host's own
-# loopback address. See `dialout`.
+# A target can sit behind a port on the host's own loopback address:
+# a container, or a machine reached through a tunnel.
 LOOPBACK_HOSTS = ("127.0.0.1", "::1", "localhost")
 HOST_KEY_ALIAS_PREFIX = "onsite-"
 TARGET_NAME_RE = re.compile(r"^[a-z][a-z0-9-]{0,31}$")
@@ -123,11 +123,11 @@ class TargetSpec:
     def host_key_alias(self) -> str:
         """The name this target's host key is filed under, if not its host.
 
-        Every machine that dials out shares the address 127.0.0.1, so
-        OpenSSH would file each key under an address and a port. A port
-        handed to a different machine would then look like the same
-        host with a changed key. Filing by target name keeps each key
-        with its machine.
+        Every target behind a loopback port shares the address
+        127.0.0.1, so OpenSSH would file each key under an address and
+        a port. A port handed to a different machine would then look
+        like the same host with a changed key. Filing by target name
+        keeps each key with its machine.
         """
 
         if self.kind != KIND_SSH:

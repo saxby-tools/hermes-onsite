@@ -15,7 +15,6 @@ from .config import KIND_LOCAL
 from .config import SCREEN_DRIVER
 from .config import SCREEN_SHARING
 from .config import TargetSpec
-from .dialout import SERVICE_NAME
 from .moves import Move
 from .proposals import Proposal
 from .rfb import SECURITY_PASSWORD
@@ -464,54 +463,6 @@ def format_open_result(
         host_folder,
         f"{mode} start a session in that folder to work there.",
     ])
-
-
-def format_dial_out(
-    mode: str,
-    name: str,
-    port: int,
-    command: str,
-    unit: str,
-    settings_yaml: str,
-    apply: bool,
-) -> str:
-    """The output of `hermes onsite dial-out`."""
-
-    lines = [
-        f"{mode} `{name}` will reach this host by dialing out.",
-        "",
-        "1. On that machine, open the link. It must be able to log in",
-        "   to this host over SSH with a key and no prompt:",
-        "",
-        f"   {command}",
-        "",
-        "2. To keep the link up on a Linux machine, save this as",
-        f"   ~/.config/systemd/user/{SERVICE_NAME}.service and turn",
-        "   it on with your service manager:",
-        "",
-    ]
-
-    lines += [f"   {line}".rstrip() for line in unit.splitlines()]
-
-    lines += [
-        "",
-        f"3. This host then reaches `{name}` at port {port} on its own",
-        "   loopback address. The target's settings:",
-        "",
-    ]
-
-    lines += [f"   {line}".rstrip() for line in settings_yaml.splitlines()]
-    lines.append("")
-
-    if apply:
-        lines.append(f"{mode} the target's settings were written.")
-    else:
-        lines.append(
-            f"{mode} nothing was written. Add --apply to write the "
-            "target's settings."
-        )
-
-    return "\n".join(lines)
 
 
 def format_mcp_refused(tool_name: str, owner: str, current: str) -> str:
