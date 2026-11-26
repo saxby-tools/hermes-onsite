@@ -11,8 +11,8 @@ good bug report.
 The examples use made-up names. The host, `host.example`, is the
 machine that runs the Hermes gateway. The target, `laptop.example`,
 is a Linux laptop. Your user on both is `you`, and the test profile
-is `test`. Put your own names in. Journeys 1 to 14 touch only the
-`qa` and `test` profiles. The rig, in journeys 12 and 15, swaps the
+is `test`. Put your own names in. Journeys 1 to 13 touch only the
+`qa` and `test` profiles. The rig, in journeys 11 and 14, swaps the
 config of the profile it is given for the length of a run. That is
 `buster` unless you pass `--profile`.
 
@@ -336,26 +336,7 @@ find /Users/you/Onsite/laptop -type f | wc -l
       under `/Users/you/Onsite/laptop`, pick it, and see the chip
       read `onsite: laptop`.
 
-## 10. A machine that dials out
-
-Never tested from the laptop's own side.
-
-- [ ] On the host, print the set-up:
-
-```bash
-hermes -p test onsite dial-out laptop-out --server you@host.example --user you
-```
-
-- [ ] On the laptop, run the `ssh -N ... -R ...` line it printed. It
-      stays running and prints nothing. If it asks for a password,
-      the laptop has no key for the host yet; stop and note it.
-- [ ] On the host, run the same command with `--apply`, then
-      `hermes -p test onsite status`. `laptop-out` is `up`, and
-      `laptop` and `mac` are still listed.
-- [ ] Stop the `ssh` line on the laptop. Status shows `laptop-out`
-      down within two seconds, with "Connection refused".
-
-## 11. MCP tools on the laptop
+## 10. MCP tools on the laptop
 
 - [ ] Add a server that runs on the laptop. Hermes connects, lists
       its tools and asks which to keep:
@@ -373,7 +354,7 @@ hermes -p test onsite mcp laptop files --apply -- npx -y @modelcontextprotocol/s
       with the reason and the words `/onsite laptop`.
 - [ ] Remove it when done: `hermes -p test mcp remove laptop_files`.
 
-## 12. Screen control
+## 11. Screen control
 
 The rig needs Docker, and `HERMES_HOME` set to the folder that holds
 `profiles/`. Run it from a clone of the repository, on the host.
@@ -423,7 +404,7 @@ python3 rig/run.py --apply --desk --phase share
       session to capture the screen and click somewhere harmless.
       GNOME on Wayland is not covered: its sharing speaks RDP.
 
-## 13. An editor
+## 12. An editor
 
 - [ ] Open a folder under `/Users/you/Development` in Zed with the
       Hermes agent on the test profile. A terminal command runs on
@@ -433,7 +414,7 @@ python3 rig/run.py --apply --desk --phase share
       that the screen tool is not offered in an editor; Hermes leaves
       it out.
 
-## 14. A phone
+## 13. A phone
 
 Never tested.
 
@@ -443,13 +424,13 @@ Never tested.
 - [ ] Ask for a risky command. Note whether Hermes' approval prompt
       shows on the phone and whether you can answer it.
 
-## 15. The automatic tests
+## 14. The automatic tests
 
 Run these from a clone of the repository, on the host. The rig uses a
 profile named `buster` unless you pass `--profile`, and needs Docker
-and `HERMES_HOME`, as in journey 12.
+and `HERMES_HOME`, as in journey 11.
 
-- [ ] Unit tests: 421 pass.
+- [ ] Unit tests: 401 pass.
 
 ```bash
 uv run --no-project --with pytest --with pillow --with cryptography python -m pytest -q
@@ -482,9 +463,8 @@ python3 rig/run.py --apply --real you@laptop.example
       onsite`.
 - [ ] Remove the test file on the laptop:
       `ssh you@laptop.example 'rm ~/Development/onsite-qa.txt'`.
-- [ ] Take back what the journeys added to the test profile, if you
-      do not want to keep it: the `laptop-out` target from journey
-      10, and `screen: sharing` and `computer_use.backend` from
-      journey 12. The mirror folders from journey 9 are empty and
-      can stay or go.
+- [ ] Take back what journey 11 added to the test profile, if you do
+      not want to keep it: `screen: sharing` and
+      `computer_use.backend`. The mirror folders from journey 9 are
+      empty and can stay or go.
 - [ ] Send back every empty box with what you saw.
