@@ -1491,12 +1491,6 @@ main {
     border-left: 1px solid var(--shot-line);
 }
 
-.ui-pane-only .ui__pane {
-    max-width: 17.5rem;
-    border-right: 1px solid var(--shot-line);
-    border-left: 0;
-}
-
 .ui__heading,
 .ui__title {
     font-weight: 700;
@@ -1533,11 +1527,6 @@ main {
     flex-wrap: wrap;
     align-items: center;
     gap: 0.4rem;
-}
-
-.ui__list-folders li {
-    padding: 0.15rem var(--space-2);
-    border: 1px solid var(--shot-line);
 }
 
 .ui__line {
