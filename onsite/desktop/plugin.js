@@ -573,12 +573,20 @@ function chipTip(status) {
     return status.error || 'onsite is not set up on the host.'
   }
 
-  return [
+  const lines = [
     `Tools run on ${status.label}`,
     `State: ${stateText(status)}`,
     `Folder: ${status.cwd}`,
     `Why: ${REASONS[status.reason] ?? status.reason}`
-  ].join('\n')
+  ]
+
+  // The session's folder is on a disk the host could not mount, so
+  // the app's file tree has nothing to show. The reason has the fix.
+  if (status.mount_error) {
+    lines.push(`Files: ${status.mount_error}`)
+  }
+
+  return lines.join('\n')
 }
 
 function OnsiteChip() {
