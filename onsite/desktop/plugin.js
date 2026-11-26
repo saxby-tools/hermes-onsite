@@ -8,8 +8,8 @@
  *                      machine answers right now
  *   2. COMMANDS PANE   the commands the agent proposed, with Run and Copy
  *   3. RUN CARD        the same Run and Copy, inline in the transcript
- *   4. FOLDER BROWSER  pick a folder on a machine and start a session
- *                      in it, in the pane
+ *   4. NEW SESSION     start a session on a machine, in the folder
+ *                      where its disk is mounted, from the pane
  *   5. MACHINES PAGE   add, edit, test and remove machines, in Settings
  *
  * The desktop loader takes one plain ESM file. Only three imports
