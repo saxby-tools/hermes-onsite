@@ -158,7 +158,8 @@ hermes -p qa onsite init --ssh laptop=you@laptop.example --local mac --prefix la
 Use the `test` profile from here on.
 
 - [ ] On the host, ask where the laptop's folder is. It prints a
-      folder on the host, under `plugin-data/onsite/mount/laptop`:
+      folder on the host, under
+      `~/.local/share/onsite/mount/test/laptop`:
 
 ```bash
 hermes -p test onsite open laptop:~/Development
