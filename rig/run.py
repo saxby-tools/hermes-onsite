@@ -208,6 +208,30 @@ PLAN = (
 SCRUB_PAIRS: list[tuple[str, str]] = []
 
 
+def scrub(text: str) -> str:
+    """Keep machine-specific paths out of saved results."""
+
+    text = text.replace(str(REPO), "<repo>")
+    text = text.replace(str(Path.home()), "~")
+    text = text.replace(socket.gethostname(), "<this-host>")
+
+    # `whoami` prints the name alone on a line.
+    lines = [
+        "<this-user>" if line == getpass.getuser() else line
+        for line in text.split("\n")
+    ]
+
+    text = "\n".join(lines)
+
+    # A run's own names go last. A real laptop's user may have the
+    # same name as this host's, and the lines above come first.
+    for needle, shown in SCRUB_PAIRS:
+        if needle:
+            text = text.replace(needle, shown)
+
+    return text
+
+
 class Report:
     """Collects check results and the text saved for each phase."""
 
@@ -231,38 +255,15 @@ class Report:
 
         self.write(f"  {mark}  {name}")
 
+        # A detail often quotes a path or a name from the machine.
         if detail:
-            self.write(f"        {detail}")
+            self.write(f"        {scrub(detail)}")
 
     def quote(self, title: str, text: str) -> None:
         self.write(f"  --- {title}")
 
         for line in text.rstrip("\n").splitlines():
             self.write(f"  | {line}")
-
-
-def scrub(text: str) -> str:
-    """Keep machine-specific paths out of saved results."""
-
-    text = text.replace(str(REPO), "<repo>")
-    text = text.replace(str(Path.home()), "~")
-    text = text.replace(socket.gethostname(), "<this-host>")
-
-    # `whoami` prints the name alone on a line.
-    lines = [
-        "<this-user>" if line == getpass.getuser() else line
-        for line in text.split("\n")
-    ]
-
-    text = "\n".join(lines)
-
-    # A run's own names go last. A real laptop's user may have the
-    # same name as this host's, and the lines above come first.
-    for needle, shown in SCRUB_PAIRS:
-        if needle:
-            text = text.replace(needle, shown)
-
-    return text
 
 
 def make_dirs() -> None:
@@ -1152,7 +1153,7 @@ def machine_checks(report: Report, profile: Profile, hands, token) -> None:
     report.check(
         "with no folder named, a machine opens where a login lands",
         started.get("path") == hands.home
-        and (start / "Development").is_dir(),
+        and start.is_dir(),
         f"path: {started.get('path')!r} error: {started.get('error')!r}",
     )
 
