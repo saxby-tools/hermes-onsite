@@ -1170,6 +1170,42 @@ a mount in the real app.
   same title, so the second click failed. It now takes the first
   free one: "you on laptop", then "you on laptop 2".
 
+### 61. A machine is also filed as a project in the app
+
+Nov. 26, 2026. A spike the owner said "go" to, after his first hour
+with a mount in the real app.
+
+- **What he hit.** In a chat made by "New session" the app had no
+  "Change working directory". Hermes Desktop hides that item on a
+  saved chat whose connection is not the app's main one. His app had
+  made its own local gateway the main one when the server dropped
+  for three minutes, so both of his routes to the server counted as
+  secondary. His way round it was the app's "Open folder as
+  project", whose picker starts in the server's home folder, eight
+  folders from the mount.
+- **What the app gives a plugin.** Nothing for folders. A plugin can
+  create a session and open a saved one. It cannot open the app's
+  folder picker, start a draft in a folder, or enter a project.
+  "New session" has to save the chat before it can open it, and a
+  saved chat is what the rule above hides the item on.
+- **What was built.** "New session" also asks Hermes, through its
+  own `projects.create`, for a project on the target's start
+  folder, named after the target. Hermes refuses a second project
+  for one folder, so the call is safe to repeat and never renames a
+  project somebody made. The app's own project list then has the
+  machine in it, and a chat started there is a draft with the
+  app's own folder menu, on any kind of connection.
+- **What the spike showed.** The owner had already made such a
+  project by hand, and in it the menu item was there. The plugin's
+  own call is tested against a stand-in and against Hermes'
+  refusal for a folder that has a project. Nobody has seen the
+  plugin make one in the real app.
+- **Not solved.** The button's own chat still has no folder menu on
+  a secondary connection. Only the app can change that. Worth
+  raising upstream, with the picker's starting folder.
+- **Reverse.** Remove `fileUnderProjects` from the desktop file.
+  A project it made stays until it is deleted in the app.
+
 ## Open decisions from the brief
 
 | # | Decision | What the build did |
