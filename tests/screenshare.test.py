@@ -9,6 +9,7 @@ import time
 import pytest
 
 from onsite import config
+from onsite import link
 from onsite import rfb
 from onsite import screenshare
 
@@ -419,7 +420,7 @@ def test_a_combination_goes_down_in_order_and_up_in_reverse():
 def shell_link(monkeypatch, script: str, timeout: float = 5):
     """A link to a local shell, standing in for `ssh`."""
 
-    monkeypatch.setattr(screenshare, "SSH_BINARY", "sh")
+    monkeypatch.setattr(link, "SSH_BINARY", "sh")
 
     return screenshare.SshLink(["-c", script], timeout)
 
@@ -468,7 +469,7 @@ def test_a_link_whose_answer_runs_past_its_deadline_gives_up(monkeypatch):
 
 
 def test_a_machine_with_no_ssh_program_says_so(monkeypatch):
-    monkeypatch.setattr(screenshare, "SSH_BINARY", "no-such-program-here")
+    monkeypatch.setattr(link, "SSH_BINARY", "no-such-program-here")
 
     with pytest.raises(screenshare.LinkError) as caught:
         screenshare.SshLink([])
