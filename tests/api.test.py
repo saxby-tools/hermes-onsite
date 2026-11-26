@@ -2,8 +2,11 @@
 
 from __future__ import annotations
 
+import pytest
+
 from onsite import api
 from onsite import health
+from onsite import mounts
 from onsite import runtime
 
 
@@ -19,6 +22,23 @@ SETTINGS = {
         "mac": {"kind": "local"},
     },
 }
+
+
+@pytest.fixture(autouse=True)
+def mount_asks(monkeypatch):
+    """Stand in for the mount. A list of machines asks for each one's
+    disk, and a test must never start a real mount to answer."""
+
+    asked = []
+
+    def fake_ensure(spec, mount_root, data_dir, system=None):
+        asked.append(spec.name)
+
+        return mounts.Mounted(mount_root, "/home/dev")
+
+    monkeypatch.setattr(mounts, "ensure", fake_ensure)
+
+    return asked
 
 
 def build(tmp_path, settings=SETTINGS, laptop_up=True):
@@ -75,6 +95,48 @@ def test_status_lists_every_target_when_asked(tmp_path):
 
     assert [row["name"] for row in payload["rows"]] == ["laptop", "mac"]
     assert payload["rows"][1]["default"] is True
+
+
+def test_a_session_under_a_mount_gets_its_mount_back(tmp_path, mount_asks):
+    folder = tmp_path / "mount" / "laptop" / "home" / "dev" / "app"
+    payload = api.status_payload(
+        build(tmp_path),
+        {"cwd": str(folder), "rows": False},
+        with_targets=False,
+    )
+
+    assert payload["reason"] == "mount"
+    assert payload["cwd"] == "/home/dev/app"
+    assert payload["mount_error"] == ""
+    assert mount_asks == ["laptop"]
+
+
+def test_a_mount_that_fails_is_named_in_the_status(tmp_path, monkeypatch):
+    def refuse(spec, mount_root, data_dir, system=None):
+        raise mounts.MountError("this server has no `sshfs`")
+
+    monkeypatch.setattr(mounts, "ensure", refuse)
+
+    payload = api.status_payload(
+        build(tmp_path),
+        {"cwd": str(tmp_path / "mount" / "laptop" / "srv")},
+        with_targets=False,
+    )
+
+    assert payload["ok"] is True
+    assert payload["mount_error"] == "this server has no `sshfs`"
+
+
+def test_a_session_elsewhere_mounts_nothing(tmp_path, mount_asks):
+    payload = api.status_payload(
+        build(tmp_path),
+        {"cwd": "/home/dev/app"},
+        with_targets=False,
+    )
+
+    assert payload["reason"] == "prefix"
+    assert payload["mount_error"] == ""
+    assert mount_asks == []
 
 
 def count_probes(built):
