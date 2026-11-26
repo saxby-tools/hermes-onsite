@@ -40,7 +40,7 @@ hermes -p test plugins install https://github.com/saxby-tools/hermes-onsite/tree
 ```
 
 ```bash
-hermes -p test onsite init --ssh laptop=you@laptop.example --local mac --map laptop=/Users/you/Development=/home/you/Development --mirror laptop=/Users/you/Onsite/laptop --apply
+hermes -p test onsite init --ssh laptop=you@laptop.example --local mac --apply
 ```
 
 ```bash
@@ -51,11 +51,8 @@ hermes -p test config set terminal.backend onsite
 hermes -p test config set plugins.entries.onsite.allow_gateway_injection true
 ```
 
-The `--map` flag is for a folder the laptop shares with the host:
-here the host sees the laptop's `~/Development` at
-`/Users/you/Development`. With no shared folder, leave the flag out
-and use a mirrored folder from journey 9 wherever a journey asks for
-a shared one.
+The journeys work in a folder on the laptop, here `~/Development`.
+Use one that exists there and put its name in.
 
 - [ ] On the host, this prints a table with `laptop` marked `up`:
 
@@ -160,10 +157,17 @@ hermes -p qa onsite init --ssh laptop=you@laptop.example --local mac --prefix la
 
 Use the `test` profile from here on.
 
-- [ ] From a folder the laptop shares with the host, start the TUI:
+- [ ] On the host, ask where the laptop's folder is. It prints a
+      folder on the host, under `plugin-data/onsite/mount/laptop`:
 
 ```bash
-cd /Users/you/Development && hermes -p test --tui
+hermes -p test onsite open laptop:~/Development
+```
+
+- [ ] Go to the folder it printed and start the TUI there:
+
+```bash
+hermes -p test --tui
 ```
 
 - [ ] Before any message, type `/onsite`. It either says the session
@@ -175,7 +179,7 @@ cd /Users/you/Development && hermes -p test --tui
       gives the reason "this session started there".
 - [ ] On the host, in that same folder, `hermes -p test onsite
       status` gives the reason the folder was picked: "the session
-      folder is in its path map".
+      folder is on its disk".
 - [ ] Quit. Start the TUI from `/Users/you/Workspaces`. The same
       question now prints the Mac's folder and the Mac's name.
 - [ ] In that Mac session, after one message, type `/onsite laptop`.
@@ -233,13 +237,29 @@ On the laptop, in the desktop app, connected to the gateway.
 
 - [ ] In the **Sessions** tab, pick the test profile. The profiles
       are a row of squares at the bottom of the sidebar, or a menu in
-      the status bar. Open a folder under `/Users/you/Development`.
-- [ ] The status bar shows a chip that reads `onsite: laptop`. Its
-      tooltip has four lines: where tools run, the state, the folder
-      and the reason.
-- [ ] Click the chip. A pane opens that reads "Onsite" at the top,
-      with the machine, its state in milliseconds, the folder, the
-      reason, and a list of machines.
+      the status bar. Open any session.
+- [ ] The status bar shows a chip that starts with `onsite`. Click
+      it. A pane opens that reads "Onsite" at the top, with a list
+      of machines. `laptop` has a button beside it, "New session".
+      `mac` has none.
+- [ ] Click "New session". A new session opens, named for the
+      laptop's home folder and the laptop, such as `you on laptop`.
+      Its chip reads `onsite: laptop`. **Never seen in the real
+      app.**
+- [ ] Ask that session for `pwd`. It prints your home folder on the
+      laptop.
+- [ ] Change the session's folder with the app's own folder picker.
+      The picker opens in your home folder on the laptop and lists
+      the laptop's real folders. Pick `Development`. The app's file
+      tree shows that folder's real files. Open one. **Never seen in
+      the real app.** Note how long the tree takes to fill.
+- [ ] The chip's tooltip has four lines: where tools run, the state,
+      the folder and the reason. The reason is "the folder is on its
+      disk".
+- [ ] The pane shows the machine, its state in milliseconds, the
+      folder and the reason above the list of machines.
+- [ ] In Capabilities, then Plugins, the card for the desktop part
+      is named `onsite-desktop`. Note the name if it differs.
 - [ ] Ask the agent to propose a command. A run card appears in the
       transcript with Run and Copy buttons, and the same command in
       the pane. **This has never been seen in the real app.**
@@ -251,11 +271,6 @@ On the laptop, in the desktop app, connected to the gateway.
       is greyed out and a line says "Run is off for this profile."
       Copy still works. Turn the setting back on and Run comes back.
       Note it if either change needs a restart.
-- [ ] In the pane, under "Open a folder", pick `laptop` and click
-      Browse. You see the laptop's home folders. Click into one, then
-      click "Start a session in ...". A new session opens, and its
-      chip reads `onsite: laptop`. **Never seen in the real app.**
-- [ ] Ask that session for `pwd`. It prints the folder you picked.
 - [ ] Open Settings, then Plugins, then Onsite. Both machines are
       listed, and a line names the profile these settings belong to.
       The page follows the profile picked in the Sessions tab. If
@@ -293,48 +308,76 @@ been tested.** The rig only fakes it.
       error that names `laptop`. Nothing ran. Write down what the
       error says, word for word.
 - [ ] If Hermes says the working folder no longer exists instead,
-      note that. It means the shared folder vanished with the laptop.
-      Repeat this journey from a mirrored folder (journey 9) and see
-      whether the plugin's own error appears there.
+      note that. The session's folder is on the laptop's mount, and
+      a mount stops answering while the laptop sleeps.
+- [ ] In the desktop app, with a laptop session in view, the file
+      tree goes empty or shows an error within a few seconds of the
+      lid closing. The app itself does not freeze. Note what you
+      see.
 - [ ] Ask again right away. It fails at once, without a wait.
 - [ ] Open the lid. Within about fifteen seconds, the next command
-      runs with no restart of anything.
+      runs with no restart of anything, and the app's file tree
+      shows the laptop's files again.
 - [ ] Start a long command (`sleep 60; echo done`), close the lid
       during it, and open it again. The result is reported as "no
       exit status", and the command is not run a second time.
 
-## 9. A folder that exists only on the laptop
+## 9. The laptop's files on the host
 
-- [ ] Open one folder that is on the laptop and not on the host. Pick
-      one that exists. It prints a folder on the host:
+On the host, in a terminal.
 
-```bash
-hermes -p test onsite open laptop:~/Downloads --apply
-```
-
-- [ ] Start the TUI in the folder it printed. `pwd` prints the real
-      folder on the laptop, and `ls` shows the laptop's files.
-- [ ] Copy the laptop's folder names to the host. Run it once as
-      shown, a dry run, then again with `--apply`. It says how many
-      folders and where:
+- [ ] Mount the laptop's disk. It prints where it is mounted and the
+      folder a new session starts in. Neither is in your home
+      folder:
 
 ```bash
-hermes -p test onsite mirror laptop
+hermes -p test onsite mount laptop
 ```
 
-- [ ] The folder it named holds folders and no files. With the set-up
-      above that is `/Users/you/Onsite/laptop`. It stands for the
-      laptop's whole disk, so your folders are under
-      `/Users/you/Onsite/laptop/home/you`. This prints 0, while `ls`
-      on that longer path shows the laptop's folder names:
+- [ ] `ls` on the start folder it printed shows the real files in
+      your home folder on the laptop, not empty folders.
+- [ ] Write a file through the mount, with the start folder in place
+      of `START`. The second command prints `hi`:
 
 ```bash
-find /Users/you/Onsite/laptop -type f | wc -l
+echo hi > START/onsite-qa-mount.txt
 ```
 
-- [ ] In the desktop app's own folder picker, browse to a folder
-      under `/Users/you/Onsite/laptop`, pick it, and see the chip
-      read `onsite: laptop`.
+```bash
+ssh you@laptop.example 'cat ~/onsite-qa-mount.txt'
+```
+
+- [ ] `rm START/onsite-qa-mount.txt`, and the file is gone on the
+      laptop.
+- [ ] `cd` to a git repository on the laptop, through the mount, and
+      run `git status` on the host. It answers within a few seconds
+      and lists no files you did not change. Note the time.
+- [ ] Ask for a folder by name. It prints that folder on the host.
+      Start the TUI there: `pwd` prints the real folder on the
+      laptop, and `ls` shows the laptop's files:
+
+```bash
+hermes -p test onsite open laptop:~/Downloads
+```
+
+- [ ] Ask for a folder that is not there, such as
+      `laptop:~/no-such-folder`. It says the folder is not a folder
+      on the laptop, and makes nothing.
+- [ ] Take the mount down. The folder it was in is now empty. Run
+      the first command of this journey again and the files are
+      back:
+
+```bash
+hermes -p test onsite mount laptop --stop
+```
+
+- [ ] Restart the host, if you can. Open the pane in the desktop
+      app, or run the first command again. The files are back with
+      no other step.
+- [ ] Only on a Linux host with no `sshfs`: the first command says
+      the server has no `sshfs` and names the line that installs it
+      for your distribution. Run that line, then the command again.
+      **The Linux route has never run on a real Linux server.**
 
 ## 10. MCP tools on the laptop
 
@@ -406,13 +449,14 @@ python3 rig/run.py --apply --desk --phase share
 
 ## 12. An editor
 
-- [ ] Open a folder under `/Users/you/Development` in Zed with the
-      Hermes agent on the test profile. A terminal command runs on
-      the laptop.
+- [ ] Open the folder from journey 3, the one on the laptop's
+      mount, in Zed with the Hermes agent on the test profile. A
+      terminal command runs on the laptop.
 - [ ] Ask it to write a new file. It lands on the laptop.
-- [ ] Ask it to patch that file. In a shared folder this works. Note
-      that the screen tool is not offered in an editor; Hermes leaves
-      it out.
+- [ ] Ask it to patch that file. Note what happens. `patch` is only
+      known to work where the same path exists on both machines.
+      Note that the screen tool is not offered in an editor; Hermes
+      leaves it out.
 
 ## 13. A phone
 
@@ -430,13 +474,13 @@ Run these from a clone of the repository, on the host. The rig uses a
 profile named `buster` unless you pass `--profile`, and needs Docker
 and `HERMES_HOME`, as in journey 11.
 
-- [ ] Unit tests: 401 pass.
+- [ ] Unit tests: 469 pass and one is skipped.
 
 ```bash
 uv run --no-project --with pytest --with pillow --with cryptography python -m pytest -q
 ```
 
-- [ ] Desktop tests: 40 pass and none is skipped. They borrow React
+- [ ] Desktop tests: 42 pass and none is skipped. They borrow React
       from a Hermes checkout at `~/.hermes/hermes-agent`, or the
       folder named in `HERMES_SRC`. Without one they are skipped, not
       failed.
@@ -465,6 +509,7 @@ python3 rig/run.py --apply --real you@laptop.example
       `ssh you@laptop.example 'rm ~/Development/onsite-qa.txt'`.
 - [ ] Take back what journey 11 added to the test profile, if you do
       not want to keep it: `screen: sharing` and
-      `computer_use.backend`. The mirror folders from journey 9 are
-      empty and can stay or go.
+      `computer_use.backend`.
+- [ ] Take the laptop's mount down if you do not want it kept:
+      `hermes -p test onsite mount laptop --stop`.
 - [ ] Send back every empty box with what you saw.
