@@ -79,7 +79,7 @@ each a name with its value beside it: "Runs on", "laptop
 "/home/you/work/app". "Why", "the folder is on its disk". Below
 that is a list of two machines, each with a green dot. The first is
 "laptop (you@laptop.example)", marked "(default)", with a button
-beside it, "New session". The second is "mac (this machine)", with
+beside it, "New session". The second is "mac (Hermes server)", with
 no button. Then a hint, "Move this session with /onsite <target>."
 Last, "Proposed commands", which says "Nothing is waiting. Commands
 the agent proposes show up here."
@@ -233,14 +233,14 @@ settings of the "home" profile, the one picked in the Sessions tab.
 The "Applies to" row in Settings does not change this page." Two rows
 follow. The first is "laptop", "you@laptop.example
 (default)", with an Edit button and a Remove button that is greyed
-out. The second is "mac", "this machine", with Edit and Remove. At
+out. The second is "mac", "Hermes server", with Edit and Remove. At
 the bottom is a button, "Add a machine".
 
 <!-- /onsite:screen -->
 
-"this machine" means the server Hermes runs on, not the computer you
-are sitting at. In the drawing the laptop is the default. Yours may
-be the server.
+"Hermes server" is the computer Hermes runs on, which may not be the
+one you are sitting at. In the drawing the laptop is the default.
+Yours may be the server.
 
 ### Add one
 
