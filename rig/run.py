@@ -67,6 +67,11 @@ HOST_NODE = os.uname().nodename
 VICTIM = "hands-rig-victim"
 SPARE_MACHINE = "rig-spare"
 
+# A file both kinds of test machine are seeded with, and a word in
+# it. A real file's contents prove more than a folder's name does.
+SEEDED_FILE = "notes.txt"
+SEEDED_WORD = "bravo"
+
 INHIBIT_WHO = "onsite"
 INHIBIT_COUNT_COMMAND = (
     f"systemd-inhibit --list --no-pager | grep -c {INHIBIT_WHO} || true"
@@ -1110,6 +1115,15 @@ def start_server(profile: Profile, token: str) -> subprocess.Popen:
     return process
 
 
+def read_through_mount(path: Path) -> str:
+    """A file's text as the host sees it, or nothing."""
+
+    try:
+        return path.read_text()
+    except OSError:
+        return ""
+
+
 def machine_checks(report: Report, profile: Profile, hands, token) -> None:
     """The routes behind the Machines page and a machine's mount."""
 
@@ -1149,9 +1163,10 @@ def machine_checks(report: Report, profile: Profile, hands, token) -> None:
     names = sorted(item.name for item in place.iterdir()) if (
         place.is_dir()
     ) else []
+    seeded = read_through_mount(place / SEEDED_FILE)
     report.check(
         "a folder on the machine shows its real files on the host",
-        opened.get("ok") is True and ".git" in names,
+        opened.get("ok") is True and SEEDED_WORD in seeded,
         f"names: {names[:8]} error: {opened.get('error')!r}",
     )
 
