@@ -27,7 +27,6 @@ const SCREENS = {
   "chip": "Hermes Desktop",
   "chip-states": "The chip, in each state",
   "pane": "Hermes Desktop: the onsite pane",
-  "browser": "Hermes Desktop: the onsite pane",
   "approval": "Hermes Desktop",
   "run-card": "Hermes Desktop",
   "machines": "Hermes Desktop: Settings",
