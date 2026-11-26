@@ -363,12 +363,15 @@ class Profile:
         self.screen_link.symlink_to(PLUGIN_DIR / SCREEN_PLUGIN_ID)
         self.reload()
 
-    def uninstall(self) -> None:
-        self.plugins("disable")
-        self.restore()
-
     def cli(self, cwd: Path, *args: str) -> subprocess.CompletedProcess:
         return run(self.command(*args), cwd=str(cwd), timeout=120)
+
+    def uninstall(self) -> None:
+        # A mount made for the rig's machine would outlive the machine
+        # and show its files under the owner's own target of that name.
+        self.cli(RIG_DIR, PLUGIN_ID, "mount", "--stop")
+        self.plugins("disable")
+        self.restore()
 
     def terminal(self, cwd: Path, flag: str, name: str) -> term.Terminal:
         screen = term.Terminal(
@@ -1108,7 +1111,7 @@ def start_server(profile: Profile, token: str) -> subprocess.Popen:
 
 
 def machine_checks(report: Report, profile: Profile, hands, token) -> None:
-    """The routes behind the Machines page and the folder browser."""
+    """The routes behind the Machines page and a machine's mount."""
 
     report.section("Phase 4.1b: machines and folders on a real server")
 
@@ -1130,28 +1133,33 @@ def machine_checks(report: Report, profile: Profile, hands, token) -> None:
         f"detail: {tried.get('detail')!r}",
     )
 
-    code, shown = post_json("/browse", {"target": "laptop"}, token)
+    code, started = post_json("/open", {"target": "laptop"}, token)
+    start = Path(started.get("cwd") or "/nonexistent")
     report.check(
-        "browsing starts in the machine's home and lists its folders",
-        shown.get("path") == hands.home
-        and "Development" in shown.get("folders", []),
-        f"folders: {shown.get('folders')}",
+        "with no folder named, a machine opens where a login lands",
+        started.get("path") == hands.home
+        and (start / "Development").is_dir(),
+        f"path: {started.get('path')!r} error: {started.get('error')!r}",
     )
 
     code, opened = post_json(
         "/open", {"target": "laptop", "path": hands.sample_dir}, token,
     )
     place = Path(opened.get("cwd") or "/nonexistent")
+    names = sorted(item.name for item in place.iterdir()) if (
+        place.is_dir()
+    ) else []
     report.check(
-        "opening a folder makes a place for it on the host, with no set-up",
-        opened.get("ok") is True and place.is_dir(),
+        "a folder on the machine shows its real files on the host",
+        opened.get("ok") is True and ".git" in names,
+        f"names: {names[:8]} error: {opened.get('error')!r}",
     )
 
     done = profile.cli(place, PLUGIN_ID, "status")
     report.check(
         "a session in that place runs in the folder on the machine",
         f"Start in  {hands.sample_dir}" in done.stdout
-        and "its mirror" in done.stdout,
+        and "its disk" in done.stdout,
     )
 
     spare = {"kind": "local"}
