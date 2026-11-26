@@ -477,6 +477,19 @@ target for it. To start somewhere else, add
 `--start laptop=/home/you/work` to the `init` command, or set
 `start` in the target's settings.
 
+**The target as a project.** The first time you press "New session"
+for a target, the plugin also files that start folder under the
+app's own Projects, named after the target. From then on you can
+pick `laptop` in the app's project list and start a chat there the
+app's own way. That matters in one case. Hermes Desktop hides
+"Change working directory" on a saved chat when the server is not
+the app's main connection, and its "Open folder" picker starts in
+the server's home folder, a long way from the mount. A new chat
+started from the project has the folder menu, and its picker opens
+on the target's files. A folder that already has a project keeps
+that project and its name. Seen once in the real app, with a
+project made by hand.
+
 **When it is mounted.** The first time something asks: the pane
 opening, `hermes onsite open`, or the chip's check for a session
 that is already in a mounted folder. It then stays until the host
@@ -740,7 +753,8 @@ the profile's Hermes home: which target each session is pinned to,
 each session's folder, and the commands the agent has proposed. One
 small state file per mount is there too, in `mount-state/`. The
 mounts themselves are in `~/.local/share/onsite/mount/`, or where
-you name.
+you name. "New session" adds one entry to the profile's list of
+Projects for each target, through Hermes' own `projects.create`.
 `hermes onsite screen-install
 --apply` makes one link, `plugins/onsite-screen`, in the profile's
 Hermes home. `hermes onsite mcp --apply` adds an MCP server to the
