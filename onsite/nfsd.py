@@ -148,6 +148,17 @@ FS_PROPERTIES = 0x1B
 # target. So these names cannot be made here, and are not shown.
 SIDECAR_PREFIX = "._"
 
+# Other files macOS leaves on any volume it looks at. They may not be
+# made through the mount. One that is already on the target is shown.
+MAC_LITTER = (
+    ".DS_Store",
+    ".Spotlight-V100",
+    ".Trashes",
+    ".fseventsd",
+    ".TemporaryItems",
+    ".apdisk",
+)
+
 # Failures answer with attributes that are "not given". How many such
 # marks follow the status differs by procedure.
 ABSENT_MARKS = {
@@ -447,6 +458,9 @@ class Server:
 
         if name.startswith(SIDECAR_PREFIX):
             raise Refused(ERR_ACCES if making else ERR_NOENT)
+
+        if making and name in MAC_LITTER:
+            raise Refused(ERR_ACCES)
 
         try:
             return folder, join_target(folder, name)

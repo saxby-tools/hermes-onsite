@@ -401,6 +401,28 @@ def test_a_macos_sidecar_name_is_neither_made_nor_shown(rig, tmp_path):
     assert (tmp_path / "._run.sh").exists()
 
 
+def test_files_macos_leaves_on_a_volume_cannot_be_made(rig, tmp_path):
+    (tmp_path / "docs" / ".DS_Store").write_text("already there")
+
+    for litter in (".DS_Store", ".Spotlight-V100", ".fseventsd"):
+        body = opaque(rig.root) + name(litter)
+
+        reply = rig.nfs(
+            nfsd.CREATE,
+            body + struct.pack(">I", nfsd.CREATE_UNCHECKED) + no_change(),
+        )
+
+        assert reply.u32() == nfsd.ERR_ACCES
+
+        reply = rig.nfs(nfsd.MKDIR, body + no_change())
+
+        assert reply.u32() == nfsd.ERR_ACCES
+
+    _, docs = rig.lookup(rig.root, "docs")
+
+    assert ".DS_Store" in rig.names(docs)
+
+
 def test_a_read_only_server_refuses_every_change(tmp_path):
     (tmp_path / "a.txt").write_text("x")
 
