@@ -25,7 +25,9 @@ and in the repository:
 
 First, the server must be able to log in to your computer over SSH
 with a key and no prompt. `ssh you@laptop.example true`, run on the
-server, must return at once.
+server, must return at once. The server runs Linux or macOS. A Linux
+server also needs the `sshfs` program. When it is missing, onsite
+says so and names the line that installs it.
 
 Then install it on the server. Until it is in the Hermes catalog,
 that is:
@@ -64,10 +66,11 @@ then Machines.
 
 To start work, open a folder on your computer. Use one that exists
 there. From a terminal on the server, `hermes onsite open
-laptop:~/work --apply` prints a folder. Start `hermes` in it and ask
-it to run `uname -n`. It should print your computer's name. In
-Hermes Desktop, click the onsite chip at the bottom right. A pane
-opens where you browse to the folder.
+laptop:~/work` prints a folder. Start `hermes` in it and ask it to
+run `uname -n`. It should print your computer's name. In Hermes
+Desktop, click the onsite chip at the bottom right. A pane opens.
+Click "New session" beside your computer. The app's own folder
+picker and file tree then show your computer's real files.
 
 Hermes Desktop needs the plugin's desktop part on the computer the
 app runs on. In the app, open Capabilities, then Plugins, click
@@ -92,8 +95,17 @@ Read this before you turn it on.
 - **It uses your SSH.** It runs the `ssh` program with whatever keys
   your SSH setup offers. It never reads, copies or stores a key. It
   files each computer's host key in `known_hosts` on first contact.
+- **It mounts each computer's disk on the server,** so the server
+  and the desktop app see your real files. Anything on the server
+  that reads or writes under the mount reads or writes your
+  computer's files, as your account there. On a macOS server the
+  plugin runs a helper process per computer for this: a small file
+  server that listens on `127.0.0.1` only and stays running. The
+  folder that holds the mounts is closed to every account but yours.
+  On a Linux server it runs `sshfs`, which you install.
 - **It keeps `ssh` processes open on the server:** one per computer
-  in use, one per MCP server you add there, and one per session that
+  in use, one per mounted computer, one per MCP server you add
+  there, and one per session that
   uses a computer's screen. With Hermes Desktop in view, it also
   logs in to the session's computer every five seconds and after
   each tool call, to see that it is up, and to every computer while
@@ -110,13 +122,14 @@ Read this before you turn it on.
   driver or the screen sharing that computer already runs. It reads
   one optional secret through Hermes, `ONSITE_SCREEN_PASSWORD`, for
   screen sharing that asks for a VNC password.
-- **On the server it writes** three small state files under
-  `plugin-data/onsite/` and empty folders that mirror a computer's
-  folder names. Never a file's contents.
+- **On the server it writes** a few small state files under
+  `plugin-data/onsite/`. The mounts are in that folder too. Nothing
+  is added to your home folder, and no file is copied.
 - **Inside Hermes** it adds a terminal backend, one tool, two hooks,
   two slash commands, one CLI command, a section of the system
-  prompt and eight routes for the desktop app. Two routes write the plugin's own
-  settings. After `/onsite` moves a session, it adds one note to
+  prompt and seven routes for the desktop app. Two routes write the
+  plugin's own settings and one mounts a disk. After `/onsite` moves
+  a session, it adds one note to
   your next message to tell the agent.
 - **It imports private Hermes modules** to reuse Hermes' own SSH,
   local and screen-driver code. A Hermes release can move them,
@@ -126,10 +139,14 @@ Read this before you turn it on.
 ## Limits
 
 - On your computer, Hermes can do anything your account can.
-- Hermes only runs a session in a folder the server can see. The
-  plugin keeps empty folders that mirror a computer's folder names,
-  so any folder can be opened. The app's own file tree then shows
-  folders and no files.
+- Hermes only runs a session in a folder the server can see, so the
+  plugin mounts your computer's disk there. The mount is a network
+  disk: a program on the server that walks a big folder through it
+  is slow. Hermes' own commands run on your computer and are not.
+- Servers on Linux and macOS only. It refuses to load on a Windows
+  server. The Linux mount has run in a container, never on a real
+  Linux server.
+- When your computer sleeps, the work stops until it is back.
 - A real sleeping laptop, a Mac as a target and the phone apps have
   not been tested.
 - Screen control has only run on a Linux X11 desktop.
