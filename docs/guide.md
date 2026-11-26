@@ -103,6 +103,12 @@ own folder picker now opens on your computer's files, starting in
 your home folder there. Pick your project. The app's file tree shows
 that folder's real files.
 
+If the app shows no "Change working directory" for that chat, use
+its project list. The first New session added your computer there,
+under its name. Pick it, then start a new chat in it. That chat has
+the folder menu. The app hides the menu on a saved chat when the
+server is not its main connection.
+
 <!-- onsite:notice -->
 
 These are your real files, shown through the server. onsite does not
