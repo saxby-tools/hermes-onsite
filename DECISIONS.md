@@ -1122,6 +1122,48 @@ Written Nov. 22, 2026, against Hermes v0.23.2.
 - **Reverse.** The mirror is in the history before commit
   `d0bea5c`.
 
+### 60. Mounts move out of the Hermes home, and "this machine" goes
+
+Nov. 25, 2026, the same day as entry 59, after the owner first saw
+a mount in the real app.
+
+- **What he saw.** The app's file tree showed one folder of the
+  laptop's home folder. His Hermes home is a git repository that
+  ignores `profiles/`. Hermes looks upward from a session's folder
+  for a `.git` and does not stop where a mounted disk begins, as
+  git itself does. So the app applied his repository's ignore rules
+  to the laptop's files and hid all but a nested repository. The
+  agent's own project lookup walks up the same way.
+- **The larger reason.** Deleting a profile deletes everything
+  under its folder. With a mount inside `plugin-data`, that would
+  reach through the mount into the target's own files.
+- **Where now.** `~/.local/share/onsite/mount/<profile>/<target>`,
+  in the home folder of the account Hermes runs as. The owner asked
+  for a standard system place. A cache or a temporary folder was
+  ruled out: whatever empties those would reach through a mount the
+  same way. The same path is used on macOS and Linux, so one piece
+  of code builds it, and it has no space in it. `<profile>` is the
+  name of the profile's folder, without a leading dot.
+- **Not done.** A marker `.git` folder above the mounts was tried
+  on paper and dropped. It would have put a made-up repository in
+  the agent's view of every session.
+- **Cost.** Two Hermes homes with a profile of the same name and a
+  target of the same name would share one mount folder. A `mount`
+  setting separates them. The state files stay in `plugin-data`.
+- **"this machine".** The label for the target that is the computer
+  Hermes runs on is now "Hermes server", in the app and the CLI.
+  The app is often open on another computer, where "this machine"
+  pointed at the wrong one. Closes the open point in entry 57.
+- **The pane's background.** The app gives a plugin's pane no
+  background, so it showed the chat's lighter surface under the
+  darker tab strip. It now paints the same surface as the Sessions
+  and Files panes.
+- **Found on the way.** Hermes loads a plugin's routes for the
+  desktop app once, when its backend starts. Turning the plugin
+  off and on reloads the agent's half and not those routes. A
+  change to `api.py`, or to anything it uses, needs a restart of
+  the backend to show in the app.
+
 ## Open decisions from the brief
 
 | # | Decision | What the build did |
