@@ -1052,6 +1052,76 @@ Written Nov. 22, 2026, against Hermes v0.23.2.
 - **Reverse.** Merge `feature/dial-out`, after it has been walked
   from the laptop's side.
 
+### 59. A target's whole disk is mounted on the host, and the mirror is gone
+
+- **Owner's call, Nov. 25.** "We need the shared filesystem mount.
+  Bottomline." The mirror of empty folders, entry 49, gave a folder
+  an address and showed no files. The app's own folder picker and
+  file tree are the only file browser. A second one in the pane was
+  ruled out.
+- **Pick.** Each SSH target's whole disk is mounted in a folder on
+  the host. A session opened under it runs in the real folder on
+  the target, and the app's picker and tree show real files. The
+  mirror, its settings and its command are removed. So is the
+  pane's folder browser.
+- **macOS host.** macOS mounts NFS for a normal user. The plugin
+  runs its own small NFS server on the loopback address, in a
+  helper process per target, fed from the target over SFTP. Both
+  are plain Python over the `ssh` program. Nothing is installed and
+  no binary is shipped, which the catalog's rules require.
+- **Linux host.** Linux has no such door without root. It needs
+  `sshfs`, which the person installs. When it is missing, the error
+  names the install line for the distribution it reads from
+  `/etc/os-release`. Bundling FUSE was ruled out by the same
+  catalog rule.
+- **Why NFS and not WebDAV.** WebDAV carries no file modes, so git
+  on the host saw every file as changed.
+- **Where.** In the plugin's data folder,
+  `plugin-data/onsite/mount/<target>`. The owner: "It can't be
+  ~/Onsite, we need to be respectful of people's home folders." A
+  `mount` setting names another place.
+- **Where a session starts.** In the folder a login on the target
+  lands in, asked of the target over SFTP and never built from a
+  user name. A `start` setting names another. The pane's "New
+  session" button opens there, so nobody has to know where the host
+  mounted the disk.
+- **Paths.** One module, `paths.py`, is the only place a host path
+  and a target path meet. A Windows host has one hook to fill
+  there.
+- **Who can read it.** The NFS server answers whoever reaches the
+  mount, as the target's account. So it listens on the loopback
+  address, grants the mount once under a random name, uses random
+  file handles, and the folder above the mount is closed to other
+  accounts. That folder is closed only when the plugin makes it. A
+  named place under a folder others can open is refused on macOS.
+  An earlier cut closed the folder above any mount, which could
+  have been a home folder. It was caught in the docs check and
+  never released.
+- **What macOS leaves behind.** macOS writes `._name` and
+  `.DS_Store` files on any network disk. The server refuses to make
+  them and hides them, or a clone through the mount gained hundreds
+  of files git then listed.
+- **A sleeping target.** The mount is soft: reads fail in a few
+  seconds and work again when the target is back. The owner's rule
+  is that it acts like the big coding apps, where a sleeping
+  computer stops the work.
+- **Coming back.** A restart of the host takes the mounts down.
+  They return when the pane opens, on `hermes onsite mount` or
+  `open`, and on the chip's own check for a session under a mount.
+- **Measured.** On the owner's network, against the real laptop: a
+  save through the mount in 0.2 seconds and `git status` in 0.2.
+  The mount came back after its helper was killed, after it was
+  unmounted by hand and after the target froze.
+- **Cost.** A network disk is slower than a local one, and file
+  locks do not cross it. A helper process per target stays running
+  on a macOS host. About 2,900 lines of protocol code are now the
+  plugin's to keep.
+- **Not proven.** The Linux route has run in a container only. No
+  person has seen the app's picker and tree on a mount. Windows is
+  refused, entry 58.
+- **Reverse.** The mirror is in the history before commit
+  `d0bea5c`.
+
 ## Open decisions from the brief
 
 | # | Decision | What the build did |
