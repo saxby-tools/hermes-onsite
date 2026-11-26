@@ -35,7 +35,10 @@ import { jsx, jsxs } from 'react/jsx-runtime'
 /* ------------------------------------------------------------------ */
 
 const ID = 'onsite'
-const NAME = 'Onsite'
+// The name on the app's own Plugins page. The agent plugin's card
+// there reads "onsite" and the screen backend's "onsite-screen", so
+// this one says which part it is.
+const NAME = 'onsite-desktop'
 const DIRECTIVE = 'onsite-run'
 const PANE_ID = 'pane'
 
