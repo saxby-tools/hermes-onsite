@@ -32,9 +32,9 @@ the computer your folder is on and brings the result back.
 A few words to know. The app calls each computer a **machine**, and
 in a few places a **target**. It calls the server the **host**. A
 **profile** is one Hermes set-up on the server, and a server can
-hold several. A **session** is one chat. A **mirror** is onsite's
-list of a computer's folder names, which is what you browse in the
-pane. This guide says "computer" and "server", and uses the app's
+hold several. A **session** is one chat. A **mount** is a folder on
+the server that shows your computer's files. Nothing is copied
+there. This guide says "computer" and "server", and uses the app's
 words only where the app does.
 
 ## Before you start
@@ -64,7 +64,7 @@ and look for a switch labelled Desktop. If it is there, turn it on.
 If it is not, the README has the step that puts the half in place,
 under [Install](../README.md#install).
 
-## Open a folder
+## Start work on your computer
 
 ### 1. Click the chip
 
@@ -76,49 +76,44 @@ side of the window. It is titled "Onsite".
 The onsite pane, on the right of the chat. At the top, four rows,
 each a name with its value beside it: "Runs on", "laptop
 (you@laptop.example)". "State", "connected (42 ms)". "Folder",
-"/home/you/work/app". "Why", "the folder is in its mirror". Below
-that is a list of two machines, each with a green dot: "laptop
-(you@laptop.example)", marked "(default)", and "mac (this machine)".
-Then a hint, "Move this
-session with /onsite <target>." Then "Open a folder", with a menu set
-to "laptop" and a Browse button. Last, "Proposed commands", which says
-"Nothing is waiting. Commands the agent proposes show up here."
+"/home/you/work/app". "Why", "the folder is on its disk". Below
+that is a list of two machines, each with a green dot. The first is
+"laptop (you@laptop.example)", marked "(default)", with a button
+beside it, "New session". The second is "mac (this machine)", with
+no button. Then a hint, "Move this session with /onsite <target>."
+Last, "Proposed commands", which says "Nothing is waiting. Commands
+the agent proposes show up here."
 
 <!-- /onsite:screen -->
 
-### 2. Pick a computer and browse
+### 2. Click New session
 
-Under "Open a folder", pick a computer from the menu and click
-**Browse**. You see the folders in your home folder on that computer.
-Folders whose names start with a dot are left out. Click a folder to
-go into it. Click the row with two dots to go back up.
+Click **New session** beside your computer. A new chat opens. It
+starts in your home folder on that computer, and it is named for
+that folder and the computer, such as "you on laptop". From here on,
+what Hermes does in that chat happens on that computer.
 
-<!-- onsite:screen {"shows": "browser"} -->
+Only a computer Hermes reaches over the network has the button. A
+chat on the server itself starts the way it did before onsite.
 
-The "Open a folder" part of the pane after a click on Browse. The
-menu is set to "laptop". Under it is the path "/home/you/work", then
-four rows: two dots, "app", "notes" and "site". At the bottom is a
-button that reads "Start a session in work".
+### 3. Pick your project folder
 
-<!-- /onsite:screen -->
-
-### 3. Start a session
-
-Click **Start a session in work**. The button names the folder you are
-in. A new chat opens, named for the folder and the computer: "work on
-laptop". From here on, what Hermes does in that chat happens in that
-folder, on that computer.
+Change the chat's folder the way you always do in the app. The app's
+own folder picker now opens on your computer's files, starting in
+your home folder there. Pick your project. The app's file tree shows
+that folder's real files.
 
 <!-- onsite:notice -->
 
-The list shows the names of your folders and nothing else. onsite
-does not copy your files to the server.
+These are your real files, shown through the server. onsite does not
+copy them. A file you save there is saved on your computer.
 
 <!-- /onsite:notice -->
 
-The menu lists only the computers Hermes reaches over the network.
-A folder on the server itself opens with the app's own folder
-picker, as it did before onsite.
+Your computer's folders sit a few levels down in the picker, under
+a folder named for the computer. Go up past your home folder and you
+see the rest of its disk. Above the folder named for the computer
+are the server's own folders, which are not your computer's.
 
 ## See where Hermes is working
 
@@ -145,8 +140,8 @@ plugin enabled."
 
 The chip shows the last two parts of the folder. Rest the pointer on
 it, or click it, for the whole path and for **Why**: the reason that
-computer was picked. The reasons are short, such as "the folder is in
-its mirror" or "set with /onsite". After the first command in a chat
+computer was picked. The reasons are short, such as "the folder is on
+its disk" or "set with /onsite". After the first command in a chat
 the reason reads "this session started there", because a chat stays
 on the computer it started on.
 
@@ -274,7 +269,7 @@ three buttons: Save, Test connection and Cancel.
 | Port | Leave it empty unless you were told a number. |
 | Key file | Leave it empty unless you were told a file. |
 | Its screen is reached by | Leave it as it is. It only matters if you let Hermes see and use this computer's screen. |
-| Folders that belong to it | Leave it empty at first. It is for a folder that has the same path on the server and on this computer. Folders you browse to in the pane need nothing here. One folder on each line, written in full from the first slash, such as "/srv/shared/". |
+| Folders that belong to it | Leave it empty at first. It is for a folder that has the same path on the server and on this computer. A chat started with "New session" needs nothing here. One folder on each line, written in full from the first slash, such as "/srv/shared/". |
 | Use it when no folder rule matches | Tick it for the computer to use when a folder is not claimed by any computer. One computer always has this tick. |
 
 Click **Test connection** before you save. It tries the computer as
@@ -306,9 +301,10 @@ computer first.
 | Hermes says a command has "no exit status" | The link dropped while the command was running. It may have finished or not. Hermes will not run it twice by itself. | Check the result on your computer, then tell Hermes what you found. |
 | "onsite: not set up" | onsite is off, has no computers, has a setting it cannot read or is not selected on the server, or the app could not reach the server. | Rest the pointer on the chip to read which. Open Machines and add a computer, or ask the person who runs your server. "Set up but not in use" is step 2 of [Set up](../README.md#set-up). |
 | A message that names a profile, such as: This chat belongs to the "home" profile. The app asked the "work" profile, which has no onsite plugin enabled. | The app is asking a different Hermes profile than the one this chat belongs to. | Pick the profile the message names, in the Sessions tab. |
-| A line that says a folder "could not be listed on laptop", with a reason | The computer did not answer, or the folder cannot be read. | Check the chip's dot. Click Browse again. |
+| A line under a machine in the pane that says it "cannot be mounted" or "could not be mounted", with a reason | The server could not show that computer's files. | Read the reason. If it names a line to run, such as one that installs `sshfs`, the person who runs your server runs it there. Then open the pane again. |
+| A line under a machine that says it "is not answering. It may be asleep." | The computer did not answer. | Wake it and click New session again. |
+| An empty file tree, or the app says the chat's folder is gone | The computer is asleep or off the network, or the server restarted. | Wake the computer. The files come back by themselves within a few seconds. Rest the pointer on the chip: a line that starts "Files:" says why if they do not. |
 | A greyed-out Run button and "Run is off for this profile.", or after `/run 1`: "This client does not let a plugin hand the agent a message." | The server has not allowed onsite to put a message into a chat. | Ask Hermes in your own words to run the command, or use Copy. To fix it for good, see step 3 of [Set up](../README.md#set-up). |
-| "More folders than fit here. Go deeper to narrow it." | The folder has more than 500 folders in it. | Click into a folder closer to the one you want. |
 | "Could not reach the chat box. Type /run 3." | The Run button could not type for you. | Type `/run 3` in the chat yourself. |
 | No Onsite entry in Settings | Your version of the app cannot show a plugin's settings page. | Use the commands in the [README](../README.md#set-up). |
 
@@ -330,9 +326,13 @@ checked in the real app yet.
 
 <!-- onsite:notice {"kind": "untested"} -->
 
-The cards with Run and Copy, the folder list and the Machines page
-have passed their tests, but no person has used them inside the real
-Hermes Desktop app. The chip and the pane have been seen there.
+The cards with Run and Copy, the New session button and the Machines
+page have passed their tests, but no person has used them inside the
+real Hermes Desktop app. The chip and the pane have been seen there.
+
+Nobody has yet seen the app's own folder picker and file tree on a
+computer's files. The server shows those files, and that part is
+tested. How the app looks with them is not.
 
 No person has yet answered Hermes' yes-or-no question for a real
 command through onsite. The tests show the question appears and that
