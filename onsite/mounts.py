@@ -84,6 +84,9 @@ COMMAND_SECONDS = 20
 HOME_SECONDS = 10
 PRIVATE_DIR_MODE = 0o700
 
+# The bits of a folder's mode that let anyone but its owner in.
+OTHERS_MODE = 0o077
+
 # The line that installs sshfs, by the names a distribution gives
 # itself in /etc/os-release.
 INSTALL_LINES = (
@@ -284,11 +287,49 @@ def look_for_folder(
 
 
 def prepare_root(root: Path) -> None:
-    """Make the folder to mount on, closed to every other user."""
+    """Make the folder to mount on.
 
-    root.parent.mkdir(parents=True, exist_ok=True)
-    os.chmod(root.parent, PRIVATE_DIR_MODE)
-    root.mkdir(exist_ok=True)
+    The folder above it is closed to other accounts when it is made
+    here. One that was already there is never changed. It may be
+    somebody's home folder.
+    """
+
+    parent = root.parent
+
+    try:
+        if not parent.exists():
+            parent.mkdir(parents=True)
+            os.chmod(parent, PRIVATE_DIR_MODE)
+
+        root.mkdir(exist_ok=True)
+    except OSError as error:
+        raise MountError(
+            f"{root} cannot be made on this server: "
+            f"{error.strerror or error}"
+        ) from None
+
+
+def is_private(folder: Path) -> bool:
+    """Whether this account alone can open a folder."""
+
+    try:
+        found = os.stat(folder)
+    except OSError:
+        return False
+
+    if found.st_uid != os.getuid():
+        return False
+
+    return statmod.S_IMODE(found.st_mode) & OTHERS_MODE == 0
+
+
+def open_to_others(spec: TargetSpec, root: Path) -> MountError:
+    return MountError(
+        f"{spec.label} cannot be mounted at {root}: other accounts on "
+        f"this server can open {root.parent}, and the mount would show "
+        "them the target's files. Name a place inside a folder that "
+        "only your account can open, or leave `mount` out."
+    )
 
 
 # ---- macOS: the plugin's own NFS server ---------------------------------
@@ -411,6 +452,11 @@ def ensure_mac(spec: TargetSpec, root: Path, state: Path) -> Mounted:
         unmount(root, force=True)
 
     prepare_root(root)
+
+    # The file server answers whoever reaches the mount as the
+    # target's own account. The folder above it is the lock.
+    if not is_private(root.parent):
+        raise open_to_others(spec, root)
 
     found = start_helper(spec, root, state)
 
