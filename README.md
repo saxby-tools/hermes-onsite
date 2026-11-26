@@ -41,7 +41,7 @@ Site: <https://saxby-tools.github.io/hermes-onsite/>
 | Run commands and edit files on your computer, as you | No | Yes |
 | Ask before risky steps, in the app you are using | Yes, for the server | Yes, the same prompt |
 | Show where the work is happening | No | A chip and a pane in the desktop app |
-| Browse your computer's folders and start work in one | No | A folder browser in the pane. Not yet seen in the real app |
+| Browse your computer's files and start work in a folder | No | Its real files, in the app's own folder picker and file tree. Not yet seen in the real app |
 | Run a proposed command with one click | No | Run cards. Not yet seen in the real app |
 | Use the tools on your computer | No | MCP servers run there |
 | See and use your computer's screen | The server's screen only | Yes, by two routes. Narrowly tested |
@@ -95,9 +95,9 @@ down, tool calls fail with an error that names the target.
 - **Desktop UI.** The part of onsite that runs inside the Hermes
   Desktop app, on the computer the app is on.
 - **Folder rule.** Anything that ties a folder to a target: a
-  prefix, a path map or a mirror.
-- **Mirror.** A folder on the host that stands for a target's
-  folders.
+  prefix, a path map or a mount.
+- **Mount.** A folder on the host that shows a target's whole disk,
+  files and all. Nothing is copied.
 - **Hermes home.** The folder that holds a profile's `config.yaml`.
 
 <!-- /onsite:notice -->
@@ -125,7 +125,8 @@ In the examples the host's target is named `mac` and the other is
   machine runs an SSH server and has the host's public key in its
   `authorized_keys`. On a Mac the SSH server is one switch: System
   Settings, General, Sharing, Remote Login. On Linux it is the
-  OpenSSH server, `sshd`.
+  OpenSSH server, `sshd`. Its file transfer, SFTP, must be left on,
+  as it is unless someone turned it off.
 
   Check it from the host, as the user Hermes runs as. This must
   return at once, with no question:
@@ -139,6 +140,9 @@ In the examples the host's target is named `mac` and the other is
   you@laptop.example` on the host is the usual fix, after
   `ssh-keygen` if the host has no key yet. The host must be able to
   reach the machine: on the same network, or over a VPN.
+- On a Linux server, the `sshfs` program, to show a target's files
+  on the server. A macOS server needs nothing. See
+  [A target's files on the host](#a-targets-files-on-the-host).
 - No Python packages of its own. It drives the `ssh` program you
   already have and uses only what Hermes ships.
 
@@ -289,13 +293,14 @@ instead.
   the default: the target used when no folder rule matches. With
   none or more than one, or to pick another, add `--default NAME`.
 - It writes the whole list each time. A target left out is removed,
-  and so is any setting it has no flag for, such as `screen`. Use it for the first set-up. After that, change one
-  target in `config.yaml` or on the Machines page.
+  and so is any setting it has no flag for, such as `screen`. Use
+  it for the first set-up. After that, change one target in
+  `config.yaml` or on the Machines page.
 
 Two more flags say which folders belong to a target. Most set-ups
-need neither, because a folder that is only on the target is opened
-through its mirror. See
-[Folders that exist only on the target](#folders-that-exist-only-on-the-target).
+need neither, because the host mounts each target's disk and a
+session opened there runs on that target. See
+[A target's files on the host](#a-targets-files-on-the-host).
 
 - `--prefix NAME=/PATH` is for a folder with the same path on the
   host and the target. A session opened under it runs on that
@@ -338,15 +343,17 @@ first line says onsite is set up but not in use.
 that is on the laptop. Use one that exists there:
 
 ```bash
-hermes onsite open laptop:~/work/site --apply
+hermes onsite open laptop:~/work/site
 ```
 
-It prints a folder on the host. Without `--apply` it only says where
-that folder would be. Go to the folder, start `hermes` there and ask
-it to run `uname -n`. It prints the laptop's name, and `/onsite`
-says `laptop`. If it prints the host's name, the session was started
-before step 2, or in another folder. In Hermes Desktop the pane does the same
-with a click. The [guide](docs/guide.md) shows it.
+It mounts the laptop's disk on the host and prints where that folder
+is. Go to the folder, start `hermes` there and ask it to run
+`uname -n`. It prints the laptop's name, and `/onsite` says
+`laptop`. If it prints the host's name, the session was started
+before step 2, or in another folder. On a Linux host the command may
+say that `sshfs` is missing, with the line that installs it. In
+Hermes Desktop the pane does the same with a click. The
+[guide](docs/guide.md) shows it.
 
 After the first four steps, `config.yaml` holds these keys. The
 order may differ, and Hermes keeps others of its own beside them:
@@ -386,8 +393,8 @@ plugins:
 | `path` | ssh | `interactive` (default) or `none`. See below. |
 | `inhibit_sleep` | ssh | Default true. See below. |
 | `connect_timeout` | ssh | Seconds. Default 3. |
-| `mirror` | ssh | Where on the host the target's folder names are kept. Default: the plugin's data folder. |
-| `mirror_depth` | ssh | Levels under the target's home to mirror. Default 3. |
+| `mount` | ssh | The folder on the host where the target's disk is mounted. Default: `plugin-data/onsite/mount/<name>` in the profile's Hermes home. |
+| `start` | ssh | The folder on the target a new session opens in. A full path. Default: the folder a login there lands in, your home folder. |
 | `screen` | ssh | How its screen is reached: `auto` (default), `driver` or `sharing`. See [Screen control](#screen-control-on-a-target). |
 | `screen_port` | ssh | The port its screen sharing listens on. Default 5900. |
 
@@ -421,46 +428,94 @@ sleep off for five seconds by default (`InhibitDelayMaxSec` in
 `logind.conf`). That covers a short write. A long one can still be
 cut by a closing lid.
 
-### Folders that exist only on the target
+### A target's files on the host
 
 Hermes only runs a session in a folder the host can see, and the
-desktop app's folder picker browses the host. A folder on your laptop
-is not on the host. A mirror gives it an address there.
+desktop app's folder picker and file tree read the host's disk. So
+the host mounts each SSH target's whole disk in a folder of its own.
+You see the target's real files there. Nothing is copied, and a file
+saved there is saved on the target.
 
-A mirror is a folder on the host that copies the target's folder
-names and nothing else: no files, ever. Open a session in a mirrored
-folder and it runs in the real folder on the target.
-
-Every SSH target has a mirror with no set-up. It is kept in the
-plugin's data folder, at `plugin-data/onsite/mirror/<target>` beside
-the profile's `config.yaml`. To keep it somewhere easier to browse,
-name the place: add `--mirror laptop=/Users/you/Laptop` to the
-`init` command, or set `mirror` in the target's settings.
-
-In Hermes Desktop, the pane does this for you: pick a machine, browse
-its folders, and start a session in one. From a terminal, open one
-folder at any depth. The target must be up, even for the dry run.
-This says where the folder would be opened. Add `--apply` to make
-that folder, then start a session in it:
+Open a session in a folder under the mount and it runs in the real
+folder on the target. There is no set-up. In Hermes Desktop, click
+"New session" beside a machine in the pane. From a terminal:
 
 ```bash
 hermes onsite open laptop:~/work/site
 ```
 
-To fill a mirror with the folder names under the target's home, three
-levels deep, so the app's own folder picker can browse them. This
-counts them. Add `--apply` to make them:
+It prints where that folder is on the host. Start `hermes` there.
+With a name alone, `hermes onsite open laptop`, it is the target's
+start folder.
+
+**Where it is mounted.** In the plugin's data folder, at
+`plugin-data/onsite/mount/<target>` beside the profile's
+`config.yaml`. Nothing is added to your home folder. The target's
+root is the top of the mount, so `/home/you/work` on the laptop is
+`.../mount/laptop/home/you/work` on the host. To mount it somewhere
+else, add `--mount laptop=/Users/you/Mounts/laptop` to the `init`
+command, or set `mount` in the target's settings. On a macOS host
+the folder above it, here `Mounts`, must be one that only your
+account can open. The plugin makes it that way when it is not there
+yet. It never changes a folder that is.
+
+**Where a new session starts.** In the folder a login on the target
+lands in, which is your home folder there. The plugin asks the
+target for it. To start somewhere else, add
+`--start laptop=/home/you/work` to the `init` command, or set
+`start` in the target's settings.
+
+**When it is mounted.** The first time something asks: the pane
+opening, `hermes onsite open`, or the chip's check for a session
+that is already in a mounted folder. It then stays until the host
+restarts, and comes back the same way. To mount every SSH target, or
+one, by hand:
 
 ```bash
-hermes onsite mirror laptop
+hermes onsite mount
 ```
 
-With no name it does every SSH target.
+```bash
+hermes onsite mount laptop
+```
 
-The mirror is only an address. The app's file tree shows its empty
-folders, not the target's files, and anything the app itself writes
-there stays on the host. The plugin never deletes from a mirror and
-never makes one outside its folder.
+To take one down. Nothing on the target changes:
+
+```bash
+hermes onsite mount laptop --stop
+```
+
+**What the host needs.** It depends on the host's system.
+
+- **macOS: nothing.** macOS can mount a network disk for a normal
+  user. The plugin runs a small file server for it, a helper process
+  per target that listens only on the host's own loopback address,
+  and reads the target's files over SSH's file transfer, SFTP.
+- **Linux: `sshfs`.** Linux has no such door without root, so the
+  host needs the `sshfs` program. When it is missing, the error
+  names the line to run for your distribution. The plugin never runs
+  it for you:
+
+  | Distribution | Run on the host |
+  | --- | --- |
+  | Debian, Ubuntu | `sudo apt install sshfs` |
+  | Fedora, RHEL, CentOS | `sudo dnf install fuse-sshfs` |
+  | Arch | `sudo pacman -S sshfs` |
+  | Alpine | `sudo apk add sshfs` |
+  | openSUSE | `sudo zypper install sshfs` |
+  | NixOS | `nix-env -iA nixos.sshfs` |
+
+**When the target is away.** The mount stays, and reading it fails
+within a few seconds, not forever. It works again by itself a few
+seconds after the target is back.
+
+<!-- onsite:notice {"kind": "untested"} -->
+
+The macOS route runs on one real host against one real Linux laptop.
+The Linux route has run in a container only, never on a real Linux
+server. Nobody has yet used either from the real desktop app.
+
+<!-- /onsite:notice -->
 
 ### MCP servers on a target
 
@@ -580,7 +635,7 @@ password. Neither has been tried on a Mac. See
 | Move this session | `/onsite <target>`, back with `/onsite auto`. The agent is told with your next message. | Same, typed in the chat. |
 | Approve a risky command | Hermes' own prompt | Hermes' own prompt. |
 | Run a command the agent proposed | `/run <number>` | Run and Copy buttons, in a pane and in the transcript. |
-| Open a folder on a machine | `hermes onsite open laptop:~/work --apply`, then start `hermes` in the folder it prints | Browse the machine in the pane and start a session there. |
+| Open a folder on a machine | `hermes onsite open laptop:~/work`, then start `hermes` in the folder it prints | "New session" beside the machine in the pane. The app's own folder picker then opens on its files. |
 | Add or change a machine | Edit `config.yaml`. `hermes onsite init` is for the first set-up: it rewrites the whole list | Settings, Plugins, Onsite, then Machines. |
 | Test a machine | `hermes onsite status` | "Test connection" in the machine's form. |
 
@@ -618,9 +673,17 @@ there, it starts your interactive shell once to read PATH. It also
 tries the sleep lock then. Hermes rebuilds an environment that has
 sat unused for a few minutes. While a command runs it may hold that lock
 (`systemd-inhibit` or `caffeinate`). To see whether a target is up it
-logs in and runs `true`. To list or mirror folders it reads folder
-names. To check a screen it reads the environment of your own
-desktop processes and asks its screen sharing to answer.
+logs in and runs `true`. To check a screen it reads the environment
+of your own desktop processes and asks its screen sharing to answer.
+
+For the mount, it keeps one link open to the target's SFTP server,
+the file transfer its SSH server already has. Through it, anything
+on the host that reads or writes under the mount reads or writes the
+target's real files, as your account there: the desktop app's file
+tree and folder picker, Hermes, and any program you point at that
+folder. On a macOS host it refuses to write the files macOS leaves
+on every disk it looks at, such as `.DS_Store` and names that start
+with `._`.
 
 With screen control on, it starts Hermes' screen driver there, or
 connects to the screen sharing the target already runs. Either can
@@ -638,9 +701,21 @@ closing it, or the target is down at that moment, the file stays
 until the target's temp folder is next cleared.
 
 **On the host.** It starts `ssh` processes: one kept open per target
-while sessions use it, one for each MCP server you add, and one per
-session that uses a target's screen. Short ones come and go: a check
-that a target is up, a folder listing, a screen check. With Hermes
+while sessions use it, one per mounted target, one for each MCP
+server you add, and one per session that uses a target's screen.
+Short ones come and go: a check that a target is up, a screen check.
+
+It mounts each SSH target's disk in a folder on the host. On macOS
+that is a helper process per target, `mountd.py` from the plugin's
+own folder, which keeps running after the command that started it.
+The helper is a file server that listens on `127.0.0.1` only, on a
+port the system picks. It hands the disk out once, to the host's own
+`mount_nfs`, under a name made of random characters. It answers
+whoever can reach the mount as your account on the target, so the
+folder that holds the mounts is closed to every account but yours,
+and a mount place that others can reach is refused. On Linux it
+runs `sshfs` instead, which is its own process. Either stays until
+`hermes onsite mount --stop` or a restart of the host. With Hermes
 Desktop open and in view, the chip asks for the state every five
 seconds and after each tool call. Each time, the plugin logs in to
 the session's target to see that it is up. While the pane is open it
@@ -650,9 +725,10 @@ It files each target's host key on first contact: in your
 `known_hosts`, or in the file a target's `known_hosts` setting
 names. It writes three small files under `plugin-data/onsite/` in
 the profile's Hermes home: which target each session is pinned to,
-each session's folder, and the commands the agent has proposed. A
-mirror makes empty folders under that same folder, or under the
-folder you name, and nothing else. `hermes onsite screen-install
+each session's folder, and the commands the agent has proposed. The
+mounts are under that same folder, in `mount/`, or where you name,
+with one small state file per target in `mount-state/`.
+`hermes onsite screen-install
 --apply` makes one link, `plugins/onsite-screen`, in the profile's
 Hermes home. `hermes onsite mcp --apply` adds an MCP server to the
 profile with Hermes' own `hermes mcp add`.
@@ -663,8 +739,9 @@ when a target's screen sharing asks for one, is `ONSITE_SCREEN_PASSWORD`
 from the profile's own secrets. The plugin asks Hermes for it each
 time a link opens and never writes it down.
 
-**The network.** It opens SSH connections to the targets you name
-and nothing else. It sends no telemetry and calls no other service.
+**The network.** It opens SSH connections to the targets you name.
+The macOS file server is reachable from the host itself and from
+nowhere else. It sends no telemetry and calls no other service.
 It does not update itself.
 
 **Inside Hermes.** It registers a terminal backend, one tool
@@ -676,9 +753,9 @@ never approves anything. The other runs before each turn. After
 `/onsite` moves a session, it adds one note to your next message
 that tells the agent which machine its tools now run on. `/run` puts
 a message into the chat for the agent. In the TUI and the desktop
-app that needs `allow_gateway_injection: true`. It serves eight
+app that needs `allow_gateway_injection: true`. It serves seven
 routes to the desktop app under `/api/plugins/onsite/`. Two of them
-write the plugin's own settings and one makes mirror folders. The
+write the plugin's own settings and one mounts a target's disk. The
 desktop half adds a status chip, a pane, a run card and two settings
 pages. Once linked and selected, the screen backend is one more
 thing Hermes loads.
@@ -706,12 +783,24 @@ Read these before trusting it with real work.
   `write_file` and the terminal work everywhere.
 - **The folder must exist on the host.** Hermes will not run a turn
   in a folder the host cannot see, and the desktop app's folder
-  picker and file tree read the host's disk. To work in a folder on
-  an SSH target, the host needs its own view of that folder. The
-  plugin keeps a mirror of folder names for every SSH target, so any
-  folder can be opened. A network mount with a `path_map` entry also
-  works. With a mirror, the app's file tree shows folders and no
-  files.
+  picker and file tree read the host's disk. So the plugin mounts
+  each SSH target's disk on the host. A host that cannot mount, such
+  as a Linux server without `sshfs`, gets an error with the fix and
+  no second way in.
+- **A mount is a network disk.** Each file read crosses the network.
+  On one home network a save took about 0.2 seconds, and so did
+  `git status` in one repository. A program on the host that
+  walks a big folder through the mount will be slow. Hermes' own
+  commands do not go through it. They run on the target.
+- **No file locks through the mount.** Two programs that lock one
+  file, one on the host and one on the target, do not see each
+  other's lock.
+- **A sleeping target stops the work.** Reads through its mount fail
+  in a few seconds and tool calls say the target is down. That is
+  meant. Nothing moves to another machine.
+- **Linux and macOS servers only.** The plugin refuses to load on a
+  Windows server. On a Linux server the mount has run in a container
+  and nowhere else.
 - **The Bots tab in Hermes Desktop.** The app sends the chip's
   requests to its active profile, which is set in the Sessions tab.
   With a bot's chat open in the Bots tab, the chip can describe a
@@ -744,7 +833,7 @@ Read these before trusting it with real work.
 | 1 | Routing, file tools, approvals | 18 | Pass |
 | 2 | A stopped, a frozen and a returning target | 20 | Pass |
 | 3 | `/onsite`, `/run`, `hermes onsite status` and `init`, CLI and TUI | 31 | Pass |
-| 4 | Routes for status, machines and folders; desktop plugin logic | 17 | Pass |
+| 4 | Routes for status, machines and a mounted disk; desktop plugin logic | 17 | Pass |
 | Share | A target's screen through screen sharing, with no Hermes session: link, pixels, typing, a drag, each button | 8 | Pass |
 | Screen | A target's screen through a Hermes session and its approval prompt: look, deny, approve | 8 | Last passed on Nov. 23, before screen sharing was added. Not run since: see below |
 | 5 | A person at the real clients | 0 | Not run |
@@ -783,8 +872,9 @@ Not yet tested by anyone:
   fakes both by cutting a relay in front of the laptop's SSH port.
 - A person approving a real command in the TUI, the desktop app and
   an editor.
-- The run card, the folder browser and the Machines page inside
-  the real Hermes Desktop app. The chip and the pane have been
+- The run card, the "New session" button and the Machines page
+  inside the real Hermes Desktop app, and the app's own folder
+  picker and file tree on a mounted disk. The chip and the pane have been
   seen there, on a gateway that serves several profiles, with the
   laptop shown as connected.
 - A macOS machine as an SSH target, and `caffeinate`.
@@ -873,7 +963,14 @@ onsite/              the plugin: all that an install puts on a host
   targets/           one class per kind of target: ssh, local
   health.py          probe and circuit breaker
   remote.py          SSH options, PATH, sleep inhibitor
-  mirror.py          a names-only copy of a target's folders
+  paths.py           tell a host folder from a target folder
+  link.py            one ssh process, read and written as a pipe
+  oneshot.py         run one short script on a target
+  sftp.py            an SFTP client over the ssh program
+  remotefs.py        a target's files, with a short memory
+  nfsd.py            a small NFS server for a macOS host
+  mounts.py          mount a target's disk on the host
+  mountd.py          the helper process that serves one mount
   mcptools.py        MCP servers that run on a target
   screen.py          find a target's desktop, and pick a route to it
   screenbackend.py   Hermes' screen driver, run on a target
@@ -895,7 +992,7 @@ onsite/              the plugin: all that an install puts on a host
   wizard.py          hermes onsite init
   api.py             what the desktop half is told and may change
   dashboard/         the HTTP routes Hermes mounts
-  desktop/plugin.js  chip, pane, run card, folder browser, Machines
+  desktop/plugin.js  chip, pane, run card, new session, Machines
 tests/               unit tests
 rig/                 the end-to-end rig and its saved results
 docs/                the design page, brand files, QA journeys, drafts
