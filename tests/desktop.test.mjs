@@ -353,6 +353,19 @@ test('the chip changes state when the target goes down and comes back', { skip: 
   assert.equal(chip().getAttribute('data-onsite-chip'), 'up')
 })
 
+test('the chip says why a session\'s files cannot be shown', { skip: SKIP }, async () => {
+  const { backend, made, mount, settle } = await setup()
+  const box = await mount(made.contributions.chip.render())
+  const chip = () => box.querySelector('[data-onsite-chip]')
+
+  assert.doesNotMatch(chip().getAttribute('title'), /Files:/)
+
+  backend.status = { ...UP, mount_error: 'this server has no `sshfs`.' }
+  await settle(made.intervals[0])
+
+  assert.match(chip().getAttribute('title'), /Files: this server has no `sshfs`\./)
+})
+
 test('the chip says so when the host has no plugin', { skip: SKIP }, async () => {
   const { backend, made, mount, settle } = await setup()
   const box = await mount(made.contributions.chip.render())
