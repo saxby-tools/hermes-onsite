@@ -30,7 +30,7 @@ description: >-
   Open a project folder on your own computer and the Hermes that
   lives on your server works in it. Its terminal and file tools run
   on the computer the folder lives on, as you, over the SSH you
-  already have, started from either side. The folder you open picks
+  already have. The folder you open picks
   the computer: no switch phrase, no mode. Risky commands
   stop at Hermes' own approval prompt in the app you are holding. In
   Hermes Desktop a chip names the computer in use, a pane browses its
@@ -73,6 +73,8 @@ image: https://raw.githubusercontent.com/saxby-tools/hermes-onsite/<the same com
 readme: true
 platforms: [linux, macos]
 known_issues:
+  - "Linux and macOS servers only. Hermes runs on Windows, but this plugin has never been run on a Windows server and refuses to load on one."
+  - "The server has to be able to log in to the user's computer over SSH: on the same network or over a VPN. A computer behind a home router with no VPN is not reachable."
   - "Imports private Hermes modules to reuse Hermes' own SSH, local and screen-driver code: 14 in compat.py and 4 in screenbackend.py. hermes plugins validate lists them as warnings. requires_hermes has an upper bound for that reason, so the plugin stops loading at Hermes 0.24 until it has been run against it."
   - "Needs plugins.isolation in_process (the default): Hermes cannot hand a terminal environment across the plugin-host boundary."
   - "Hermes only runs a session in a folder that exists on the host. The plugin keeps empty folders that mirror a target's folder names, so any folder can be opened, but the desktop app's own file tree shows those empty folders, not the target's files."
