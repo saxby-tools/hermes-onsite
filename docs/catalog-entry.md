@@ -33,9 +33,10 @@ description: >-
   already have. The folder you open picks
   the computer: no switch phrase, no mode. Risky commands
   stop at Hermes' own approval prompt in the app you are holding. In
-  Hermes Desktop a chip names the computer in use, a pane browses its
-  folders and starts sessions there, proposed commands get a Run
-  button, and settings pages add and test computers. MCP servers
+  Hermes Desktop a chip names the computer in use, a pane starts a
+  session on it, the app's own folder picker and file tree show its
+  real files, proposed commands get a Run button, and settings pages
+  add and test computers. MCP servers
   can run on the computer too, and Hermes can see and drive its
   screen, through Hermes' own driver or the screen sharing the
   computer already has. Disclosure —
@@ -45,8 +46,15 @@ description: >-
   ssh client and the keys your SSH setup offers, and never reads or
   stores a key. Reads one optional secret through Hermes,
   ONSITE_SCREEN_PASSWORD, if a target's screen sharing asks for a VNC
-  password. Keeps one ssh connection open per target in use, one
-  per MCP server you add and one per session that uses a target's
+  password. Mounts each target's whole disk in a folder on the
+  server, so anything on the server that reads or writes under the
+  mount reads or writes the target's real files as that account. On
+  a macOS server it runs a helper process per target for this, a
+  file server on 127.0.0.1 only that stays running until stopped or
+  the server restarts; on a Linux server it runs sshfs, which the
+  user installs. Keeps one ssh connection open per target in use,
+  one per mounted target, one per MCP server you add and one per
+  session that uses a target's
   screen. While Hermes Desktop is in view, logs in to the session's
   target every five seconds and after each tool call to see that it
   is up, and to every target while its pane is open. Files each target's host key in
@@ -54,12 +62,12 @@ description: >-
   while a command runs. Hermes' own SSH code, which it reuses,
   writes a small file to the target's /tmp for each environment it
   builds, holding the shell's exported variables, functions and
-  aliases; the plugin removes it when that environment is closed. Writes three small state files under
-  plugin-data/onsite and empty folders that mirror a target's folder
-  names. /run puts a message into the chat, which needs
-  allow_gateway_injection. Serves eight routes to the desktop app
+  aliases; the plugin removes it when that environment is closed.
+  Writes a few small state files under plugin-data/onsite, where
+  the mounts are too. /run puts a message into the chat, which needs
+  allow_gateway_injection. Serves seven routes to the desktop app
   under /api/plugins/onsite. Two write the plugin's own settings and
-  one makes mirror folders. Adds a section to the system prompt that
+  one mounts a target's disk. Adds a section to the system prompt that
   names the session's computer. After /onsite moves a session, adds
   one note to the user's next message to tell the agent. No
   telemetry, no other network calls, no self-update, nothing
@@ -77,7 +85,8 @@ known_issues:
   - "The server has to be able to log in to the user's computer over SSH: on the same network or over a VPN. A computer behind a home router with no VPN is not reachable."
   - "Imports private Hermes modules to reuse Hermes' own SSH, local and screen-driver code: 14 in compat.py and 4 in screenbackend.py. hermes plugins validate lists them as warnings. requires_hermes has an upper bound for that reason, so the plugin stops loading at Hermes 0.24 until it has been run against it."
   - "Needs plugins.isolation in_process (the default): Hermes cannot hand a terminal environment across the plugin-host boundary."
-  - "Hermes only runs a session in a folder that exists on the host. The plugin keeps empty folders that mirror a target's folder names, so any folder can be opened, but the desktop app's own file tree shows those empty folders, not the target's files."
+  - "Hermes only runs a session in a folder that exists on the host, so the plugin mounts each target's disk there. A macOS server needs nothing for it. A Linux server needs the sshfs program, and the error names the install line when it is missing. The Linux mount has run in a container only, never on a real Linux server."
+  - "The mount is a network disk. A program on the server that walks a big folder through it is slow, and file locks do not cross it. Hermes' own commands run on the target and are not affected."
   - "Screen control needs either Hermes' screen driver installed on the target by its owner, or screen sharing (VNC) turned on there. Screen sharing sees pixels only: Hermes clicks by position and cannot name a button. Both have been tested only on a Linux X11 desktop. The approval prompt for a screen action cannot name the computer."
   - "Screen sharing borrows two packages Hermes itself ships, Pillow for the picture and cryptography for a VNC password. They are not declared as the plugin's own, and are only imported when a session uses that route."
   - "Editors over ACP: Hermes leaves the screen tool out, and patch only works where the same path exists on both computers."
@@ -142,8 +151,8 @@ are close:
 
 None of the four says it picks the computer by folder, or opens a
 folder that exists only on your computer. `tether` has its own panel
-in the desktop app. None lists a folder browser or run buttons
-there.
+in the desktop app. None says it shows your computer's files in the
+app's file tree, or lists run buttons there.
 
 These lines were checked on Nov. 24 against each plugin's entry in
 the catalog that ships with Hermes 0.23.2. Read them against the
