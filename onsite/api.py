@@ -21,6 +21,7 @@ from .config import KNOWN_TARGET_KEYS
 from .config import parse_config
 from .health import probe_target
 from .proposals import Proposal
+from .routing import REASON_MOUNT
 
 
 API_VERSION = 1
@@ -140,6 +141,29 @@ def mount_problem(runtime, spec) -> str:
     return ""
 
 
+def session_mount_problem(runtime, payload: dict[str, Any]) -> str:
+    """Why the session's own folder cannot be shown, or nothing.
+
+    A session opened under a mount is in a folder that is only there
+    while the mount is. A restart of the host takes every mount down.
+    The chip asks this every few seconds, so the mount is back before
+    a person has to go looking for it.
+    """
+
+    if not payload.get("ok"):
+        return ""
+
+    if payload.get("reason") != REASON_MOUNT:
+        return ""
+
+    try:
+        spec = runtime.load_config().target(payload["target"])
+    except ConfigError:
+        return ""
+
+    return mount_problem(runtime, spec)
+
+
 def describe_targets(
     runtime,
     known: dict[str, Any] | None = None,
@@ -180,6 +204,7 @@ def status_payload(runtime, body: Any, with_targets: bool = False) -> dict:
     payload = runtime.status(session_id=session_id, cwd=read_cwd(body))
     payload["api_version"] = API_VERSION
     payload["run_allowed"] = runtime.run_allowed()
+    payload["mount_error"] = session_mount_problem(runtime, payload)
 
     if with_targets:
         payload["rows"] = describe_targets(runtime, answer_of(payload))
