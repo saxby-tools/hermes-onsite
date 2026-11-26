@@ -12,9 +12,12 @@ import sys
 
 from pathlib import Path
 
+import pytest
+
 
 ROOT = Path(__file__).resolve().parent.parent / "onsite"
 PACKAGE = "onsite"
+HOME_FOLDER = "home"
 
 
 def load_package() -> None:
@@ -33,3 +36,14 @@ def load_package() -> None:
 
 
 load_package()
+
+
+@pytest.fixture(autouse=True)
+def a_home_folder_of_its_own(tmp_path, monkeypatch):
+    """Point every test at a home folder that is not the real one.
+
+    A mount's default place is under the home folder. No test may
+    make or look at anything in the home of whoever runs the tests.
+    """
+
+    monkeypatch.setenv("HOME", str(tmp_path / HOME_FOLDER))

@@ -98,7 +98,7 @@ def test_status_lists_every_target_when_asked(tmp_path):
 
 
 def test_a_session_under_a_mount_gets_its_mount_back(tmp_path, mount_asks):
-    folder = tmp_path / "mount" / "laptop" / "home" / "dev" / "app"
+    folder = mounts.default_root(tmp_path, "laptop") / "home" / "dev" / "app"
     payload = api.status_payload(
         build(tmp_path),
         {"cwd": str(folder), "rows": False},
@@ -119,7 +119,7 @@ def test_a_mount_that_fails_is_named_in_the_status(tmp_path, monkeypatch):
 
     payload = api.status_payload(
         build(tmp_path),
-        {"cwd": str(tmp_path / "mount" / "laptop" / "srv")},
+        {"cwd": str(mounts.default_root(tmp_path, "laptop") / "srv")},
         with_targets=False,
     )
 

@@ -35,10 +35,24 @@ dev@laptop.example:/ /data/onsite/mount/laptop fuse.sshfs rw,nosuid 0 0
 """
 
 
-def test_the_default_root_is_inside_the_plugins_own_data(tmp_path):
-    root = mounts.default_root(tmp_path, "laptop")
+def test_the_default_root_is_outside_the_hermes_home(tmp_path):
+    home = tmp_path / "home"
+    data = home / ".hermes" / "profiles" / "work" / "plugin-data" / "onsite"
 
-    assert root == tmp_path / "mount" / "laptop"
+    root = mounts.default_root(data, "laptop", home=home)
+
+    share = home / ".local" / "share" / "onsite"
+    assert root == share / "mount" / "work" / "laptop"
+    assert home / ".hermes" not in root.parents
+
+
+def test_the_default_profile_gets_a_folder_name_without_a_dot(tmp_path):
+    home = tmp_path / "home"
+    data = home / ".hermes" / "plugin-data" / "onsite"
+
+    root = mounts.default_root(data, "laptop", home=home)
+
+    assert root.parent.name == "hermes"
 
 
 def test_mount_points_are_read_from_macos_own_list():

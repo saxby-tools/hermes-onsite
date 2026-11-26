@@ -39,6 +39,7 @@ from pathlib import Path
 
 from . import sftp
 from .config import DEFAULT_SSH_PORT
+from .config import PLUGIN_ID
 from .config import TargetSpec
 from .link import LinkError
 from .link import SshLink
@@ -50,7 +51,17 @@ from .remote import build_sftp_arguments
 SYSTEM_MAC = "Darwin"
 SYSTEM_LINUX = "Linux"
 
+# Where mounts live, under the home folder of the account Hermes runs
+# as: ~/.local/share/onsite/mount/<profile>/<target>. Not inside the
+# Hermes home. Deleting a profile deletes everything below its
+# folder, and that would reach through a live mount into the
+# target's disk. A Hermes home kept in git also makes the app hide
+# the mounted files that the repository ignores. Not a cache or a
+# temporary folder either: whatever empties those would reach
+# through the mount the same way.
+SHARE_PARTS = (".local", "share")
 MOUNTS_DIR = "mount"
+UNNAMED_PROFILE = "hermes"
 STATE_DIR = "mount-state"
 HELPER_FILE = "mountd.py"
 
@@ -124,14 +135,39 @@ class Mounted:
     home: str
 
 
-def default_root(data_dir: Path, name: str) -> Path:
-    """Where a target is mounted when the settings name no place.
+def profile_name(data_dir: Path) -> str:
+    """The folder name of the Hermes home that holds `data_dir`.
 
-    Inside the plugin's own data folder, so nothing new appears in
-    anybody's home folder.
+    `data_dir` is <Hermes home>/plugin-data/onsite. The name keeps two
+    profiles with a target of the same name on separate folders. A
+    leading dot is dropped, so `.hermes` gives `hermes`.
     """
 
-    return data_dir / MOUNTS_DIR / name
+    name = data_dir.parent.parent.name.lstrip(".")
+
+    if not name:
+        return UNNAMED_PROFILE
+
+    return name
+
+
+def default_root(
+    data_dir: Path,
+    name: str,
+    home: Path | None = None,
+) -> Path:
+    """Where a target is mounted when the settings name no place.
+
+    In the standard folder for a program's own data, so nothing new
+    appears at the top of anybody's home folder.
+    """
+
+    if home is None:
+        home = Path.home()
+
+    share = home.joinpath(*SHARE_PARTS)
+
+    return share / PLUGIN_ID / MOUNTS_DIR / profile_name(data_dir) / name
 
 
 def state_file(data_dir: Path, name: str) -> Path:

@@ -66,7 +66,7 @@ NEW_MACHINE = {
 def test_an_ssh_target_gets_a_mount_root_without_asking(tmp_path):
     spec = Harness(tmp_path).runtime.load_config().target("laptop")
 
-    assert spec.mount == str(tmp_path / "mount" / "laptop")
+    assert spec.mount == str(mounts.default_root(tmp_path, "laptop"))
 
 
 def test_a_mount_root_named_in_the_settings_is_kept(tmp_path):
@@ -86,7 +86,7 @@ def test_a_local_target_has_no_disk_to_mount(tmp_path):
 
 def test_a_folder_under_the_mount_runs_on_the_target(tmp_path):
     harness = Harness(tmp_path)
-    folder = tmp_path / "mount" / "laptop" / "srv" / "site"
+    folder = mounts.default_root(tmp_path, "laptop") / "srv" / "site"
 
     status = harness.runtime.status(cwd=str(folder))
 
@@ -97,7 +97,8 @@ def test_a_folder_under_the_mount_runs_on_the_target(tmp_path):
 
 def test_the_mount_root_itself_is_the_targets_root(tmp_path):
     harness = Harness(tmp_path)
-    status = harness.runtime.status(cwd=str(tmp_path / "mount" / "laptop"))
+    root = mounts.default_root(tmp_path, "laptop")
+    status = harness.runtime.status(cwd=str(root))
 
     assert status["target"] == "laptop"
     assert status["cwd"] == "/"
@@ -265,7 +266,7 @@ def mounted(monkeypatch, tmp_path, home="/home/dev"):
     """Stand in for the mount: a folder on disk that plays the
     target's whole disk, with a few folders in it."""
 
-    root = tmp_path / "mount" / "laptop"
+    root = mounts.default_root(tmp_path, "laptop")
     asked = []
 
     for folder in ("home/dev/work/site", "srv/data"):

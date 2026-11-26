@@ -11,7 +11,7 @@ import pytest
 from onsite import paths
 
 
-ROOT = Path("/var/hermes/plugin-data/onsite/mount/laptop")
+ROOT = Path("/home/dev/.local/share/onsite/mount/work/laptop")
 
 
 def test_a_target_path_lands_under_the_mount_root():

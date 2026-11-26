@@ -627,7 +627,7 @@ const TWO_MACHINES = {
   ]
 }
 
-const MOUNT = '/host/plugin-data/onsite/mount/laptop'
+const MOUNT = '/host/.local/share/onsite/mount/work/laptop'
 
 async function openPaneMachines() {
   const made = await setup()
