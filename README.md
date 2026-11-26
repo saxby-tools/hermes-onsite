@@ -18,8 +18,8 @@ Hermes that lives somewhere else.
   the computer in use.
 - **No program to run on your computer.** The server logs in to it
   over SSH, as you. Your computer needs its SSH server on and the
-  server's key accepted. A computer the server cannot reach can
-  start the link from its own side.
+  server's key accepted. The server has to be able to reach it,
+  directly or over a VPN.
 
 It is a Hermes plugin. Hermes itself is not patched.
 
@@ -107,6 +107,9 @@ In the examples the host's target is named `mac` and the other is
 
 ## Requirements
 
+- A server that runs Linux or macOS. Hermes also runs on Windows,
+  but onsite has never been run on a Windows server and refuses to
+  load on one. A target runs Linux or macOS too.
 - Hermes v0.23.2. A later 0.23 release will load the plugin but has
   not been tried. Hermes 0.24 will not load it. A later release of
   onsite lifts that once it has been run there. `hermes --version`
@@ -134,9 +137,8 @@ In the examples the host's target is named `mac` and the other is
   The first time, it asks whether to trust the machine's key. Say
   yes once. If it asks for a password, `ssh-copy-id
   you@laptop.example` on the host is the usual fix, after
-  `ssh-keygen` if the host has no key yet. A machine the host cannot
-  reach at all can dial out to it. See
-  [A machine the host cannot reach](#a-machine-the-host-cannot-reach).
+  `ssh-keygen` if the host has no key yet. The host must be able to
+  reach the machine: on the same network, or over a VPN.
 - No Python packages of its own. It drives the `ssh` program you
   already have and uses only what Hermes ships.
 
@@ -287,8 +289,7 @@ instead.
   the default: the target used when no folder rule matches. With
   none or more than one, or to pick another, add `--default NAME`.
 - It writes the whole list each time. A target left out is removed,
-  and so is any setting it has no flag for, such as a dial-out port
-  or `screen`. Use it for the first set-up. After that, change one
+  and so is any setting it has no flag for, such as `screen`. Use it for the first set-up. After that, change one
   target in `config.yaml` or on the Machines page.
 
 Two more flags say which folders belong to a target. Most set-ups
@@ -419,41 +420,6 @@ login is refused a blocking lock and gets a delay lock, which holds
 sleep off for five seconds by default (`InhibitDelayMaxSec` in
 `logind.conf`). That covers a short write. A long one can still be
 cut by a closing lid.
-
-### A machine the host cannot reach
-
-A laptop behind a home router cannot be dialed from the host. It can
-dial out. The machine opens one SSH connection to the host and offers
-its own SSH server back through it. The host then reaches the machine
-at a port on its own loopback address.
-
-This prints the command to run on the machine, a service file that
-keeps the link up, and the target's settings. It is a dry run. Add
-`--apply` to write the settings:
-
-```bash
-hermes onsite dial-out laptop --server you@host.example --user you
-```
-
-`--server` is how the machine logs in to the host. `--user` is your
-account on the machine. Keys are needed both ways: the machine logs
-in to the host to open the link, and the host logs in to the machine
-through it. For a target that is already in the settings, `--apply`
-changes its address and port and keeps the rest. A new name is
-added beside the others. Each machine that dials out needs a port of
-its own on the host: the first gets 22022, so add `--port 22023` for
-a second. Once a link is up, the check from the host is
-`ssh -p 22022 you@127.0.0.1 true`.
-
-The service file is for a Linux machine with `systemd`. Save it
-where the output says, then
-`systemctl --user enable --now onsite-dial-out`. The service file
-has not been run by anyone yet.
-
-The machine still needs its own SSH server, but only the host can
-reach it, through the link. The plugin adds no listener: the host's
-SSH server opens the port, on loopback only. When the link drops,
-tool calls fail at once and resume when the machine dials back in.
 
 ### Folders that exist only on the target
 
@@ -831,9 +797,6 @@ Not yet tested by anyone:
   desktop.
 - Screen sharing against any server but `x11vnc`, on a Mac, or
   through a Hermes session's approval prompt.
-- A machine that dials out from its own side. It was checked once
-  by hand, with a stand-in link opened from the host. The rig does
-  not cover it.
 - An MCP server on a target, beyond one test server run by hand on
   the laptop.
 
@@ -911,7 +874,6 @@ onsite/              the plugin: all that an install puts on a host
   health.py          probe and circuit breaker
   remote.py          SSH options, PATH, sleep inhibitor
   mirror.py          a names-only copy of a target's folders
-  dialout.py         set-up text for a machine that dials out
   mcptools.py        MCP servers that run on a target
   screen.py          find a target's desktop, and pick a route to it
   screenbackend.py   Hermes' screen driver, run on a target
