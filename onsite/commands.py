@@ -11,6 +11,7 @@ import sys
 
 from pathlib import Path
 
+from . import environments
 from . import mcptools
 from . import messages
 from . import mounts
@@ -18,7 +19,9 @@ from . import screen
 from . import screenshare
 from . import wizard
 from .config import ConfigError
+from .config import KIND_ENVIRONMENT
 from .config import KIND_LOCAL
+from .config import KIND_SSH
 from .config import TargetSpec
 from .health import probe_target
 from .proposals import STATUS_SENT
@@ -187,12 +190,18 @@ def build_run_command(ctx, runtime: Runtime):
     return run_command
 
 
-def describe_row(spec) -> dict:
+def describe_row(spec, profile: str = "") -> dict:
     probe = probe_target(spec)
     state = "up" if probe.ok else f"DOWN ({probe.detail})"
 
-    if probe.ok and spec.kind != KIND_LOCAL:
+    if probe.ok and spec.kind == KIND_SSH:
         state = f"up ({probe.elapsed_ms} ms)  {spec.user}@{spec.host}"
+
+    if probe.ok and spec.kind == KIND_ENVIRONMENT:
+        state = messages.format_environment_state(
+            len(environments.list_sessions(spec)),
+            *environments.count_containers(spec, profile),
+        )
 
     return {"name": spec.name, "kind": spec.kind, "state": state}
 
@@ -215,7 +224,8 @@ def cli_status(runtime: Runtime, args) -> int:
         return EXIT_USAGE
 
     config = runtime.load_config()
-    rows = [describe_row(spec) for spec in config.targets.values()]
+    profile = runtime.profile()
+    rows = [describe_row(spec, profile) for spec in config.targets.values()]
 
     print(messages.format_cli_status(folder, status, rows))
 
@@ -386,6 +396,98 @@ def cli_open(runtime: Runtime, args) -> int:
     return EXIT_OK
 
 
+def find_environment(config, name: str | None) -> TargetSpec | None:
+    if name is None or name not in config.targets:
+        return None
+
+    spec = config.target(name)
+
+    if spec.kind != KIND_ENVIRONMENT:
+        return None
+
+    return spec
+
+
+def env_new(runtime: Runtime, spec: TargetSpec) -> int:
+    try:
+        session = runtime.open_session(spec)
+    except environments.SandboxError as error:
+        print(error)
+        return EXIT_DOWN
+
+    print(messages.format_session_opened(
+        spec,
+        session.id,
+        str(session.start),
+    ))
+
+    return EXIT_OK
+
+
+def env_list(specs: list[TargetSpec]) -> int:
+    for spec in specs:
+        rows = [
+            (session.id, str(session.start))
+            for session in environments.list_sessions(spec)
+        ]
+
+        print(messages.format_sessions(spec, rows))
+
+    return EXIT_OK
+
+
+def env_rm(runtime: Runtime, spec: TargetSpec, session_id: str) -> int:
+    try:
+        runtime.remove_session(spec, session_id)
+    except environments.SandboxError as error:
+        print(error)
+        return EXIT_DOWN
+
+    print(messages.format_session_removed(spec, session_id))
+
+    return EXIT_OK
+
+
+def cli_env(runtime: Runtime, args) -> int:
+    """`hermes onsite env`: make, list and remove an environment's
+    sessions. Not released."""
+
+    try:
+        config = runtime.load_config()
+    except ConfigError as error:
+        print(error)
+        return EXIT_USAGE
+
+    every = [
+        spec
+        for spec in config.targets.values()
+        if spec.kind == KIND_ENVIRONMENT
+    ]
+
+    if args.env_action == "list" and args.environment is None:
+        return env_list(every)
+
+    spec = find_environment(config, args.environment)
+
+    if spec is None:
+        print(messages.NOT_AN_ENVIRONMENT.format(name=args.environment))
+        print(messages.ENV_USAGE)
+        return EXIT_USAGE
+
+    if args.env_action == "new":
+        return env_new(runtime, spec)
+
+    if args.env_action == "list":
+        return env_list([spec])
+
+    if args.env_action == "rm" and args.session:
+        return env_rm(runtime, spec, args.session)
+
+    print(messages.ENV_USAGE)
+
+    return EXIT_USAGE
+
+
 def cli_mcp(runtime: Runtime, args) -> int:
     try:
         config = runtime.load_config()
@@ -458,6 +560,10 @@ def cli_screen(runtime: Runtime, args) -> int:
             f"`{spec.name}` is the Hermes server. Check its screen with "
             "`hermes computer-use doctor`."
         )
+        return EXIT_USAGE
+
+    if spec.kind == KIND_ENVIRONMENT:
+        print(f"`{spec.name}` is an environment. A sandbox has no screen.")
         return EXIT_USAGE
 
     try:
@@ -625,6 +731,28 @@ def setup_cli(parser) -> None:
         help="a target, or a folder on one, such as laptop:~/work/site.",
     )
 
+    sandboxed = actions.add_parser(
+        "env",
+        help="make, list or remove an environment's sessions. Not "
+        "released.",
+    )
+    sandboxed.add_argument(
+        "env_action",
+        choices=("new", "list", "rm"),
+        help="new: a session folder. list: the sessions. rm: remove "
+        "one, with its sandbox.",
+    )
+    sandboxed.add_argument(
+        "environment",
+        nargs="?",
+        help="the environment, as it is named in the settings.",
+    )
+    sandboxed.add_argument(
+        "session",
+        nargs="?",
+        help="for rm: the session's id, as `env list` shows it.",
+    )
+
     served = actions.add_parser(
         "mcp",
         help="show how to add an MCP server that runs on a target.",
@@ -674,6 +802,9 @@ def build_cli_handler(ctx, runtime: Runtime):
 
         if action == "open":
             return cli_open(runtime, args)
+
+        if action == "env":
+            return cli_env(runtime, args)
 
         if action == "mcp":
             return cli_mcp(runtime, args)
