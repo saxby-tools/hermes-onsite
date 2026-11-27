@@ -3,7 +3,8 @@
 The desktop half asks where a session runs and what the agent has
 proposed. It also edits the list of machines, tests one, and says
 where a machine's disk is mounted on the host, so a session can be
-started in one of its folders. Each is answered here so it can be
+started in one of its folders. For a machine that dials in, it
+hands over the command to run there. Each is answered here so it can be
 tested with no web server. `dashboard/plugin_api.py` only wraps them.
 
 This module imports nothing from Hermes.
@@ -13,6 +14,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from . import dialin
 from . import messages
 from . import mounts
 from .config import ConfigError
@@ -217,6 +219,10 @@ def describe_targets(
             "kind": spec.kind,
             "label": spec.label,
             "default": spec.name == config.default,
+            # The pane says "not connected" of a computer that dials
+            # in, and points at its command, where it would say "not
+            # reachable" of one the server dials.
+            "dial_in": bool(spec.dial_in),
             **row_state(runtime, spec, known or {}),
         })
 
@@ -314,6 +320,20 @@ def clean_target(raw: Any) -> dict:
     return block
 
 
+def complete_target(name: str, block: dict, targets: dict) -> dict:
+    """A target block with what the plugin decides filled in.
+
+    A form for a computer that dials in sends the account and how
+    the computer reaches the server. The loopback address and a free
+    port are the plugin's to add. Any other block is left as it is.
+    """
+
+    if not block.get("dial_in"):
+        return block
+
+    return dialin.complete(name, block, targets)
+
+
 def targets_payload(runtime) -> dict:
     """The machines as written in the settings, for a form to edit."""
 
@@ -368,7 +388,15 @@ def save_target_payload(runtime, body: Any) -> dict:
 
     before = target_as_set_up(runtime, name)
     settings = runtime.raw_settings()
-    settings["targets"][name] = clean_target(body.get("target"))
+
+    try:
+        settings["targets"][name] = complete_target(
+            name,
+            clean_target(body.get("target")),
+            settings["targets"],
+        )
+    except dialin.DialInError as error:
+        return failure(str(error))
 
     if body.get("default") or not settings.get("default"):
         settings["default"] = name
@@ -420,8 +448,17 @@ def test_target_payload(runtime, body: Any) -> dict:
     name = read_name(body) or "machine"
     block = clean_target(body.get("target") if isinstance(body, dict) else None)
 
+    # A form for a machine that dials in sends no address, as it does
+    # on a save. Its port is the one it was saved with.
     try:
+        block = complete_target(
+            name,
+            block,
+            runtime.raw_settings()["targets"],
+        )
         config = parse_config({"default": name, "targets": {name: block}})
+    except dialin.DialInError as error:
+        return failure(str(error))
     except ConfigError as error:
         return failure("; ".join(error.problems))
 
@@ -461,6 +498,42 @@ def find_ssh_target(runtime, body: Any):
         )
 
     return spec, None
+
+
+def dial_in_payload(runtime, body: Any) -> dict:
+    """What a person runs on a computer that dials in, and whether
+    the computer has arrived.
+
+    The Machines page asks this again every few seconds while its
+    steps are on screen, so the page turns to "connected" by itself
+    when the command is run.
+    """
+
+    spec, problem = find_ssh_target(runtime, body)
+
+    if problem is not None:
+        return problem
+
+    if not spec.dial_in:
+        return failure(
+            f"`{spec.name}` does not dial in. The server logs in to it."
+        )
+
+    probe = runtime.gate_for(spec).check()
+
+    return {
+        "ok": True,
+        "api_version": API_VERSION,
+        "label": spec.label,
+        "connected": probe.ok,
+        "detail": probe.detail,
+        "latency_ms": probe.elapsed_ms,
+        "host_keys": dialin.keys_on_file(
+            spec.host_key_alias,
+            spec.known_hosts,
+        ),
+        **dialin.instructions(spec.name, spec.dial_in, spec.port),
+    }
 
 
 def read_folder(body: Any) -> str:
