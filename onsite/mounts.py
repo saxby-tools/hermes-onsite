@@ -419,7 +419,11 @@ def inside_hermes(spec: TargetSpec, root: Path, hermes: Path) -> MountError:
         f"Hermes home, {hermes}. Deleting a profile or removing Hermes "
         "deletes everything in that folder, and through a mount it "
         "would delete the target's own files. Set this target's "
-        f"`mount` to a folder outside {hermes} that nothing empties."
+        f"`mount` to a folder outside {hermes} that nothing empties. "
+        "In the desktop app that is the folder field on the Machines "
+        "page. In a terminal on the server: hermes config set "
+        f"plugins.entries.{PLUGIN_ID}.settings.targets.{spec.name}.mount "
+        "/A/FOLDER"
     )
 
 

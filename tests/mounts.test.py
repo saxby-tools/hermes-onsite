@@ -148,6 +148,8 @@ def test_a_home_folder_inside_the_hermes_home_gets_no_default_mount(
     assert "laptop (dev@laptop.example)" in said
     assert f"inside the Hermes home, {hermes}" in said
     assert "Set this target's `mount`" in said
+    assert "targets.laptop.mount" in said
+    assert "Machines page" in said
     assert steps == ["take down"]
     assert not root.exists()
 
