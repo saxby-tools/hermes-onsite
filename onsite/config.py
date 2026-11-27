@@ -15,6 +15,7 @@ from dataclasses import dataclass
 from typing import Any
 from typing import Mapping
 
+from . import dialin
 from .paths import PathError
 from .paths import clean_target
 
@@ -61,7 +62,7 @@ SCREEN_PASSWORD_ENV = "ONSITE_SCREEN_PASSWORD"
 RESERVED_TARGET_NAMES = ("auto",)
 
 # A target can sit behind a port on the host's own loopback address:
-# a container, or a machine reached through a tunnel.
+# a container, or a computer that dials in. See `dialin`.
 LOOPBACK_HOSTS = ("127.0.0.1", "::1", "localhost")
 HOST_KEY_ALIAS_PREFIX = "onsite-"
 TARGET_NAME_RE = re.compile(r"^[a-z][a-z0-9-]{0,31}$")
@@ -94,6 +95,7 @@ KNOWN_TARGET_KEYS = frozenset({
     "start",
     "screen",
     "screen_port",
+    "dial_in",
 })
 
 
@@ -130,6 +132,9 @@ class TargetSpec:
     start: str = ""
     screen: str = SCREEN_AUTO
     screen_port: int = DEFAULT_SCREEN_PORT
+    # Set for a computer that dials in: the server, as that computer
+    # logs in to it. See `dialin`.
+    dial_in: str = ""
 
     @property
     def host_key_alias(self) -> str:
@@ -140,6 +145,11 @@ class TargetSpec:
         a port. A port handed to a different machine would then look
         like the same host with a changed key. Filing by target name
         keeps each key with its machine.
+
+        For a computer that dials in, this is also the lock on its
+        port. Any account on the server can listen on a port the
+        computer has let go of. What answers there is only talked to
+        when it shows the key this name was first filed with.
         """
 
         if self.kind != KIND_SSH:
@@ -154,6 +164,11 @@ class TargetSpec:
     def label(self) -> str:
         if self.kind == KIND_LOCAL:
             return f"{self.name} ({LOCAL_LABEL})"
+
+        # The address of a computer that dials in is the server's own
+        # loopback, which tells a person nothing.
+        if self.dial_in:
+            return f"{self.name} ({self.user}, dials in)"
 
         return f"{self.name} ({self.user}@{self.host})"
 
@@ -187,7 +202,9 @@ def check_name(name: Any, problems: list[str]) -> bool:
         problems.append(f"target name `{name}` is reserved")
         return False
 
-    if TARGET_NAME_RE.match(name) is None:
+    # The whole name. `$` alone lets a line end through, and the name
+    # is also what a loopback target's host key is filed under.
+    if TARGET_NAME_RE.fullmatch(name) is None:
         problems.append(
             f"target name `{name}` must be lowercase letters, digits "
             "and hyphens, starting with a letter"
@@ -420,6 +437,70 @@ def read_option_path(
     return text
 
 
+def is_low_port(port: Any) -> bool:
+    """Whether a port is one only root may listen on."""
+
+    if isinstance(port, bool) or not isinstance(port, int):
+        return False
+
+    return 1 <= port < dialin.MIN_PORT
+
+
+def read_dial_in(
+    name: str,
+    kind: str,
+    raw: Mapping,
+    host: str,
+    problems: list[str],
+) -> str:
+    """How a computer that dials in reaches the server, or nothing.
+
+    Such a target is an ssh target at a port on the server's own
+    loopback address. The plugin writes the address and the port, but
+    the block can be edited by hand, so both are checked here.
+    """
+
+    value = raw.get("dial_in")
+
+    if value is None:
+        return ""
+
+    if kind != KIND_SSH:
+        problems.append(f"`{name}.dial_in` is only for an ssh target")
+        return ""
+
+    try:
+        server = dialin.parse_server(value)
+    except dialin.DialInError as error:
+        problems.append(f"`{name}.dial_in`: {error}")
+        return ""
+
+    # That address and no other name for it. The computer's link
+    # listens there alone, and `localhost` can also mean `::1`, where
+    # another account on the host could be the one to answer.
+    if host != dialin.LOOPBACK:
+        problems.append(
+            f"`{name}.host` must be {dialin.LOOPBACK} for a computer "
+            "that dials in"
+        )
+
+    port = raw.get("port")
+
+    if port is None:
+        problems.append(
+            f"`{name}.port` is required for a computer that dials in"
+        )
+
+    # Anything else wrong with the port is said by `read_port`.
+    if is_low_port(port):
+        problems.append(
+            f"`{name}.port` must be {dialin.MIN_PORT} or higher for a "
+            "computer that dials in"
+        )
+
+    return dialin.format_server(server)
+
+
 def read_path_mode(name: str, raw: Any, problems: list[str]) -> str:
     if raw is None:
         return PATH_MODE_INTERACTIVE
@@ -524,7 +605,45 @@ def read_target(name: str, raw: Any, problems: list[str]) -> TargetSpec | None:
             key="screen_port",
             default=DEFAULT_SCREEN_PORT,
         ),
+        dial_in=read_dial_in(name, kind, raw, host, problems),
     )
+
+
+def check_shared_ports(
+    targets: Mapping[str, TargetSpec],
+    problems: list[str],
+) -> None:
+    """Two computers must never dial in on one port.
+
+    The second one's link would be refused, and the server would talk
+    to whichever computer got there first under the other's name. The
+    host key stops that, but only after a failed call. A port shared
+    with any other target on the loopback address is caught here.
+    """
+
+    seen: dict[int, TargetSpec] = {}
+
+    for spec in targets.values():
+        if spec.kind != KIND_SSH:
+            continue
+
+        if spec.host not in LOOPBACK_HOSTS:
+            continue
+
+        other = seen.get(spec.port)
+
+        if other is None:
+            seen[spec.port] = spec
+            continue
+
+        if not spec.dial_in and not other.dial_in:
+            continue
+
+        problems.append(
+            f"`{other.name}` and `{spec.name}` both use port "
+            f"{spec.port}. A computer that dials in needs a port of "
+            "its own"
+        )
 
 
 def read_targets(raw: Any, problems: list[str]) -> dict[str, TargetSpec]:
@@ -561,6 +680,8 @@ def parse_config(raw: Any) -> OnsiteConfig:
     problems: list[str] = []
     targets = read_targets(raw.get("targets"), problems)
     default = raw.get("default")
+
+    check_shared_ports(targets, problems)
 
     if not isinstance(default, str):
         problems.append("`default` must name the target used when no "
@@ -608,6 +729,9 @@ def target_to_settings(spec: TargetSpec) -> dict:
 
     if spec.screen_port != DEFAULT_SCREEN_PORT:
         block["screen_port"] = spec.screen_port
+
+    if spec.dial_in:
+        block["dial_in"] = spec.dial_in
 
     return block
 
