@@ -35,6 +35,46 @@ dev@laptop.example:/ /data/onsite/mount/laptop fuse.sshfs rw,nosuid 0 0
 """
 
 
+def data_dir(tmp_path: Path, profile: str = "") -> Path:
+    """The plugin's data folder, laid out the way Hermes lays it out.
+
+    The Hermes home is `tmp_path / "hermes"`. With no profile named,
+    it is the default profile's folder.
+    """
+
+    hermes = tmp_path / "hermes"
+
+    if not profile:
+        return hermes / "plugin-data" / "onsite"
+
+    return hermes / "profiles" / profile / "plugin-data" / "onsite"
+
+
+@pytest.fixture
+def steps(monkeypatch):
+    """What `ensure` went on to do, with nothing mounted or stopped."""
+
+    done = []
+
+    monkeypatch.setattr(
+        mounts,
+        "take_down",
+        lambda root, state, system: done.append("take down"),
+    )
+    monkeypatch.setattr(
+        mounts,
+        "ensure_linux",
+        lambda spec, root, state: done.append("mount"),
+    )
+    monkeypatch.setattr(
+        mounts,
+        "ensure_mac",
+        lambda spec, root, state: done.append("mount"),
+    )
+
+    return done
+
+
 def test_the_default_root_is_outside_the_hermes_home(tmp_path):
     home = tmp_path / "home"
     data = home / ".hermes" / "profiles" / "work" / "plugin-data" / "onsite"
@@ -53,6 +93,132 @@ def test_the_default_profile_gets_a_folder_name_without_a_dot(tmp_path):
     root = mounts.default_root(data, "laptop", home=home)
 
     assert root.parent.name == "hermes"
+
+
+def test_the_hermes_home_is_found_from_either_kind_of_profile(tmp_path):
+    hermes = tmp_path / "hermes"
+
+    assert mounts.hermes_root(data_dir(tmp_path)) == hermes
+    assert mounts.hermes_root(data_dir(tmp_path, "work")) == hermes
+
+
+def test_the_default_place_in_an_ordinary_home_folder_is_used(
+    tmp_path,
+    monkeypatch,
+    steps,
+):
+    home = tmp_path / "home"
+    data = home / ".hermes" / "profiles" / "work" / "plugin-data" / "onsite"
+
+    monkeypatch.setenv("HOME", str(home))
+
+    mounts.ensure(SPEC, mounts.default_root(data, "laptop"), data)
+
+    assert steps == ["mount"]
+
+
+# Hermes' own container image runs the default profile with the
+# Hermes home as its home folder, and a named profile with a home
+# folder inside the profile's own folder.
+@pytest.mark.parametrize("profile, home_parts", [
+    ("", ()),
+    ("work", ("profiles", "work", "home")),
+])
+@pytest.mark.parametrize("system", ["Linux", "Darwin"])
+def test_a_home_folder_inside_the_hermes_home_gets_no_default_mount(
+    tmp_path,
+    monkeypatch,
+    steps,
+    profile,
+    home_parts,
+    system,
+):
+    hermes = tmp_path / "hermes"
+    data = data_dir(tmp_path, profile)
+
+    monkeypatch.setenv("HOME", str(hermes.joinpath(*home_parts)))
+
+    root = mounts.default_root(data, "laptop")
+
+    with pytest.raises(mounts.MountError) as caught:
+        mounts.ensure(SPEC, root, data, system=system)
+
+    said = str(caught.value)
+
+    assert "laptop (dev@laptop.example)" in said
+    assert f"inside the Hermes home, {hermes}" in said
+    assert "Set this target's `mount`" in said
+    assert steps == ["take down"]
+    assert not root.exists()
+
+
+@pytest.mark.parametrize("parts", [
+    ("mounts", "laptop"),
+    ("profiles", "work", "mounts", "laptop"),
+    ("profiles", "another", "home", "laptop"),
+    (),
+])
+def test_a_named_place_inside_the_hermes_home_is_refused(
+    tmp_path,
+    steps,
+    parts,
+):
+    hermes = tmp_path / "hermes"
+    root = hermes.joinpath(*parts)
+
+    with pytest.raises(mounts.MountError) as caught:
+        mounts.ensure(SPEC, root, data_dir(tmp_path, "work"), system="Linux")
+
+    assert f"cannot be mounted at {root}" in str(caught.value)
+    assert "inside the Hermes home" in str(caught.value)
+    assert steps == ["take down"]
+
+
+def test_a_place_is_judged_by_where_a_link_leads(tmp_path, steps):
+    inside = tmp_path / "hermes" / "mounts"
+    link = tmp_path / "shortcut"
+
+    inside.mkdir(parents=True)
+    link.symlink_to(inside)
+
+    with pytest.raises(mounts.MountError) as caught:
+        mounts.ensure(SPEC, link / "laptop", data_dir(tmp_path), system="Linux")
+
+    assert "inside the Hermes home" in str(caught.value)
+    assert steps == ["take down"]
+
+
+def test_a_place_beside_the_hermes_home_is_used(tmp_path, steps):
+    # The name starts the same way. The folder is not inside.
+    root = tmp_path / "hermes-mounts" / "laptop"
+
+    mounts.ensure(SPEC, root, data_dir(tmp_path, "work"), system="Linux")
+
+    assert steps == ["mount"]
+
+
+def test_taking_a_mac_mount_down_stops_its_helper_too(tmp_path, monkeypatch):
+    root = tmp_path / "m" / "root"
+    state = mounts.state_file(data_dir(tmp_path), "laptop")
+    done = []
+
+    mounts.write_state(state, {"pid": 12})
+    monkeypatch.setattr(mounts, "mount_points", lambda system: {str(root)})
+    monkeypatch.setattr(
+        mounts,
+        "stop_helper",
+        lambda found: done.append(("stop", found["pid"])),
+    )
+    monkeypatch.setattr(
+        mounts,
+        "unmount",
+        lambda path, force=False: done.append(("unmount", path, force)),
+    )
+
+    mounts.stop(SPEC, root, data_dir(tmp_path), system="Darwin")
+
+    assert done == [("stop", 12), ("unmount", root, True)]
+    assert not state.exists()
 
 
 def test_mount_points_are_read_from_macos_own_list():
@@ -167,7 +333,12 @@ def test_a_linux_server_without_sshfs_is_told_what_to_run(
     monkeypatch.setattr(mounts, "read_os_release", lambda: "ID=ubuntu\n")
 
     with pytest.raises(mounts.MountError) as caught:
-        mounts.ensure(SPEC, tmp_path / "root", tmp_path, system="Linux")
+        mounts.ensure(
+            SPEC,
+            tmp_path / "root",
+            data_dir(tmp_path),
+            system="Linux",
+        )
 
     said = str(caught.value)
 
@@ -182,13 +353,13 @@ def test_a_linux_mount_that_is_up_is_left_alone(tmp_path, monkeypatch):
     ran = []
 
     mounts.write_state(
-        mounts.state_file(tmp_path, "laptop"),
+        mounts.state_file(data_dir(tmp_path), "laptop"),
         {"link": remote.build_sftp_arguments(SPEC), "home": "/home/dev"},
     )
     monkeypatch.setattr(mounts, "mount_points", lambda system: {str(root)})
     monkeypatch.setattr(mounts.subprocess, "run", lambda *a, **k: ran.append(a))
 
-    found = mounts.ensure(SPEC, root, tmp_path, system="Linux")
+    found = mounts.ensure(SPEC, root, data_dir(tmp_path), system="Linux")
 
     assert found.root == root
     assert ran == []
@@ -205,14 +376,24 @@ def test_what_sshfs_says_is_what_the_person_is_told(tmp_path, monkeypatch):
     monkeypatch.setattr(mounts.subprocess, "run", lambda *a, **k: Done())
 
     with pytest.raises(mounts.MountError) as caught:
-        mounts.ensure(SPEC, tmp_path / "root", tmp_path, system="Linux")
+        mounts.ensure(
+            SPEC,
+            tmp_path / "root",
+            data_dir(tmp_path),
+            system="Linux",
+        )
 
     assert "Connection reset by peer" in str(caught.value)
 
 
 def test_a_system_with_no_way_to_mount_says_so(tmp_path):
     with pytest.raises(mounts.MountError) as caught:
-        mounts.ensure(SPEC, tmp_path / "root", tmp_path, system="Windows")
+        mounts.ensure(
+            SPEC,
+            tmp_path / "root",
+            data_dir(tmp_path),
+            system="Windows",
+        )
 
     assert "Windows" in str(caught.value)
 
@@ -264,7 +445,12 @@ def test_a_mac_never_mounts_where_other_accounts_can_look(
     )
 
     with pytest.raises(mounts.MountError) as caught:
-        mounts.ensure(SPEC, parent / "laptop", tmp_path, system="Darwin")
+        mounts.ensure(
+            SPEC,
+            parent / "laptop",
+            data_dir(tmp_path),
+            system="Darwin",
+        )
 
     assert "other accounts on this server can open" in str(caught.value)
     assert str(parent) in str(caught.value)
@@ -310,7 +496,12 @@ def test_a_helper_that_reports_a_failure_becomes_an_error(
     )
 
     with pytest.raises(mounts.MountError) as caught:
-        mounts.ensure(SPEC, tmp_path / "m" / "root", tmp_path, system="Darwin")
+        mounts.ensure(
+            SPEC,
+            tmp_path / "m" / "root",
+            data_dir(tmp_path),
+            system="Darwin",
+        )
 
     assert "Operation not permitted" in str(caught.value)
     assert "laptop (dev@laptop.example)" in str(caught.value)
@@ -324,7 +515,7 @@ def test_a_mac_mount_that_is_up_is_answered_from_the_state_file(
     started = []
 
     mounts.write_state(
-        mounts.state_file(tmp_path, "laptop"),
+        mounts.state_file(data_dir(tmp_path), "laptop"),
         {
             "pid": os.getpid(),
             "home": "/home/dev",
@@ -339,7 +530,7 @@ def test_a_mac_mount_that_is_up_is_answered_from_the_state_file(
         lambda *args: started.append(args) or {},
     )
 
-    found = mounts.ensure(SPEC, root, tmp_path, system="Darwin")
+    found = mounts.ensure(SPEC, root, data_dir(tmp_path), system="Darwin")
 
     assert found == mounts.Mounted(root, "/home/dev")
     assert started == []
@@ -357,7 +548,7 @@ def test_a_mount_made_for_another_address_is_replaced(tmp_path, monkeypatch):
     steps = []
 
     mounts.write_state(
-        mounts.state_file(tmp_path, "laptop"),
+        mounts.state_file(data_dir(tmp_path), "laptop"),
         {
             "pid": os.getpid(),
             "home": "/home/dev",
@@ -383,7 +574,7 @@ def test_a_mount_made_for_another_address_is_replaced(tmp_path, monkeypatch):
         or {"pid": 1, "home": "/home/dev"},
     )
 
-    mounts.ensure(moved, root, tmp_path, system="Darwin")
+    mounts.ensure(moved, root, data_dir(tmp_path), system="Darwin")
 
     assert steps == ["stop", "unmount", "new-address.example"]
 
@@ -406,7 +597,7 @@ def test_a_linux_mount_for_another_address_is_remounted(
         return Done()
 
     mounts.write_state(
-        mounts.state_file(tmp_path, "laptop"),
+        mounts.state_file(data_dir(tmp_path), "laptop"),
         {"link": ["old", "arguments"], "home": "/home/old"},
     )
     monkeypatch.setattr(mounts, "mount_points", lambda system: {str(root)})
@@ -414,12 +605,12 @@ def test_a_linux_mount_for_another_address_is_remounted(
     monkeypatch.setattr(mounts.subprocess, "run", run)
     monkeypatch.setattr(mounts, "ask_home", lambda spec: "/home/dev")
 
-    found = mounts.ensure(SPEC, root, tmp_path, system="Linux")
+    found = mounts.ensure(SPEC, root, data_dir(tmp_path), system="Linux")
 
     assert steps == ["fusermount3", "sshfs"]
     assert found == mounts.Mounted(root, "/home/dev")
 
-    kept = mounts.read_state(mounts.state_file(tmp_path, "laptop"))
+    kept = mounts.read_state(mounts.state_file(data_dir(tmp_path), "laptop"))
 
     assert kept["link"] == remote.build_sftp_arguments(SPEC)
 

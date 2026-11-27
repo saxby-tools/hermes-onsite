@@ -59,9 +59,16 @@ SYSTEM_LINUX = "Linux"
 # the mounted files that the repository ignores. Not a cache or a
 # temporary folder either: whatever empties those would reach
 # through the mount the same way.
+#
+# Some set-ups put that home folder inside the Hermes home. Hermes'
+# own container image does. There the place above is unsafe, and
+# `ensure` refuses it. No second place is guessed.
 SHARE_PARTS = (".local", "share")
 MOUNTS_DIR = "mount"
 UNNAMED_PROFILE = "hermes"
+
+# A named profile's folder is <Hermes home>/profiles/<name>.
+PROFILES_DIR = "profiles"
 STATE_DIR = "mount-state"
 HELPER_FILE = "mountd.py"
 
@@ -160,6 +167,9 @@ def default_root(
 
     In the standard folder for a program's own data, so nothing new
     appears at the top of anybody's home folder.
+
+    This only builds the path. `ensure` is what refuses it when the
+    home folder is inside the Hermes home.
     """
 
     if home is None:
@@ -168,6 +178,41 @@ def default_root(
     share = home.joinpath(*SHARE_PARTS)
 
     return share / PLUGIN_ID / MOUNTS_DIR / profile_name(data_dir) / name
+
+
+def hermes_root(data_dir: Path) -> Path:
+    """The folder Hermes keeps everything in, for every profile.
+
+    `data_dir` is <a profile's folder>/plugin-data/onsite. The default
+    profile's folder is that top folder itself. A named profile's is
+    <top folder>/profiles/<name>. Hermes tells the two apart by the
+    same folder name.
+    """
+
+    own = data_dir.parent.parent
+
+    if own.parent.name == PROFILES_DIR:
+        return own.parent.parent
+
+    return own
+
+
+def is_inside(place: Path, folder: Path) -> bool:
+    """Whether `place` is `folder`, or anywhere below it.
+
+    Links are followed first, so a place reached through a link is
+    judged by where it really is. Only the folder above `place` is
+    followed, never `place` itself. It may be a mount whose target
+    sleeps, and asking a dead mount about itself can hang.
+    """
+
+    real = Path(os.path.realpath(place.parent)) / place.name
+    outer = Path(os.path.realpath(folder))
+
+    if real == outer:
+        return True
+
+    return outer in real.parents
 
 
 def state_file(data_dir: Path, name: str) -> Path:
@@ -365,6 +410,16 @@ def open_to_others(spec: TargetSpec, root: Path) -> MountError:
         f"this server can open {root.parent}, and the mount would show "
         "them the target's files. Name a place inside a folder that "
         "only your account can open, or leave `mount` out."
+    )
+
+
+def inside_hermes(spec: TargetSpec, root: Path, hermes: Path) -> MountError:
+    return MountError(
+        f"{spec.label} cannot be mounted at {root}: that is inside the "
+        f"Hermes home, {hermes}. Deleting a profile or removing Hermes "
+        "deletes everything in that folder, and through a mount it "
+        "would delete the target's own files. Set this target's "
+        f"`mount` to a folder outside {hermes} that nothing empties."
     )
 
 
@@ -654,6 +709,22 @@ def ensure_linux(spec: TargetSpec, root: Path, state: Path) -> Mounted:
 # ---- both ---------------------------------------------------------------
 
 
+def take_down(root: Path, state: Path, system: str) -> None:
+    """Unmount `root` and stop what served it. The caller holds the
+    target's lock."""
+
+    if system == SYSTEM_LINUX:
+        unmount_linux(root)
+        return
+
+    stop_helper(read_state(state))
+
+    if is_mounted(root, SYSTEM_MAC):
+        unmount(root, force=True)
+
+    state.unlink(missing_ok=True)
+
+
 def ensure(
     spec: TargetSpec,
     root: Path,
@@ -675,7 +746,19 @@ def ensure(
             f"target's files on {system or 'this system'} yet."
         )
 
+    hermes = hermes_root(data_dir)
+
     with locked(state):
+        # Asked every time, of the default place and of a place the
+        # settings name alike. Hermes deletes a profile by deleting
+        # everything below its folder, and that would go through a
+        # mount into the target's disk. A mount an older version left
+        # there is taken down, so the danger does not outlive it.
+        if is_inside(root, hermes):
+            take_down(root, state, system)
+
+            raise inside_hermes(spec, root, hermes)
+
         if system == SYSTEM_LINUX:
             return ensure_linux(spec, root, state)
 
@@ -694,13 +777,4 @@ def stop(
     state = state_file(data_dir, spec.name)
 
     with locked(state):
-        if system == SYSTEM_LINUX:
-            unmount_linux(root)
-            return
-
-        stop_helper(read_state(state))
-
-        if is_mounted(root, SYSTEM_MAC):
-            unmount(root, force=True)
-
-        state.unlink(missing_ok=True)
+        take_down(root, state, system)
