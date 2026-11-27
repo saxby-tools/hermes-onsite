@@ -86,6 +86,11 @@ const MACHINES_PAGE_TITLE = 'Machines'
 const KIND_SSH = 'ssh'
 const KIND_LOCAL = 'local'
 
+// A sandbox the server makes for one session. Not released. It is
+// set up in config.yaml: the Machines page has no form for one.
+const KIND_ENVIRONMENT = 'environment'
+const ENVIRONMENT_EDIT_NOTE = 'An environment is edited in config.yaml.'
+
 // The same words as LOCAL_LABEL in config.py. Never "this machine":
 // the app is often open on a different computer than Hermes.
 const LOCAL_LABEL = 'Hermes server'
@@ -579,6 +584,12 @@ function stateText(status) {
     return 'ready'
   }
 
+  // An environment is not a machine to connect to. It is ready when
+  // the server's container program answers.
+  if (status.kind === 'environment') {
+    return 'ready'
+  }
+
   return `connected (${status.latency_ms} ms)`
 }
 
@@ -999,6 +1010,27 @@ async function openSessionAt(cwd, title) {
   return true
 }
 
+// Whether a row gets a New session button. The Hermes server has
+// none: its folders open the usual way.
+function opensSessions(row) {
+  if (row.kind === KIND_SSH) {
+    return true
+  }
+
+  return row.kind === KIND_ENVIRONMENT
+}
+
+// A machine has one start folder, so it is filed as one project. Each
+// session of an environment has a folder of its own, and a project
+// for each would fill the app's list.
+async function fileRowUnderProjects(row, cwd) {
+  if (row.kind === KIND_ENVIRONMENT) {
+    return
+  }
+
+  await fileUnderProjects(row.name, cwd)
+}
+
 // One machine in the pane. A machine reached over SSH gets a button
 // that opens a session in its start folder. The app's own picker then
 // starts there, so nobody has to know where the host mounted it.
@@ -1025,7 +1057,7 @@ function PaneMachine({ row }) {
       if (answer?.ok) {
         const title = `${folderName(answer.path)} on ${row.name}`
 
-        await fileUnderProjects(row.name, answer.cwd)
+        await fileRowUnderProjects(row, answer.cwd)
         await openSessionAt(answer.cwd, title)
       } else {
         setMessage(answer?.error || 'That machine could not be opened.')
@@ -1052,7 +1084,7 @@ function PaneMachine({ row }) {
           jsx(Dot, { tone: row.connected ? TONE_UP : TONE_DOWN }),
           jsx('span', { children: row.label }),
           row.default ? jsx('span', { className: TEXT_MUTED, children: '(default)' }) : null,
-          row.kind === KIND_SSH
+          opensSessions(row)
             ? jsx('button', {
                 type: 'button',
                 className: joinClasses(BUTTON_CLASS, 'ml-auto'),
@@ -1234,6 +1266,10 @@ function describeMachine(block) {
     return LOCAL_LABEL
   }
 
+  if (block?.kind === KIND_ENVIRONMENT) {
+    return `sandbox, ${block?.image ?? '?'}`
+  }
+
   return `${block?.user ?? '?'}@${block?.host ?? '?'}`
 }
 
@@ -1411,6 +1447,9 @@ function MachineForm({ form, note, busy, onChange, onSave, onTest, onCancel }) {
 }
 
 function MachineRow({ name, block, isDefault, busy, onEdit, onRemove }) {
+  // The form would save an environment back as a machine over SSH.
+  const noForm = block?.kind === KIND_ENVIRONMENT
+
   return jsxs('div', {
     className: 'flex items-center gap-2',
     'data-onsite-machine': name,
@@ -1429,7 +1468,8 @@ function MachineRow({ name, block, isDefault, busy, onEdit, onRemove }) {
         type: 'button',
         className: BUTTON_CLASS,
         'data-onsite-edit': name,
-        disabled: busy,
+        disabled: busy || noForm,
+        title: noForm ? ENVIRONMENT_EDIT_NOTE : '',
         onClick: onEdit,
         children: 'Edit'
       }),
