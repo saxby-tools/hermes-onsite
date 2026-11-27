@@ -164,6 +164,44 @@ class Runtime:
 
         return OnsiteConfig(default=config.default, targets=targets)
 
+    def gate_for(self, spec: TargetSpec) -> Gate:
+        # Keyed on where the target points, not on its name alone, so
+        # an edited host does not inherit the old host's breaker.
+        key = (spec.name, spec.kind, spec.host, spec.user, spec.port)
+
+        with self._gates_lock:
+            gate = self._gates.get(key)
+
+            if gate is None:
+                gate = Gate(spec)
+                self._gates[key] = gate
+
+            # The breaker is kept and the target is the one read just
+            # now. A key file or a known-hosts file set since the
+            # gate was made would otherwise never reach its probe.
+            gate.spec = spec
+
+            return gate
+
+    def link_problem(self, spec: TargetSpec) -> str:
+        """Why a computer that dials in cannot be reached now, or
+        nothing. A target the server dials has no link to ask about.
+
+        A mount that fails while the link is down fails with whatever
+        the mount program made of it. This is asked then, so the
+        person reads the reason that matters.
+        """
+
+        if not spec.dial_in:
+            return ""
+
+        probe = self.gate_for(spec).check()
+
+        if probe.ok:
+            return ""
+
+        return probe.detail
+
     def mount(self, spec: TargetSpec) -> mounts.Mounted:
         """A target's disk on the host, mounted now if it was not.
 
@@ -189,6 +227,15 @@ class Runtime:
         try:
             found = mounts.ensure(spec, Path(spec.mount), self._data_dir)
         except mounts.MountError as error:
+            down = self.link_problem(spec)
+
+            # Not remembered. The mount is tried again as soon as the
+            # computer has dialed in, with no wait on the server.
+            if down:
+                raise mounts.MountError(
+                    f"{spec.label} cannot be mounted yet: {down}."
+                ) from None
+
             with self._mounts_lock:
                 self._mount_failures[spec.name] = (now, str(error))
 
@@ -361,20 +408,6 @@ class Runtime:
             return
 
         logger.error("%s", problem)
-
-    def gate_for(self, spec: TargetSpec) -> Gate:
-        # Keyed on where the target points, not on its name alone, so
-        # an edited host does not inherit the old host's breaker.
-        key = (spec.name, spec.kind, spec.host, spec.user, spec.port)
-
-        with self._gates_lock:
-            gate = self._gates.get(key)
-
-            if gate is None:
-                gate = Gate(spec)
-                self._gates[key] = gate
-
-            return gate
 
     def plan(
         self,
@@ -558,6 +591,7 @@ class Runtime:
             "target": spec.name,
             "kind": spec.kind,
             "label": spec.label,
+            "dial_in": bool(spec.dial_in),
             "connected": probe.ok,
             "detail": probe.detail,
             "latency_ms": probe.elapsed_ms,
