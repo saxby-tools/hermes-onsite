@@ -765,6 +765,93 @@ test('a project Hermes refuses does not stop the session', { skip: SKIP }, async
   assert.equal(box.querySelector('[role="alert"]'), null)
 })
 
+// An environment: a sandbox the server makes for one session. Not
+// released. Each New session is a folder of its own on the server.
+const SESSIONS = '/host/.local/share/onsite/env/work/web'
+const SESSION_FOLDER = `${SESSIONS}/20261126-231502-9f3a/project`
+
+const WITH_ENVIRONMENT = {
+  ...UP,
+  rows: [
+    ...TWO_MACHINES.rows,
+    {
+      name: 'web',
+      kind: 'environment',
+      label: 'web (sandbox, debian:stable-slim)',
+      connected: true,
+      mount_error: ''
+    }
+  ]
+}
+
+async function openPaneEnvironment() {
+  const made = await setup()
+
+  made.backend.status = WITH_ENVIRONMENT
+  made.backend.routes['/open'] = body => ({
+    ok: true,
+    target: body.target,
+    cwd: SESSION_FOLDER,
+    path: SESSION_FOLDER,
+    session: '20261126-231502-9f3a'
+  })
+
+  await made.settle(made.made.intervals[0])
+
+  const box = await made.mount(made.made.contributions.pane.render())
+
+  return { ...made, box }
+}
+
+test('an environment gets a New session button as a machine does', { skip: SKIP }, async () => {
+  const { box } = await openPaneEnvironment()
+  const buttons = [...box.querySelectorAll('[data-onsite-new-session]')]
+
+  assert.deepEqual(
+    buttons.map(button => button.getAttribute('data-onsite-new-session')),
+    ['laptop', 'web']
+  )
+  assert.match(box.textContent, /web \(sandbox, debian:stable-slim\)/)
+})
+
+test('New session on an environment opens the folder the server made', { skip: SKIP }, async () => {
+  const { box, calls, click, made } = await openPaneEnvironment()
+
+  await click(box.querySelector('[data-onsite-new-session="web"]'))
+
+  const asked = made.requests.filter(([route]) => route === '/open')
+
+  // Only the name is sent. What is cloned is the server's to say.
+  assert.deepEqual(asked.map(([, options]) => options.body), [{ target: 'web' }])
+  assert.deepEqual(sessionCalls(calls), [
+    ['session.create', { cwd: SESSION_FOLDER, cwd_explicit: true }],
+    ['session.title', { session_id: 'runtime-new', title: 'project on web' }]
+  ])
+  assert.deepEqual(calls.opened, [['stored-new', { expectHistory: false }]])
+})
+
+test('a session of an environment is not filed as a project', { skip: SKIP }, async () => {
+  const { box, calls, click } = await openPaneEnvironment()
+
+  await click(box.querySelector('[data-onsite-new-session="web"]'))
+
+  assert.deepEqual(projectCalls(calls), [])
+})
+
+test('an environment that cannot open says why in its row', { skip: SKIP }, async () => {
+  const { backend, box, calls, click } = await openPaneEnvironment()
+
+  backend.routes['/open'] = () => ({
+    ok: false,
+    error: 'https://host.example/you/project.git could not be cloned'
+  })
+
+  await click(box.querySelector('[data-onsite-new-session="web"]'))
+
+  assert.match(box.querySelector('[role="alert"]').textContent, /could not be cloned/)
+  assert.deepEqual(sessionCalls(calls), [])
+})
+
 // The steps the plugin wrote at one console level, with the time each
 // took replaced, because that differs from run to run.
 function stepsAt(logs, level) {
@@ -1165,6 +1252,32 @@ test('the default machine cannot be removed from the page', { skip: SKIP }, asyn
 
   assert.equal(box.querySelector('[data-onsite-remove="mac"]').disabled, true)
   assert.equal(box.querySelector('[data-onsite-remove="laptop"]').disabled, false)
+})
+
+test('an environment is listed, and has no form to be edited in', { skip: SKIP }, async () => {
+  const made = await setup()
+
+  made.backend.routes['/targets'] = () => ({
+    ...SAVED,
+    targets: {
+      ...SAVED.targets,
+      web: { kind: 'environment', image: 'debian:stable-slim' }
+    }
+  })
+
+  const box = await made.mount(made.made.pages[0].children[0].render())
+
+  await made.settle()
+
+  const row = box.querySelector('[data-onsite-machine="web"]')
+  const edit = box.querySelector('[data-onsite-edit="web"]')
+
+  assert.match(row.textContent, /sandbox, debian:stable-slim/)
+  // The form would save it back as a machine reached over SSH.
+  assert.equal(edit.disabled, true)
+  assert.match(edit.title, /config\.yaml/)
+  assert.equal(box.querySelector('[data-onsite-edit="laptop"]').disabled, false)
+  assert.equal(box.querySelector('[data-onsite-remove="web"]').disabled, false)
 })
 
 test('saving keeps the settings the form does not show', { skip: SKIP }, async () => {
