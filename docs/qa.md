@@ -500,13 +500,13 @@ Run these from a clone of the repository, on the host. The rig uses a
 profile named `buster` unless you pass `--profile`, and needs Docker
 and `HERMES_HOME`, as in journey 11.
 
-- [ ] Unit tests: 490 pass and one is skipped.
+- [ ] Unit tests: 504 pass and one is skipped.
 
 ```bash
 uv run --no-project --with pytest --with pillow --with cryptography python -m pytest -q
 ```
 
-- [ ] Desktop tests: 64 pass and none is skipped. They borrow React
+- [ ] Desktop tests: 67 pass and none is skipped. They borrow React
       from a Hermes checkout at `~/.hermes/hermes-agent`, or the
       folder named in `HERMES_SRC`. Without one they are skipped, not
       failed.
