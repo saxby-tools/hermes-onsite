@@ -55,9 +55,11 @@ const SITE_SUMMARY = "A community plugin for the Hermes agent. Open a " +
   "project folder on your own computer and the Hermes that lives on " +
   "your server works in it, with its own approval prompts kept on.";
 
-// Copied as they are. The README and the design page point at these.
+// Copied as they are. The README and the design page point at the
+// brand files. The `shots` component points at the screenshots.
 const PASSTHROUGH = [
   "docs/brand",
+  "docs/screenshots",
 ];
 
 // Everything that is not a page. Markdown in these folders is code,
