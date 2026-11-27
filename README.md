@@ -593,8 +593,9 @@ reading it fails within a few seconds, not forever. On a Linux host
 the mount lets go about twelve seconds after the target stops
 answering. The folder is then empty and reads fail at once, so a
 sleeping laptop cannot hold Hermes up. Either way it works again by
-itself a few seconds after the target is back, as long as the
-desktop app is open on a session in that folder or on the pane.
+itself once the target is back: within seconds while the desktop app
+is in view, and otherwise at the session's next command or file
+edit.
 
 <!-- onsite:notice {"kind": "untested"} -->
 
