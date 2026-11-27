@@ -13,9 +13,11 @@ from __future__ import annotations
 
 from typing import Any
 
+from . import environments
 from . import messages
 from . import mounts
 from .config import ConfigError
+from .config import KIND_ENVIRONMENT
 from .config import KIND_SSH
 from .config import KNOWN_TARGET_KEYS
 from .config import parse_config
@@ -358,8 +360,8 @@ def test_target_payload(runtime, body: Any) -> dict:
     }
 
 
-def find_ssh_target(runtime, body: Any):
-    """The SSH target a request names, or a failure to send back."""
+def find_target(runtime, body: Any):
+    """The target a request names, or a failure to send back."""
 
     name = clean_text(
         body.get("target") if isinstance(body, dict) else "",
@@ -374,7 +376,18 @@ def find_ssh_target(runtime, body: Any):
     if name not in config.targets:
         return None, failure(f"`{name}` is not one of the machines.")
 
-    spec = config.target(name)
+    return config.target(name), None
+
+
+def find_ssh_target(runtime, body: Any):
+    """The SSH target a request names, or a failure to send back."""
+
+    spec, problem = find_target(runtime, body)
+
+    if problem is not None:
+        return None, problem
+
+    name = spec.name
 
     if spec.kind != KIND_SSH:
         return None, failure(
@@ -391,9 +404,38 @@ def read_folder(body: Any) -> str:
     return clean_text(body.get("path"), MAX_CWD_CHARS)
 
 
+def open_environment(runtime, spec) -> dict:
+    """A new session folder in an environment, for a session to be
+    started in. Every call makes one: an environment's sessions do
+    not share a folder.
+
+    Only the environment's name comes from the caller. What is cloned
+    and where is read from the settings on the server."""
+
+    try:
+        session = runtime.open_session(spec)
+    except environments.SandboxError as error:
+        return failure(str(error))
+
+    return {
+        "ok": True,
+        "api_version": API_VERSION,
+        "target": spec.name,
+        "cwd": str(session.start),
+        "path": str(session.start),
+        "session": session.id,
+    }
+
+
 def open_payload(runtime, body: Any) -> dict:
     """Where a folder on a machine is on the host, so a session can be
-    started in it. With no folder named, the machine's start folder."""
+    started in it. With no folder named, the machine's start folder.
+    For an environment, a new session folder."""
+
+    named, _ = find_target(runtime, body)
+
+    if named is not None and named.kind == KIND_ENVIRONMENT:
+        return open_environment(runtime, named)
 
     spec, problem = find_ssh_target(runtime, body)
 
