@@ -59,14 +59,21 @@ description: >-
   screen. While Hermes Desktop is in view, logs in to the session's
   target every five seconds and after each tool call to see that it
   is up, and to every target while its pane is open. Files each target's host key in
-  known_hosts on first contact. May hold a sleep lock on a target
+  known_hosts on first contact. A computer the server cannot reach
+  can dial in: its owner runs one ssh command there, which the
+  plugin prints, and the server's own SSH server then listens on a
+  port on 127.0.0.1 that leads to that computer for as long as the
+  link is up. The plugin opens no port itself. Any account on the
+  server can reach that port, so the computer's host key is filed
+  under a name of its own on first contact and checked on every
+  later one. May hold a sleep lock on a target
   while a command runs. Hermes' own SSH code, which it reuses,
   writes a small file to the target's /tmp for each environment it
   builds, holding the shell's exported variables, functions and
   aliases; the plugin removes it when that environment is closed.
   Writes a few small state files under plugin-data/onsite. The
   mounts are in ~/.local/share/onsite/mount. /run puts a message into the chat, which needs
-  allow_gateway_injection. Serves seven routes to the desktop app
+  allow_gateway_injection. Serves eight routes to the desktop app
   under /api/plugins/onsite. Two write the plugin's own settings and
   one mounts a target's disk. Adds a section to the system prompt that
   names the session's computer. After /onsite moves a session, adds
@@ -90,7 +97,8 @@ readme: true
 platforms: [linux, macos]
 known_issues:
   - "Linux and macOS servers only. Hermes runs on Windows, but this plugin has never been run on a Windows server and refuses to load on one."
-  - "The server has to be able to log in to the user's computer over SSH: on the same network or over a VPN. A computer behind a home router with no VPN is not reachable."
+  - "The server logs in to the user's computer over SSH: on the same network or over a VPN. A computer it cannot reach, such as one behind a home router, can dial in to the server instead, with one ssh command its owner runs and keeps running. That route has been walked in containers only, never from a real laptop behind a real router."
+  - "Dial-in trusts the first thing to answer on a computer's port, as SSH does on first contact, and any account on the server can listen there before the computer has connected. The README says how to check the key on file. A server whose SSH server sends no keepalive can hold a dead link's port for minutes, and the computer cannot dial in again until then. Two lines in sshd_config fix it."
   - "Imports private Hermes modules to reuse Hermes' own SSH, local and screen-driver code: 14 in compat.py and 4 in screenbackend.py. hermes plugins validate lists them as warnings. requires_hermes has an upper bound for that reason, so the plugin stops loading at Hermes 0.24 until it has been run against it."
   - "Needs plugins.isolation in_process (the default): Hermes cannot hand a terminal environment across the plugin-host boundary."
   - "Hermes only runs a session in a folder that exists on the host, so the plugin mounts each target's disk there. A macOS server needs nothing for it. A Linux server needs the sshfs program, and the error names the install line when it is missing. The Linux mount has run in a container only, never on a real Linux server."
