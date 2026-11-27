@@ -124,8 +124,10 @@ Read this before you turn it on.
   screen sharing that asks for a VNC password.
 - **On the server it writes** a few small state files under
   `plugin-data/onsite/`. The mounts are in
-  `~/.local/share/onsite/mount/`. Nothing is added to the top of
-  your home folder, and no file is copied.
+  `~/.local/share/onsite/mount/`, or where you name. A place inside
+  the Hermes home is refused: deleting a profile there would delete
+  your computer's files through the mount. Nothing is added to the
+  top of your home folder, and no file is copied.
 - **Inside Hermes** it adds a terminal backend, one tool, two hooks,
   two slash commands, one CLI command, a section of the system
   prompt and seven routes for the desktop app. Two routes write the
