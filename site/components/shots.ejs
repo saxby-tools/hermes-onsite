@@ -1,0 +1,90 @@
+<%#
+  The screenshots, as a row that scrolls sideways:
+  <!-- onsite:shots /-->
+
+  With no script it is a plain row that scrolls, and each picture is
+  a link to its own file. The script in site/static/onsite.js shows
+  the two step buttons and opens a picture larger, in the <dialog>,
+  in place of following the link. A film has its own controls and
+  loads nothing until the reader presses play.
+
+  The heading comes first and is written like a `##` heading, so
+  home.ejs and page.ejs treat it as one. With no shots, nothing is
+  drawn at all. Its styles are under "Screenshots" in
+  site/static/onsite.css.
+-%>
+<% if (shots.length > 0) { -%>
+<% if (heading) { -%>
+<h2 id="<%= id %>"><%= heading %></h2>
+<% } -%>
+<div class="shots" role="group" aria-label="<%= label %>" data-shots>
+  <ul class="shots__row" data-shots-row>
+<% for (const shot of shots) { -%>
+    <li class="shots__card">
+      <figure class="shots__card-figure">
+<% if (shot.poster) { -%>
+        <video
+          class="shots__card-media"
+          controls
+          playsinline
+          preload="none"
+          poster="<%= shot.poster %>"
+          width="<%= shot.width %>"
+          height="<%= shot.height %>"
+          aria-label="<%= shot.alt %>"
+        >
+          <source src="<%= shot.src %>" type="<%= shot.type %>">
+        </video>
+<% } else { -%>
+        <a class="shots__card-open" href="<%= shot.src %>" data-shots-open>
+          <img
+            class="shots__card-media"
+            src="<%= shot.src %>"
+            alt="<%= shot.alt %>"
+            width="<%= shot.width %>"
+            height="<%= shot.height %>"
+            loading="lazy"
+            decoding="async"
+          >
+        </a>
+<% } -%>
+        <figcaption class="shots__card-caption"><%= shot.caption %></figcaption>
+      </figure>
+    </li>
+<% } -%>
+  </ul>
+  <button
+    class="shots__step shots__step-previous"
+    type="button"
+    aria-label="Previous screenshot"
+    data-shots-step="previous"
+    hidden
+  >
+    <svg class="shots__step-icon" viewBox="0 0 16 16" aria-hidden="true">
+      <path d="M10 3 5 8l5 5" />
+    </svg>
+  </button>
+  <button
+    class="shots__step shots__step-next"
+    type="button"
+    aria-label="Next screenshot"
+    data-shots-step="next"
+    hidden
+  >
+    <svg class="shots__step-icon" viewBox="0 0 16 16" aria-hidden="true">
+      <path d="m6 3 5 5-5 5" />
+    </svg>
+  </button>
+  <dialog
+    class="shots__dialog"
+    aria-label="Screenshot, larger"
+    data-shots-dialog
+  >
+    <form class="shots__dialog-bar" method="dialog">
+      <button class="shots__dialog-close">Close</button>
+    </form>
+    <img class="shots__dialog-image" alt="" data-shots-large>
+    <p class="shots__dialog-caption" data-shots-words></p>
+  </dialog>
+</div>
+<% } -%>
