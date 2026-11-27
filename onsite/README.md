@@ -149,11 +149,11 @@ Read this before you turn it on.
 - Servers on Linux and macOS only. It refuses to load on a Windows
   server. The Linux mount has run in a container, never on a real
   Linux server.
-- Hermes in its own Docker image needs four things set up by hand
-  before your computer's files show in the app: `sshfs` in the
-  image, the FUSE device, a folder for the mounts and one Hermes
-  setting. The repository's README lists them under "Hermes in
-  Docker".
+- Hermes in its own Docker image needs five things set up by hand
+  before your computer's files show in the app and can be edited:
+  `sshfs` in the image, the FUSE device, a folder for the mounts and
+  two Hermes settings. The repository's README lists them under
+  "Hermes in Docker".
 - When your computer sleeps, the work stops until it is back.
 - A real sleeping laptop, a Mac as a target and the phone apps have
   not been tested.
