@@ -1662,6 +1662,227 @@ main {
     }
 }
 
+/* ---- Screenshots ---------------------------------------------------- */
+
+/* Real screenshots, in one row that scrolls sideways and stops on
+ * each card, the way Hermes Desktop shows a plugin's screenshots.
+ * Every card is the same height and as wide as its own picture, so
+ * wide and tall pictures sit side by side. The cards are dark in
+ * both themes, like the code blocks, because the app is. With no
+ * script it is still a row that scrolls; the script only shows the
+ * two step buttons and opens a picture larger. */
+
+.shots {
+    --shots-height: clamp(12rem, 40vw, 20rem);
+
+    position: relative;
+    margin: 0 0 var(--space-4);
+}
+
+/* The row is a size container so that a card can be told "no wider
+ * than the row", which a percentage cannot say here. */
+.shots__row {
+    display: flex;
+    gap: var(--space-3);
+    margin: 0;
+    padding: 0 0 var(--space-2);
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    list-style: none;
+    scroll-snap-type: x mandatory;
+    container-type: inline-size;
+}
+
+.shots__card {
+    flex: none;
+    margin: 0;
+    scroll-snap-align: start;
+}
+
+.prose .shots__row {
+    max-width: none;
+    margin: 0;
+    padding-left: 0;
+}
+
+.prose .shots__card {
+    margin: 0;
+}
+
+.shots__card-figure {
+    margin: 0;
+}
+
+.shots__card-open {
+    display: block;
+    cursor: zoom-in;
+}
+
+/* A picture or a film. The height is fixed and the width follows
+ * the picture's shape. One that would be wider than the row, or
+ * narrower than a caption needs, is fitted inside the dark card. */
+.shots__card-media {
+    display: block;
+    width: auto;
+    min-width: 12rem;
+    max-width: 100cqi;
+    height: var(--shots-height);
+    border: 1px solid var(--color-line);
+    background: var(--color-code);
+    object-fit: contain;
+}
+
+/* The caption takes the card's width and never sets it. Zero wide
+ * when the browser sizes the card, then stretched to fill it. */
+.shots__card-caption {
+    width: 0;
+    min-width: 100%;
+    margin-top: var(--space-2);
+    color: var(--color-text-muted);
+    font-family: var(--font-plate);
+    font-size: var(--size-small);
+    font-style: italic;
+    line-height: 1.35;
+}
+
+/* The step buttons sit over the two ends of the row, level with the
+ * middle of the pictures. They are hidden until the script runs, and
+ * stay hidden when every card already fits. */
+.shots__step {
+    position: absolute;
+    top: calc(var(--shots-height) / 2);
+    display: grid;
+    place-items: center;
+    width: 2.5rem;
+    height: 2.5rem;
+    padding: 0;
+    border: 1px solid var(--color-field-muted);
+    border-radius: var(--radius-control);
+    background: var(--color-field);
+    color: var(--color-field-text);
+    cursor: pointer;
+    transform: translateY(-50%);
+    transition:
+        background var(--motion-fast) var(--motion-ease),
+        opacity var(--motion-fast) var(--motion-ease);
+}
+
+.shots__step[hidden] {
+    display: none;
+}
+
+.shots__step-previous {
+    left: var(--space-2);
+}
+
+.shots__step-next {
+    right: var(--space-2);
+}
+
+.shots__step:hover {
+    background: var(--color-field-deep);
+}
+
+/* At an end of the row. It keeps its place and its focus, and says
+ * so to a screen reader; pressing it does nothing. */
+.shots__step[aria-disabled="true"] {
+    opacity: 0.35;
+    cursor: default;
+}
+
+.shots__step-icon {
+    width: 1rem;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+}
+
+/* A finger swipes the row. On a phone the buttons would only cover
+ * a good part of each picture, so they stay away. */
+@media (pointer: coarse) {
+    .shots__step {
+        display: none;
+    }
+}
+
+/* The ring goes inside the picture, where the row cannot clip it. */
+.shots :focus-visible {
+    outline-color: var(--color-signal);
+    outline-offset: -2px;
+}
+
+/* One picture, larger. The browser centres a <dialog>, traps the
+ * keyboard in it and closes it on Escape. */
+.shots__dialog {
+    max-width: calc(100vw - 2 * var(--gutter));
+    max-height: calc(100dvh - 2 * var(--gutter));
+    padding: 0;
+    border: 1px solid var(--color-line);
+    background: var(--color-code);
+    color: var(--color-code-text);
+}
+
+/* `--color-code`, seen through. Some browsers pass no tokens to a
+ * backdrop, so the colour is written out. */
+.shots__dialog::backdrop {
+    background: rgb(0 0 58 / 0.85);
+}
+
+.shots__dialog-bar {
+    display: flex;
+    justify-content: flex-end;
+    padding: var(--space-2);
+    border-bottom: 1px solid var(--color-field-deep);
+}
+
+.shots__dialog-close {
+    padding: 0.25rem 0.5rem;
+    border: 1px solid var(--color-code-muted);
+    border-radius: var(--radius-control);
+    background: var(--color-code);
+    color: var(--color-code-text);
+    font-family: var(--font-display);
+    font-size: var(--size-label);
+    font-weight: 500;
+    letter-spacing: var(--track);
+    line-height: 1.2;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: background var(--motion-fast) var(--motion-ease);
+}
+
+.shots__dialog-close:hover {
+    background: var(--color-field-deep);
+}
+
+/* As large as the window allows, with room left for the bar above
+ * and the caption below. */
+.shots__dialog-image {
+    width: auto;
+    max-width: 100%;
+    height: auto;
+    max-height: calc(100dvh - 10rem);
+    margin: 0 auto;
+    cursor: zoom-out;
+}
+
+.shots__dialog-caption,
+.prose .shots__dialog-caption {
+    max-width: none;
+    margin: 0;
+    padding: var(--space-2) var(--space-3);
+    color: var(--color-code-muted);
+    font-size: var(--size-small);
+}
+
+/* A step to the next card glides, unless the reader asked for less
+ * motion. The script leaves the speed to this rule. */
+@media (prefers-reduced-motion: no-preference) {
+    .shots__row {
+        scroll-behavior: smooth;
+    }
+}
+
 /* ---- Footer --------------------------------------------------------- */
 
 .foot {
