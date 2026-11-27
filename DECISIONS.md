@@ -1238,6 +1238,87 @@ with a mount in the real app.
 - **Reverse.** Remove the Logging section and its callers from the
   desktop file.
 
+### 63. No mount inside the Hermes home, and no second default
+
+Nov. 26, 2026. Entry 60 moved the mounts out of the Hermes home. The
+move did not hold everywhere.
+
+- **What was seen.** In the official image,
+  `nousresearch/hermes-agent:v0.23.2`, a mount for the profile
+  `buster` came out at
+  `/opt/data/profiles/buster/home/.local/share/onsite/mount/buster/laptop`.
+  That is inside the profile's own folder. The default profile's
+  mount was at `/opt/data/.local/share/onsite/mount/data/laptop`,
+  inside the Hermes home.
+- **Why.** The default place is built from the home folder of the
+  account Hermes runs as. The image makes that account with the
+  home folder `/opt/data`, which is the Hermes home, and its start
+  scripts set `HOME` to it. For a named profile, Hermes in a
+  container gives the helper processes a `HOME` of
+  `<profile folder>/home` (`get_subprocess_home` in
+  `hermes_constants.py`). The same happens on any server where
+  somebody sets `TERMINAL_HOME_MODE` to `profile`.
+- **The danger, read from Hermes' source.** Deleting a profile ends
+  in `shutil.rmtree` on the profile's folder
+  (`hermes_cli/profiles.py`, `hermes_cli/profiles_remove.py`).
+  Python's `rmtree` does not stop where a mounted disk begins. With
+  a mount up, it would delete the target's own files. Removing
+  Hermes with its data does the same to the whole Hermes home.
+- **Pick.** `mounts.ensure` refuses any place inside the Hermes
+  home. The check is the same for the default place and for a place
+  the settings name. The error names the place and the Hermes home,
+  and says to set the target's `mount`. Nothing is made at the
+  place first.
+- **Why no second default.** A fallback was looked for and not
+  found. The account's home folder in the password database is
+  `/opt/data` in the image too. `/mnt` and `/var/lib` need root.
+  `/tmp` and cache folders get emptied, which entry 60 ruled out.
+  Any place the plugin guessed in a container would be one the
+  owner of the container did not pick and may not keep. One rule
+  and one error are easier to trust than a list of places tried in
+  order.
+- **A mount that is already there.** The refusal also takes down a
+  mount found at the refused place, and stops its helper. A mount
+  an older cut left inside a profile would otherwise stay up, with
+  the danger still live. Nothing on the target changes. A mount
+  that is busy can refuse to come down. The error is the same then.
+- **How "inside" is judged.** The Hermes home is worked out from
+  the plugin's data folder: two folders up, and two more when the
+  folder above that is named `profiles`. Hermes tells a named
+  profile from the default one the same way. Links are followed
+  first, in the folder above the mount. The mount's own folder is
+  not asked, because a mount whose target sleeps can hang.
+- **Cost.** In the Docker image there is no default place at all.
+  The person who runs the container makes a folder outside
+  `/opt/data` and names it in `mount`. A Hermes home whose own path
+  ends in `profiles/<name>` is read as a named profile, so its
+  grandparent folder is closed to mounts as well. On a disk that
+  ignores case, a `mount` typed with the wrong case is not caught.
+- **Checked.** Unit tests cover a home folder that is the Hermes
+  home, one inside a profile, a named place in either, a place
+  reached through a link, and a place beside the Hermes home whose
+  name starts the same way. In a throwaway container from the
+  official image, as the image's own account: both unsafe places
+  were refused and no folder was made, and
+  `/mnt/onsite/laptop` mounted the stand-in laptop and came down
+  again.
+- **Not checked.** Nobody has read the new error in the desktop
+  app. The take-down of an older mount ran against stand-ins only.
+  The macOS route was not run in a set-up with `HOME` inside the
+  Hermes home. A folder at `/mnt/onsite` in a container is gone
+  when the container is replaced, unless it is on a volume, and
+  that was not tried.
+- **Found on the way.** In the image, the default profile's
+  processes run with `HOME=/opt/data` and a named profile's helper
+  with `HOME` inside the profile. With `TERMINAL_HOME_MODE` set to
+  `profile` on a plain server, the agent's half and the desktop
+  half of one profile could build different default places. Not
+  fixed here. Both are refused or both are safe, never mounted
+  inside.
+- **Reverse.** Remove the check at the top of `ensure` and
+  `inside_hermes`. Do not, unless Hermes stops deleting a profile
+  by walking its folder.
+
 ## Open decisions from the brief
 
 | # | Decision | What the build did |
