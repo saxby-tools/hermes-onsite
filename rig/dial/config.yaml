@@ -1,0 +1,27 @@
+model:
+  provider: custom
+  default: stub
+  base_url: http://127.0.0.1:11499/v1
+  api_key: stub
+  context_length: 131072
+_config_version: 53
+telemetry:
+  shared_metrics:
+    enabled: false
+    send: false
+    offer_version: 2
+approvals:
+  mode: manual
+terminal:
+  backend: onsite
+plugins:
+  enabled:
+    - onsite
+  entries:
+    onsite:
+      allow_gateway_injection: true
+      settings:
+        default: server
+        targets:
+          server:
+            kind: local
