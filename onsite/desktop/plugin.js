@@ -52,6 +52,13 @@ const COPIED_MS = 1500
 const TITLE_TRIES = 50
 const TITLE_TAKEN = /already in use/i
 
+// Where the app keeps its "show every profile's sessions" switch.
+// The plugin SDK has no call that reads it.
+const ALL_PROFILES_KEY = 'hermes.desktop.showAllProfiles'
+
+// The name Hermes gives the profile that has no name of its own.
+const DEFAULT_PROFILE = 'default'
+
 // Shown on a proposed command when the host will not let `/run` hand
 // it to the agent. The command is the one the README gives.
 const RUN_OFF_NOTE =
@@ -915,6 +922,47 @@ async function titleSession(sessionId, title) {
   throw refusal
 }
 
+// Whether the app's session list shows every profile. Off unless the
+// person turned it on, which is also what the app assumes.
+function showsAllProfiles() {
+  try {
+    return globalThis.localStorage?.getItem(ALL_PROFILES_KEY) === 'true'
+  } catch {
+    return false
+  }
+}
+
+// How the app is asked to open a session the plugin just made.
+//
+// Seen in Hermes Desktop 0.23.2. On a profile other than the default,
+// with the session list showing that profile alone, the app switches
+// to the default profile and back while it opens a session. Each
+// switch empties the file tree, and the tree only fills again when
+// the folder or the connection changes. A second session in the same
+// folder was left with a tree that loaded forever.
+//
+// The app does not make that switch while its list shows every
+// profile, and naming the profile here with `keepAllProfilesScope`
+// turns that view on. So on a named profile the view is turned on,
+// which is the one thing that keeps the tree working. Everywhere
+// else the view is left as the person had it.
+function openingIn(profile) {
+  const how = { expectHistory: false }
+
+  if (profile === '') {
+    return how
+  }
+
+  how.profile = profile
+  how.keepAllProfilesScope = true
+
+  if (profile === DEFAULT_PROFILE) {
+    how.keepAllProfilesScope = showsAllProfiles()
+  }
+
+  return how
+}
+
 // Starts a new session in a folder on the host, the way Hermes' own
 // chat plugin does. The folder is where the machine's disk is mounted
 // on the host, so the session runs in the real folder on the machine,
@@ -938,8 +986,12 @@ async function openSessionAt(cwd, title) {
 
   await titleSession(made.session_id, title)
 
-  await logged(LOG_STEP, 'app openSession', made.stored_session_id, () =>
-    sdk.host.openSession(made.stored_session_id, { expectHistory: false })
+  const how = openingIn(profile)
+
+  const asked = { session: made.stored_session_id, ...how }
+
+  await logged(LOG_STEP, 'app openSession', asked, () =>
+    sdk.host.openSession(made.stored_session_id, how)
   )
 
   logAppViewAfterOpen()
