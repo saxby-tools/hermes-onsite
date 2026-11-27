@@ -316,6 +316,17 @@ and then the folder, "…/work/app".
 
 <!-- /onsite:screen -->
 
+### Slideshow
+
+Real screenshots of the app, in one row that scrolls sideways, the
+way Hermes Desktop shows a plugin's screenshots. Every card is the
+same height and as wide as its own picture, and dark in both themes.
+Each has a caption. A click opens the picture larger. The pictures
+and their captions are listed in `screenshots/shots.json`. While that
+list is empty, nothing is drawn, here or on any other page.
+
+<!-- onsite:shots {"heading": false} /-->
+
 ## Writing pages
 
 Every page is a Markdown file that must read plainly on GitHub. The
@@ -330,5 +341,5 @@ the catalog entry pins.
 | Asset | File | The catalog's rule |
 | --- | --- | --- |
 | `image` | `docs/brand/banner.png` | 2 to 1, here 1200 by 600. The listing lays the title over its left side, so the plate is on the right. The left half is paper, because the catalog draws a flat blue halftone for entries with no picture |
-| `screenshots` | none yet | Up to six. They wait for a person at the real clients |
+| `screenshots` | none yet; they go in `docs/screenshots/` | Up to six. They wait for a person at the real clients |
 | README | `README.md` | Shown as Markdown. Raw HTML is dropped, so it uses none |
