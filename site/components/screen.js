@@ -31,6 +31,7 @@ const SCREENS = {
   "run-card": "Hermes Desktop",
   "machines": "Hermes Desktop: Settings",
   "machine-form": "Hermes Desktop: Settings",
+  "dial-in": "Hermes Desktop: Settings",
 };
 
 // ---- Screen -----------------------------------------------------------

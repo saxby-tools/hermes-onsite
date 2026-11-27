@@ -1,0 +1,53 @@
+<div class="ui ui-settings">
+  <p class="ui__title">Machines</p>
+  <div class="ui__machine">
+    <span>
+      <strong>laptop</strong>
+      <span class="ui__quiet">you, dials in on port 24817</span>
+    </span>
+    <span class="ui__line">
+      <span class="ui__button">Connect</span>
+      <span class="ui__button">Edit</span>
+      <span class="ui__button">Remove</span>
+    </span>
+  </div>
+  <div class="ui__card">
+    <p class="ui__card-top">
+      <span>
+        <strong>Connect laptop</strong>
+        <span class="ui__dot ui__dot-bad"></span>
+        Waiting: it has not connected to this server, or its link
+        dropped. Nothing answers on port 24817.
+      </span>
+      <span class="ui__button">Close</span>
+    </p>
+    <p class="ui__card-top">
+      <span>
+        1. On laptop, run this in a terminal and leave it running.
+        That machine must be able to log in to the server over SSH.
+      </span>
+      <span class="ui__button">Copy</span>
+    </p>
+    <p class="ui__code">
+      ssh -N -o ExitOnForwardFailure=yes -o ConnectTimeout=10
+      -o ServerAliveInterval=15 -o ServerAliveCountMax=3
+      -o ControlPath=none -R 127.0.0.1:24817:127.0.0.1:22
+      you@server.example
+    </p>
+    <p class="ui__card-top">
+      <span>
+        2. To keep it running after a restart. That machine runs
+        <span class="ui__select">Linux</span>
+      </span>
+    </p>
+    <p class="ui__card-top">
+      <span>
+        3. Optional. So that machine's key can hold the link and do
+        nothing else on the server, put this in front of its line in
+        your account's authorized_keys file on the server, then a
+        space.
+      </span>
+      <span class="ui__button">Copy</span>
+    </p>
+  </div>
+</div>
