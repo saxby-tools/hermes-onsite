@@ -500,7 +500,7 @@ Run these from a clone of the repository, on the host. The rig uses a
 profile named `buster` unless you pass `--profile`, and needs Docker
 and `HERMES_HOME`, as in journey 11.
 
-- [ ] Unit tests: 489 pass and one is skipped.
+- [ ] Unit tests: 490 pass and one is skipped.
 
 ```bash
 uv run --no-project --with pytest --with pillow --with cryptography python -m pytest -q
