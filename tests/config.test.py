@@ -177,3 +177,170 @@ def test_screen_settings_are_written_only_when_they_differ():
     assert "screen_port" not in config.target_to_settings(plain)
     assert config.target_to_settings(custom)["screen"] == "sharing"
     assert config.target_to_settings(custom)["screen_port"] == 5901
+
+
+# ---- environments ----------------------------------------------------
+
+
+def with_environment(**block) -> dict:
+    settings = {"kind": "environment", "image": "debian:stable-slim"}
+    settings.update(block)
+
+    return {
+        "default": "mac",
+        "targets": {"web": settings, "mac": {"kind": "local"}},
+    }
+
+
+def problems_of(settings: dict) -> str:
+    with pytest.raises(config.ConfigError) as caught:
+        config.parse_config(settings)
+
+    return str(caught.value)
+
+
+def test_an_environment_needs_only_an_image():
+    web = config.parse_config(with_environment()).target("web")
+
+    assert web.kind == config.KIND_ENVIRONMENT
+    assert web.image == "debian:stable-slim"
+    assert web.repository == ""
+    assert web.setup == ""
+    assert web.env == ()
+    assert web.workspace == ""
+    assert web.label == "web (sandbox, debian:stable-slim)"
+
+
+def test_an_environment_has_no_network_until_it_is_given_one():
+    closed = config.parse_config(with_environment()).target("web")
+    opened = config.parse_config(
+        with_environment(network=True),
+    ).target("web")
+
+    assert closed.network is False
+    assert opened.network is True
+
+
+def test_an_environment_reads_every_setting_of_its_own():
+    web = config.parse_config(with_environment(
+        repository="https://host.example/you/project.git",
+        setup="npm ci\n",
+        env={"NODE_ENV": "development", "PORT": 3000},
+        workspace="/srv/onsite/web/",
+    )).target("web")
+
+    assert web.repository == "https://host.example/you/project.git"
+    assert web.setup == "npm ci"
+    assert web.env == (("NODE_ENV", "development"), ("PORT", "3000"))
+    assert web.workspace == "/srv/onsite/web"
+
+
+def test_an_environment_with_no_image_is_named():
+    settings = with_environment()
+
+    del settings["targets"]["web"]["image"]
+
+    assert "`web.image` is required for an environment" in problems_of(
+        settings
+    )
+
+
+@pytest.mark.parametrize("image", ["--privileged", "a b", "", 7])
+def test_an_image_that_could_be_read_as_an_option_is_refused(image):
+    assert "`web.image`" in problems_of(with_environment(image=image))
+
+
+@pytest.mark.parametrize("repository", [
+    "https://host.example/you/project.git",
+    "ssh://git@host.example/you/project.git",
+    "git@host.example:you/project.git",
+    "/srv/git/project.git",
+])
+def test_a_repository_can_be_named_four_ways(repository):
+    web = config.parse_config(
+        with_environment(repository=repository),
+    ).target("web")
+
+    assert web.repository == repository
+
+
+@pytest.mark.parametrize("repository", [
+    "--upload-pack=touch /tmp/x",
+    "ext::sh -c id",
+    "http://host.example/you/project.git",
+    "project",
+    "https://host.example/a b",
+    7,
+])
+def test_a_repository_git_could_misread_is_refused(repository):
+    assert "`web.repository`" in problems_of(
+        with_environment(repository=repository),
+    )
+
+
+@pytest.mark.parametrize("env", [
+    ["A=1"],
+    {"1A": "x"},
+    {"A B": "x"},
+    {"A": ["x"]},
+    {"A": True},
+])
+def test_variables_that_are_not_plain_are_refused(env):
+    assert "`web.env" in problems_of(with_environment(env=env))
+
+
+@pytest.mark.parametrize("workspace", ["sessions", "/", 7])
+def test_a_workspace_must_be_a_full_path_and_not_the_root(workspace):
+    assert "`web.workspace`" in problems_of(
+        with_environment(workspace=workspace),
+    )
+
+
+def test_a_folder_rule_on_an_environment_is_refused():
+    found = problems_of(with_environment(prefixes=["/srv/work"]))
+
+    assert "`web.prefixes` is not for an environment" in found
+
+
+def test_an_environment_setting_on_a_machine_is_refused():
+    settings = with_environment()
+
+    settings["targets"]["mac"]["image"] = "debian:stable-slim"
+    settings["targets"]["mac"]["network"] = True
+
+    found = problems_of(settings)
+
+    assert "`mac.image` is only for an environment" in found
+    assert "`mac.network` is only for an environment" in found
+
+
+def test_an_environment_cannot_be_the_default():
+    settings = with_environment()
+
+    settings["default"] = "web"
+
+    assert "`default` names `web`, an environment" in problems_of(settings)
+
+
+def test_an_environment_is_written_back_as_it_was_read():
+    block = {
+        "kind": "environment",
+        "image": "debian:stable-slim",
+        "repository": "/srv/git/project.git",
+        "setup": "make deps",
+        "network": True,
+        "env": {"A": "1"},
+        "workspace": "/srv/onsite/web",
+    }
+    parsed = config.parse_config(with_environment(**block))
+
+    assert config.target_to_settings(parsed.target("web")) == block
+
+
+def test_an_environment_left_plain_is_written_plain():
+    parsed = config.parse_config(with_environment())
+
+    assert config.target_to_settings(parsed.target("web")) == {
+        "kind": "environment",
+        "image": "debian:stable-slim",
+    }
