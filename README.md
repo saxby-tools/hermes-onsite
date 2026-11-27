@@ -394,7 +394,7 @@ plugins:
 | `path` | ssh | `interactive` (default) or `none`. See below. |
 | `inhibit_sleep` | ssh | Default true. See below. |
 | `connect_timeout` | ssh | Seconds. Default 3. |
-| `mount` | ssh | The folder on the host where the target's disk is mounted. Default: `~/.local/share/onsite/mount/<profile>/<name>` in the home folder of the account Hermes runs as. |
+| `mount` | ssh | The folder on the host where the target's disk is mounted. Default: `~/.local/share/onsite/mount/<profile>/<name>` in the home folder of the account Hermes runs as. A place inside the Hermes home is refused. See [A target's files on the host](#a-targets-files-on-the-host). |
 | `start` | ssh | The folder on the target a new session opens in. A full path. Default: the folder a login there lands in, your home folder. |
 | `screen` | ssh | How its screen is reached: `auto` (default), `driver` or `sharing`. See [Screen control](#screen-control-on-a-target). |
 | `screen_port` | ssh | The port its screen sharing listens on. Default 5900. |
@@ -466,11 +466,27 @@ never changes a folder that is.
 
 The mounts are kept out of the Hermes home on purpose. Deleting a
 profile deletes everything under its folder, and that would reach
-through a mount into the target's own files. For the same reason,
+through a mount into the target's own files. So onsite refuses to
+mount anywhere inside the Hermes home, at the default place or at
+one you name. The Hermes home is the folder that holds every
+profile, `~/.hermes` on most set-ups. For the same reason,
 do not name a mount place in a folder that gets emptied, such as a
 cache or a temporary folder, or inside a git repository. Take a
 mount down with `hermes onsite mount --stop` before you delete the
 folder it is in.
+
+**When there is no default place.** On some set-ups the home folder
+of the account Hermes runs as is inside the Hermes home. Hermes'
+own Docker image is one. Its home folder is `/opt/data`, which is
+the Hermes home, and a named profile gets a home folder inside its
+own profile folder. The default place would then be inside the
+Hermes home. onsite does not use it and does not guess another. The
+mount fails, and the message names both folders. Make a folder
+outside the Hermes home that the account Hermes runs as can write
+to, such as `/mnt/onsite`, and name a place in it with `--mount` or
+the `mount` setting: `/mnt/onsite/laptop`. If an older version of
+onsite left a mount inside the Hermes home, the same check takes it
+down.
 
 **Where a new session starts.** In the folder a login on the target
 lands in, which is your home folder there. The plugin asks the
