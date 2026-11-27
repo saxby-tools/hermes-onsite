@@ -47,7 +47,11 @@ The steps are in the README, under [Install](../README.md#install)
 and [Set up](../README.md#set-up).
 
 One thing has to be true of your own computer: the server must be
-able to log in to it over SSH. That is part of the same set-up.
+able to log in to it over SSH. That is part of the same set-up. If
+the server cannot reach your computer at all, as with a laptop
+behind a home router, your computer can connect to the server by
+itself. See
+[A computer the server cannot reach](#a-computer-the-server-cannot-reach).
 
 You can tell it is ready by looking at the bottom right corner of
 Hermes Desktop. A small chip there names a computer.
@@ -257,7 +261,8 @@ Click **Add a machine** and fill in the form.
 <!-- onsite:screen {"shows": "machine-form"} -->
 
 The form for a machine. From the top: "Name", filled with "laptop".
-"Where it is", set to "Another machine, over SSH". "Address", filled
+"Where it is", set to "Another machine, which the server can log in
+to". "Address", filled
 with "laptop.example". "Log in as", filled with "you". "Port (leave
 empty for 22)", empty. "Key file (leave empty to use your SSH
 setup)", empty. "Its screen is reached by", set to "Hermes' driver if
@@ -271,7 +276,7 @@ three buttons: Save, Test connection and Cancel.
 | Field | What to put in it |
 | --- | --- |
 | Name | A short name you will recognise, such as "laptop". Small letters, digits and hyphens only, starting with a letter. You cannot change it later. |
-| Where it is | "Another machine, over SSH" for any computer but the server. The other choice, "The machine Hermes runs on", is the server itself. |
+| Where it is | "Another machine, which the server can log in to" for a computer the server can reach. "Another machine, which connects to the server by itself" is for one it cannot: see [A computer the server cannot reach](#a-computer-the-server-cannot-reach). "The machine Hermes runs on" is the server itself. |
 | Address | The name or address the server uses to reach this computer. |
 | Log in as | Your user name on that computer. |
 | Port | Leave it empty unless you were told a number. |
@@ -292,6 +297,56 @@ you typed it and saves nothing. You get one of these answers:
 - A line that names a field, such as "`laptop.host` is required for
   an ssh target". Fill that field in.
 
+### A computer the server cannot reach
+
+A laptop behind a home router is out of the server's reach. It can
+still connect to the server by itself, and work the same way after
+that. Your computer needs its own SSH server on, and it must be able
+to log in to the server over SSH. The person who runs your server
+can tell you both. The README has the details, under
+[A computer the server cannot reach](../README.md#a-computer-the-server-cannot-reach).
+
+Click **Add a machine**. Under "Where it is" pick "Another machine,
+which connects to the server by itself". The form then asks for two
+things: "Your account on that machine", and "This server, as that
+machine logs in to it over SSH", such as `you@server.example`. If the
+app itself reaches the server over SSH, the second is filled in for
+you. Click **Save**. The steps to connect it open at once.
+
+<!-- onsite:screen {"shows": "dial-in"} -->
+
+The Machines page after a save. A row reads "laptop", "you, dials in
+on port 24817", with three buttons: Connect, Edit and Remove. Under
+it is a box titled "Connect laptop", with a red dot and the words
+"Waiting: it has not connected to this server, or its link dropped.
+Nothing answers on port 24817.", and a Close button. Then step 1:
+"On laptop, run this in a terminal and leave it running. That
+machine must be able to log in to the server over SSH.", a Copy
+button and one long command that starts "ssh -N". Then step 2, "To
+keep it running after a restart. That machine runs", with a choice
+set to "Linux". Then step 3, which starts "Optional. So that
+machine's key can hold the link and do nothing else on the server",
+with a Copy button.
+
+<!-- /onsite:screen -->
+
+1. Click **Copy** beside step 1. Open a terminal on that computer,
+   paste the command and press Enter. The first time, it asks
+   whether to trust the server. Type `yes`. Leave the terminal open.
+2. Look at the page again. Within a few seconds the dot turns green
+   and the words change to "Connected", with a time. You click
+   nothing.
+3. Click the chip, then **New session** beside the computer, as in
+   [Start work on your computer](#start-work-on-your-computer).
+
+The link lasts as long as that command runs. Step 2 on the page
+shows how to keep it running after the computer restarts: a file to
+save there and the lines that turn it on, each with a Copy button.
+onsite does not put the file there for you. Step 3 is for the person
+who runs your server.
+
+**Connect** beside the computer opens the steps again at any time.
+
 ### Change or remove one
 
 **Edit** opens the same form. **Remove** takes the computer off the
@@ -306,6 +361,10 @@ computer first.
 | You see | It means | Do this |
 | --- | --- | --- |
 | A red dot on the chip | The computer is asleep, off or off the network. | Wake it. Work picks up by itself within about 10 seconds. |
+| A red dot, and "not connected" when you rest the pointer on the chip | The computer connects to the server by itself, and it is not connected now. The words after it say why. | If they say it "has not connected to this server, or its link dropped", run its command on that computer again. Open Machines and click Connect to see it. If they say "its link is up but it does not answer", wake the computer. |
+| A line under a machine in the pane that starts "Not connected:" | The same, for a computer you are not working on right now. | The same. |
+| The command on your computer says "remote port forwarding failed" | The server still holds that computer's place from the last time it was connected. | Leave the command to try again, or wait a minute and run it again. If it goes on for more than a few minutes, tell the person who runs your server. The README says what to set there. |
+| The steps say "something else answers on port" and a number | What answers is not the computer that first connected under that name. onsite sent it nothing. | Tell the person who runs your server. If you set that computer up afresh, they clear its old key. |
 | Hermes says a command has "no exit status" | The link dropped while the command was running. It may have finished or not. Hermes will not run it twice by itself. | Check the result on your computer, then tell Hermes what you found. |
 | "onsite: not set up" | onsite is off, has no computers, has a setting it cannot read or is not selected on the server, or the app could not reach the server. | Rest the pointer on the chip to read which. Open Machines and add a computer, or ask the person who runs your server. "Set up but not in use" is step 2 of [Set up](../README.md#set-up). |
 | A message that names a profile, such as: This chat belongs to the "home" profile. The app asked the "work" profile, which has no onsite plugin enabled. | The app is asking a different Hermes profile than the one this chat belongs to. | Pick the profile the message names, in the Sessions tab. |
@@ -347,6 +406,10 @@ for.
 
 A laptop that really falls asleep has not been tried. The tests cut
 the network link, which is not quite the same.
+
+A computer that connects to the server by itself has been tried
+between test computers only. No real laptop behind a real router has
+done it, and nobody has used the Connect steps inside the real app.
 
 <!-- /onsite:notice -->
 
