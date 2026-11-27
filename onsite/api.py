@@ -11,7 +11,6 @@ This module imports nothing from Hermes.
 
 from __future__ import annotations
 
-from pathlib import PurePosixPath
 from typing import Any
 
 from . import messages
@@ -21,6 +20,7 @@ from .config import KIND_SSH
 from .config import KNOWN_TARGET_KEYS
 from .config import parse_config
 from .health import probe_target
+from .mounts import under_mount
 from .proposals import Proposal
 from .routing import REASON_MOUNT
 
@@ -139,8 +139,10 @@ def mount_problem(runtime, spec, connected: bool = True) -> str:
     if spec.kind != KIND_SSH:
         return ""
 
+    # What the last try said still holds for a fault of set-up, such
+    # as a server with no `sshfs`. It is said again, not asked again.
     if not connected:
-        return ""
+        return runtime.mount_failure(spec.name)
 
     try:
         runtime.mount(spec)
@@ -148,22 +150,6 @@ def mount_problem(runtime, spec, connected: bool = True) -> str:
         return str(error)
 
     return ""
-
-
-def under_mount(folder: str, spec) -> bool:
-    """Whether a folder on the host is on a target's mount.
-
-    Told from the two paths alone. The folder itself is never asked:
-    it may be on a mount whose target sleeps, and that can hang.
-    """
-
-    if not folder or not spec.mount:
-        return False
-
-    place = PurePosixPath(folder)
-    root = PurePosixPath(spec.mount)
-
-    return place == root or root in place.parents
 
 
 def session_mount_problem(
@@ -187,9 +173,10 @@ def session_mount_problem(
     if not payload.get("ok"):
         return ""
 
+    # A machine can be removed between the answer and this line.
     try:
         spec = runtime.load_config().target(payload["target"])
-    except ConfigError:
+    except (ConfigError, KeyError):
         return ""
 
     by_reason = payload.get("reason") == REASON_MOUNT
@@ -341,12 +328,45 @@ def targets_payload(runtime) -> dict:
     }
 
 
+def target_as_set_up(runtime, name: str):
+    """A machine as the settings have it now, or nothing."""
+
+    try:
+        return runtime.load_config().targets.get(name)
+    except ConfigError:
+        return None
+
+
+def let_go_of_old_mount(runtime, before, name: str) -> None:
+    """Take down the mount a machine had before its settings changed.
+
+    On Linux nothing else would. The new settings name another place
+    or no machine at all, so the old place is never looked at again,
+    and the machine's whole disk would stay mounted there unseen.
+    """
+
+    if before is None or before.kind != KIND_SSH:
+        return
+
+    after = target_as_set_up(runtime, name)
+    kept = after is not None and after.kind == KIND_SSH
+
+    if kept and after.mount == before.mount:
+        return
+
+    try:
+        runtime.unmount(before)
+    except (mounts.MountError, OSError):
+        return
+
+
 def save_target_payload(runtime, body: Any) -> dict:
     name = read_name(body)
 
     if not name:
         return failure("Give the machine a name.")
 
+    before = target_as_set_up(runtime, name)
     settings = runtime.raw_settings()
     settings["targets"][name] = clean_target(body.get("target"))
 
@@ -359,6 +379,8 @@ def save_target_payload(runtime, body: Any) -> dict:
         return failure("; ".join(error.problems))
     except RuntimeError as error:
         return failure(str(error))
+
+    let_go_of_old_mount(runtime, before, name)
 
     return targets_payload(runtime)
 
@@ -376,6 +398,8 @@ def remove_target_payload(runtime, body: Any) -> dict:
             "first."
         )
 
+    before = target_as_set_up(runtime, name)
+
     del settings["targets"][name]
 
     try:
@@ -384,6 +408,8 @@ def remove_target_payload(runtime, body: Any) -> dict:
         return failure("; ".join(error.problems))
     except RuntimeError as error:
         return failure(str(error))
+
+    let_go_of_old_mount(runtime, before, name)
 
     return targets_payload(runtime)
 

@@ -170,6 +170,98 @@ def test_a_target_that_is_away_is_not_asked_to_mount(tmp_path, mount_asks):
     assert mount_asks == []
 
 
+def test_a_fault_of_set_up_is_still_said_while_the_target_is_away(
+    tmp_path,
+    monkeypatch,
+):
+    def refuse(spec, mount_root, data_dir, system=None):
+        raise mounts.MountError("this server has no `sshfs`")
+
+    monkeypatch.setattr(mounts, "ensure", refuse)
+
+    built = build(tmp_path, laptop_up=False)
+    spec = built.load_config().target("laptop")
+
+    with pytest.raises(mounts.MountError):
+        built.mount(spec)
+
+    payload = api.status_payload(
+        built,
+        {"cwd": f"{spec.mount}/home/dev", "rows": True},
+        with_targets=True,
+    )
+
+    assert payload["mount_error"] == "this server has no `sshfs`"
+    assert payload["rows"][0]["mount_error"] == "this server has no `sshfs`"
+
+
+def saving_runtime(tmp_path, monkeypatch):
+    """A runtime whose settings can be saved, and the mounts it was
+    asked to take down."""
+
+    store = {
+        "default": "mac",
+        "targets": {
+            "laptop": {
+                "kind": "ssh",
+                "host": "laptop.example",
+                "user": "dev",
+                "mount": "/mnt/old/laptop",
+            },
+            "mac": {"kind": "local"},
+        },
+    }
+    stopped = []
+    session = runtime.SessionReader(cwd=lambda: "", session_id=lambda: "")
+
+    built = runtime.Runtime(
+        load_settings=lambda: store,
+        data_dir=tmp_path,
+        session=session,
+        build_environment=lambda *args: object(),
+        save_settings=lambda new: store.update(new),
+    )
+
+    monkeypatch.setattr(
+        mounts,
+        "stop",
+        lambda spec, root, data_dir, system=None: stopped.append(str(root)),
+    )
+
+    return built, store, stopped
+
+
+def test_a_new_mount_place_takes_the_old_mount_down(tmp_path, monkeypatch):
+    built, store, stopped = saving_runtime(tmp_path, monkeypatch)
+    target = {**store["targets"]["laptop"], "mount": "/mnt/new/laptop"}
+
+    answer = api.save_target_payload(built, {"name": "laptop", "target": target})
+
+    assert answer["ok"] is True
+    assert stopped == ["/mnt/old/laptop"]
+
+
+def test_a_save_that_keeps_the_mount_place_leaves_the_mount_up(
+    tmp_path,
+    monkeypatch,
+):
+    built, store, stopped = saving_runtime(tmp_path, monkeypatch)
+    target = {**store["targets"]["laptop"], "user": "other"}
+
+    api.save_target_payload(built, {"name": "laptop", "target": target})
+
+    assert stopped == []
+
+
+def test_removing_a_machine_takes_its_mount_down(tmp_path, monkeypatch):
+    built, store, stopped = saving_runtime(tmp_path, monkeypatch)
+
+    answer = api.remove_target_payload(built, {"name": "laptop"})
+
+    assert answer["ok"] is True
+    assert stopped == ["/mnt/old/laptop"]
+
+
 def test_a_folder_beside_a_mount_is_not_on_it(tmp_path):
     built = build(tmp_path)
     spec = built.load_config().target("laptop")
