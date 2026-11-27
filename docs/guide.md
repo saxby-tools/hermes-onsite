@@ -16,6 +16,8 @@ Hermes app the whole time.
 
 <!-- /onsite:notice -->
 
+<!-- onsite:shots /-->
+
 ## How it works
 
 You talk to Hermes in the app. Hermes thinks on your server. When it
