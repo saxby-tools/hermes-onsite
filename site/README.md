@@ -51,8 +51,9 @@ reader's browser or to a plugin user.
 
 The README is the front page. `home.ejs` puts everything before its
 first `##` heading in the hero, and builds the "On this page" list
-from the `##` headings. That list is the one thing the site adds that
-the Markdown does not hold.
+from the `##` headings. That list and the
+[screenshots](#screenshots) are the two things the site adds that the
+Markdown does not hold.
 
 Don't add front matter; GitHub shows it as a table. The layout,
 address and title come from `eleventy.config.js`, and the title is
@@ -121,6 +122,7 @@ Each component's own file lists its options at the top.
 | `specimen` | A table | A sample in each type class |
 | `scale` | A table | The spacing scale as bars |
 | `motion` | Nothing | Two bars that move at the two speeds |
+| `shots` | Nothing | The real screenshots, as a row that scrolls sideways |
 
 To add one, add `name.ejs` to `components/` to draw it, and `name.js`
 to turn the block into the template's data if it needs more than the
@@ -131,6 +133,78 @@ The drawings a `screen` block can show are the files in
 the list in `components/screen.js`. Draw it with the `ui__` classes
 under "Screens" in the stylesheet, and use only words the app really
 shows. `docs/guide.md` uses them.
+
+##  Screenshots
+
+The `shots` block draws the real screenshots as one row that scrolls
+sideways, the way Hermes Desktop shows a plugin's screenshots. The
+block holds nothing, so GitHub and the plugin catalog show nothing:
+
+```markdown
+<!-- onsite:shots /-->
+```
+
+It is in `README.md` just above the first `##` heading, in
+`docs/guide.md` and in `docs/design.md`.
+
+The block writes its own "Screenshots" heading, the way a `##`
+heading is written. So on the front page the row is the first
+section under the hero, and both layouts list it in "On this page".
+`{"heading": false}` leaves the heading out, for a page that has its
+own above the block.
+
+To add a screenshot:
+
+1. Put the file in `docs/screenshots/`. Start its name with a number,
+   such as `01-chip.png`, so the folder lists in the order shown.
+2. Name it in `docs/screenshots/shots.json`, with its words:
+
+```json
+[
+  {
+    "file": "01-chip.png",
+    "alt": "A chip in the corner of the app reads onsite: laptop.",
+    "caption": "The chip names the computer in use."
+  }
+]
+```
+
+The cards show in the list's order. `alt` says what the picture
+shows, for a reader who cannot see it. `caption` is the line under
+the card. All three are required. Nobody types a width or a height:
+`components/image-size.js` reads them from the file, so the page
+keeps its shape while the pictures load.
+
+A file can be a `.png`, `.jpg`, `.webp` or `.gif`. An animated GIF
+plays as it would anywhere. A short film is a `.mp4` or `.webm` with
+a `poster`, a picture beside it:
+
+```json
+{
+  "file": "05-run.mp4",
+  "poster": "05-run.png",
+  "alt": "A command runs on the laptop and passes.",
+  "caption": "A run card, start to finish."
+}
+```
+
+A film shows its poster and loads nothing more until the reader
+presses play. It never starts by itself.
+
+An empty list, `[]`, draws nothing on any page: no heading and no
+row. A mistake in the list stops the build and names the entry.
+`npm test` reads the repo's own list too.
+
+Every card is the same height and as wide as its own picture, so
+wide and tall pictures sit side by side. With the script off it is a
+plain row that scrolls, and each picture is a link to its file. The
+script adds the two step buttons and opens a picture larger in a
+`<dialog>`, which Escape closes.
+
+The plugin catalog does not read this list. Its entry names its own
+`screenshots`, up to six, as addresses pinned to a commit. The same
+picture files can serve both. A film cannot: the catalog takes
+pictures only.
 
 ##  Styles, script and icons
 
@@ -145,7 +219,8 @@ The tokens are at the top of `onsite.css`. `design.test.js` fails if
 a token there is missing from `docs/design.md`, or a colour differs.
 
 Every page works with the script off. The script adds the Copy
-buttons and the theme toggle.
+buttons, the theme toggle, and the step buttons and larger view of
+the screenshots.
 
 The prefix of the comment blocks, `onsite:`, is set once, as
 `NAMESPACE` in `eleventy.config.js`. Every Markdown file that uses a
@@ -199,6 +274,7 @@ design.test.js          the design page against the stylesheet
 plugins/md-links.js     links between pages and out to GitHub
 plugins/md-marks.js     anchors, status, tables, chips, code blocks
 components/             a .ejs, and often a .js, per component
+components/image-size.js  a picture's width and height, from its file
 layouts/home.ejs        the front page, from the repo's README.md
 layouts/page.ejs        the page around every other Markdown file
 layouts/head.ejs        the shared head, in every layout
