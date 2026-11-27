@@ -29,6 +29,10 @@ server, must return at once. The server runs Linux or macOS. A Linux
 server also needs the `sshfs` program. When it is missing, onsite
 says so and names the line that installs it.
 
+If the server cannot reach your computer at all, as with a laptop
+behind a home router, the computer can connect to the server by
+itself. See "A computer the server cannot reach" below.
+
 Then install it on the server. Until it is in the Hermes catalog,
 that is:
 
@@ -84,6 +88,35 @@ It is done when a chip that starts with "onsite" shows at the bottom
 right of the app. If none shows, open Onsite's entry in Capabilities,
 Plugins and turn on its Desktop switch.
 
+## A computer the server cannot reach
+
+Such a computer dials in. It opens one SSH connection to the server
+and keeps it open, and the server reaches it back through that
+connection. Your computer still needs its SSH server on, and it
+must be able to log in to the server over SSH with a key.
+
+In Hermes Desktop, open Settings, Plugins, Onsite, then Machines.
+Click "Add a machine" and pick "Another machine, which connects to
+the server by itself". Fill in your account on that computer and
+the server as that computer logs in to it, such as
+`you@server.example`, and click Save. From a terminal on the server
+it is:
+
+```bash
+hermes onsite dial-in laptop --user you --server you@server.example --apply
+```
+
+Either way you are handed one `ssh` command. Run it in a terminal
+on your computer and leave it running. The chip and `hermes onsite
+status` say when your computer has arrived. onsite also prints a
+service file that keeps the command running across restarts, for
+you to save on your computer. It installs nothing there itself.
+
+The repository's README has the rest, under the same heading: the
+three things to check first, how to limit what your computer's key
+may do on the server, and a server setting that lets a laptop dial
+in again quickly after it changes network.
+
 ## What it touches
 
 Read this before you turn it on.
@@ -110,6 +143,14 @@ Read this before you turn it on.
   logs in to the session's computer every five seconds and after
   each tool call, to see that it is up, and to every computer while
   the pane is open.
+- **A computer that dials in uses a port on the server.** The
+  server's own SSH server listens on `127.0.0.1` for as long as that
+  computer is connected. The plugin opens no port itself. Any
+  account on the server can reach that port, and can listen on it
+  while your computer is away. So the plugin files your computer's
+  host key under a name of its own on first contact, and talks only
+  to what shows that key afterward. The first contact is taken on
+  trust.
 - **On your computer it installs nothing.** It may hold a sleep lock
   while a command runs. It starts your interactive shell to read
   PATH each time a session's environment is built. Hermes' SSH code,
@@ -130,7 +171,7 @@ Read this before you turn it on.
   top of your home folder, and no file is copied.
 - **Inside Hermes** it adds a terminal backend, one tool, two hooks,
   two slash commands, one CLI command, a section of the system
-  prompt and seven routes for the desktop app. Two routes write the
+  prompt and eight routes for the desktop app. Two routes write the
   plugin's own settings and one mounts a disk. After `/onsite` moves
   a session, it adds one note to
   your next message to tell the agent.
@@ -155,6 +196,10 @@ Read this before you turn it on.
   two Hermes settings. The repository's README lists them under
   "Hermes in Docker".
 - When your computer sleeps, the work stops until it is back.
+- A computer that dials in has been tried in containers only. A
+  server whose SSH server sends no keepalive can hold a dead link's
+  port for minutes, and your computer cannot dial in again until
+  then. The repository's README has the two lines that fix it.
 - A real sleeping laptop, a Mac as a target and the phone apps have
   not been tested.
 - Screen control has only run on a Linux X11 desktop.
