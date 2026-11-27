@@ -1356,6 +1356,75 @@ move did not hold everywhere.
 - **Reverse.** Make `openingIn` return `{ expectHistory: false }`.
   Worth doing when the app stops making the switch.
 
+### 65. A walk through the real app, and what it broke
+
+Nov. 27, 2026. The owner asked for his morning QA to be run first,
+in the test copy of the app, and for what it found to be fixed. The
+backend was Hermes' own Docker image with a stand-in laptop beside
+it, as in entry 64. A scripted model stood in for a real one.
+
+- **The Run button never worked in the app.** `/run` handed its
+  message to Hermes without naming the session. The app's backend
+  takes a message only for a session it is told by name. With none
+  it looks for a messaging gateway in its own process, and there is
+  none there. The person got the hint about
+  `allow_gateway_injection` with the setting on. The command now
+  names its session. In the app the card read "Sent" and the agent
+  ran the command.
+- **A frozen laptop stopped the whole backend on Linux.** `sshfs`
+  ran with `reconnect`. Each read of a dead mount then waited 5 to
+  9 seconds for a login that could not come. Hermes reads a
+  session's folder from its main loop, so its main thread sat in
+  disk sleep and plain web requests timed out, for every session and
+  profile. `reconnect` is gone. The mount lets go about 12 seconds
+  after the target stops answering, and reads fail at once. In the
+  same test the backend answered in 5 ms throughout.
+- **A mount did not come back under a session with history.** The
+  chip asked for the mount only while the session was routed by its
+  folder. After a first message a session is routed by where it
+  started. The check now goes by the folder the app names. A target
+  that does not answer is no longer asked to mount, so no failure
+  is remembered past its return. The mount and the file tree were
+  back 3 seconds after the frozen laptop woke.
+- **The fifty-first session on a machine would have failed.** A new
+  session's title was found by trying each number in turn, one
+  refused call per old session, up to fifty. It is now looked up
+  with Hermes' own exact-title question: doubling, then halving.
+  Ten questions found number 22.
+- **The app could not set a mount folder.** The error for a refused
+  mount says to set `mount`, and the machine form had no field for
+  it. It has one now, and the error names it.
+- **Smaller ones.** A status request that timed out made the chip
+  say "not set up". It says "no answer". A run card forgot it was
+  sent when the app reloaded. A folder that already had a project
+  wrote a warning to the console on every click.
+- **Hermes' Docker image is not ready as shipped.** Four things are
+  missing, and the README now lists them: `sshfs`, the FUSE device
+  open to Hermes' account, a folder for mounts outside `/opt/data`,
+  and Hermes' own `HERMES_DASHBOARD_FILES_ROOT`. The last is the
+  hard one. In that image Hermes lets the app read `/opt/data` and
+  nothing else, and entry 63 keeps mounts out of `/opt/data`. With
+  the setting on the mount folder, the app reads the mounts and a
+  session on the server loses its file tree. That is a real cost,
+  and it was not weighed against entry 63 again. Setting it to `/`
+  was not tried.
+- **Seen for the first time in the real app.** The run card. Hermes'
+  approval prompt for a command on a target: a "no" left the folder
+  and a "yes" removed it. The Machines page: test, add, remove. The
+  app's "Install from Git" with the address that ends in
+  `/onsite/desktop`. Three sessions in a row on a named profile,
+  each with a full file tree.
+- **Not seen.** The app's folder picker. On this rig the app never
+  offers "Change working directory", for its own sessions either.
+  The run card with a real model, which must copy one line from the
+  tool's answer. The name on the plugin's card in Capabilities. The
+  Bots tab. The switch that turns Run off. Anything on Hermes
+  Desktop 0.23.4.
+- **Not done.** Taking a dead mount down the moment the first probe
+  fails, which would cut the 12 seconds to about 3. It needs a
+  forced unmount and a killed process, and a single lost probe
+  would then drop a healthy mount.
+
 ## Open decisions from the brief
 
 | # | Decision | What the build did |
