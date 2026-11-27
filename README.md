@@ -821,6 +821,12 @@ Read these before trusting it with real work.
   imports are in `compat.py` and `screenbackend.py`. It has been run
   on Hermes 0.23.2 only, and `requires_hermes` stops it loading at
   0.24.
+- **"New session" on a named profile widens the session list.** On
+  any profile but the default, the button turns on the app's "All
+  profiles" view. Without it, Hermes Desktop 0.23.2 leaves the file
+  tree loading forever from the second session in a folder on. Click
+  the profile again to see its sessions alone. That puts you on a new
+  chat; the session you made stays in the list.
 - **Editors over ACP.** Hermes previews an edit by reading the file
   on the host. In an editor such as Zed, `patch` only works where the
   same path exists on both machines, as in a shared folder.
