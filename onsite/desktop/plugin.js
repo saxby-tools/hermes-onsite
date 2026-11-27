@@ -136,6 +136,22 @@ const EVENTS_THAT_CHANGE_STATE = ['tool.complete', 'session.info', 'gateway.read
 
 const SESSION_ATOMS = ['focusedStoredSessionId', 'focusedSessionId', 'activeSessionId']
 
+// Every line the plugin writes to the app's console starts with this,
+// so the inspector's filter box can show them alone.
+const LOG_TAG = '[onsite]'
+const LOG_STEP = 'info'
+const LOG_QUIET = 'debug'
+const LOG_PROBLEM = 'warn'
+
+// After a session is opened, what the app says it is showing is
+// written at once and again after each of these waits. A file tree
+// that never fills shows up here as a folder that never changes.
+const AFTER_OPEN_MS = [0, 1000, 3000]
+
+// What of the host's answer says where a session runs. The chip asks
+// every few seconds, and only a change in these is worth a line.
+const STATUS_KEYS = ['ok', 'target', 'connected', 'cwd', 'reason', 'error']
+
 const TEXT_SMALL = 'text-[0.6875rem]'
 const TEXT_MUTED = 'text-(--ui-text-tertiary)'
 
@@ -192,9 +208,73 @@ const proposalsStore = createStore([])
 // How many copies of the pane are on screen now.
 let openPanes = 0
 
+// The machines a session is being started on right now. A second
+// click that lands before the button greys out must not start a
+// second session.
+const starting = new Set()
+
 // Set in register(). The components need the plugin context to call
 // the host, and they are created outside it.
 let plugin = null
+
+/* ------------------------------------------------------------------ */
+/* Logging                                                             */
+/* ------------------------------------------------------------------ */
+
+// The plugin says what it does in the app's console, so a person can
+// follow a click from the button to the host and back. Open the
+// inspector and type "[onsite]" in the console's filter box.
+//
+// Three levels. A step somebody asked for is "info". A failure is
+// "warn". The poll that feeds the chip is "debug", which the inspector
+// hides until its level menu has Verbose ticked.
+function logLine(level, step, detail) {
+  const write = globalThis.console?.[level]
+
+  if (typeof write !== 'function') {
+    return
+  }
+
+  if (detail === undefined) {
+    write.call(globalThis.console, LOG_TAG, step)
+
+    return
+  }
+
+  write.call(globalThis.console, LOG_TAG, step, detail)
+}
+
+function logStep(step, detail) {
+  logLine(LOG_STEP, step, detail)
+}
+
+function logQuiet(step, detail) {
+  logLine(LOG_QUIET, step, detail)
+}
+
+function logProblem(step, error) {
+  logLine(LOG_PROBLEM, step, String(error?.message ?? error))
+}
+
+// Runs one call and writes what was asked, how long it took and how
+// it ended. The error is passed on untouched.
+async function logged(level, step, asked, call) {
+  const started = Date.now()
+
+  logLine(level, `${step}: asking`, asked)
+
+  try {
+    const answer = await call()
+
+    logLine(level, `${step}: answered in ${Date.now() - started} ms`, answer)
+
+    return answer
+  } catch (error) {
+    logProblem(`${step}: failed after ${Date.now() - started} ms`, error)
+
+    throw error
+  }
+}
 
 /* ------------------------------------------------------------------ */
 /* Talking to the host                                                 */
@@ -302,11 +382,15 @@ function describeError(error) {
 }
 
 async function post(path, extra = {}) {
-  return plugin.rest(path, {
-    method: 'POST',
-    body: { ...requestBody(), ...extra },
-    timeoutMs: REQUEST_TIMEOUT_MS
-  })
+  const body = { ...requestBody(), ...extra }
+
+  return logged(LOG_QUIET, `host ${path}`, body, () =>
+    plugin.rest(path, {
+      method: 'POST',
+      body,
+      timeoutMs: REQUEST_TIMEOUT_MS
+    })
+  )
 }
 
 function paneIsOpen() {
@@ -331,6 +415,31 @@ function keepRows(answer) {
   return { ...answer, rows: statusStore.get()?.rows }
 }
 
+function statusSummary(status) {
+  const summary = {}
+
+  STATUS_KEYS.forEach(key => {
+    summary[key] = status?.[key]
+  })
+
+  return summary
+}
+
+// The chip asks every few seconds. One line is written when the
+// answer differs from the last one, not one line per poll.
+function setStatus(next) {
+  const before = JSON.stringify(statusSummary(statusStore.get()))
+  const after = statusSummary(next)
+
+  statusStore.set(next)
+
+  if (JSON.stringify(after) === before) {
+    return
+  }
+
+  logStep('status changed', after)
+}
+
 async function refresh() {
   if (!plugin) {
     return
@@ -342,9 +451,9 @@ async function refresh() {
     // open.
     const answer = await post('/status', { rows: paneIsOpen() })
 
-    statusStore.set(keepRows(answer))
+    setStatus(keepRows(answer))
   } catch (error) {
-    statusStore.set({ ok: false, error: describeError(error) })
+    setStatus({ ok: false, error: describeError(error) })
   }
 
   try {
@@ -675,10 +784,45 @@ function StatusLines({ status }) {
 /* ------------------------------------------------------------------ */
 
 async function send(path, body) {
-  return plugin.rest(path, {
-    method: 'POST',
-    body,
-    timeoutMs: REQUEST_TIMEOUT_MS
+  return logged(LOG_STEP, `host ${path}`, body, () =>
+    plugin.rest(path, {
+      method: 'POST',
+      body,
+      timeoutMs: REQUEST_TIMEOUT_MS
+    })
+  )
+}
+
+// One request to Hermes itself, through the app.
+async function ask(method, params) {
+  return logged(LOG_STEP, `hermes ${method}`, params, () =>
+    sdk.host.request(method, params)
+  )
+}
+
+// What the app says it is showing: the folder, the session and the
+// profile. Read from the same places the chip reads them.
+function appView() {
+  return {
+    cwd: readAtom(hostState().cwd) ?? '',
+    session_ids: sessionIds(),
+    profile: activeProfile(),
+    focused_profile: focusedProfile()
+  }
+}
+
+function logAppView(step) {
+  logStep(step, appView())
+}
+
+// Writes what the app shows now and after each wait, so it can be
+// seen whether the app moved to the new session's folder.
+function logAppViewAfterOpen() {
+  AFTER_OPEN_MS.forEach(wait => {
+    globalThis.setTimeout(
+      () => logAppView(`the app shows, ${wait} ms after opening`),
+      wait
+    )
   })
 }
 
@@ -725,14 +869,15 @@ async function fileUnderProjects(name, cwd) {
   }
 
   try {
-    await sdk.host.request('projects.create', {
+    await ask('projects.create', {
       ...scope,
       name,
       folders: [cwd],
       primary_path: cwd
     })
   } catch {
-    // See above: the session opens without a project.
+    // See above: the session opens without a project. The refusal is
+    // already in the console.
   }
 }
 
@@ -752,7 +897,7 @@ async function titleSession(sessionId, title) {
 
   for (let attempt = 1; attempt <= TITLE_TRIES; attempt += 1) {
     try {
-      await sdk.host.request('session.title', {
+      await ask('session.title', {
         session_id: sessionId,
         title: numberedTitle(title, attempt)
       })
@@ -789,10 +934,15 @@ async function openSessionAt(cwd, title) {
     request.profile = profile
   }
 
-  const made = await sdk.host.request('session.create', request)
+  const made = await ask('session.create', request)
 
   await titleSession(made.session_id, title)
-  await sdk.host.openSession(made.stored_session_id, { expectHistory: false })
+
+  await logged(LOG_STEP, 'app openSession', made.stored_session_id, () =>
+    sdk.host.openSession(made.stored_session_id, { expectHistory: false })
+  )
+
+  logAppViewAfterOpen()
 
   return true
 }
@@ -805,8 +955,17 @@ function PaneMachine({ row }) {
   const [message, setMessage] = useState('')
 
   const start = async () => {
+    if (starting.has(row.name)) {
+      logStep('New session: already starting, click ignored', row.name)
+
+      return
+    }
+
+    starting.add(row.name)
     setBusy(true)
     setMessage('')
+    logStep('New session: clicked', row.name)
+    logAppView('the app shows, before the click')
 
     try {
       const answer = await send('/open', { target: row.name })
@@ -820,10 +979,13 @@ function PaneMachine({ row }) {
         setMessage(answer?.error || 'That machine could not be opened.')
       }
     } catch (error) {
+      logProblem('New session: stopped', error)
       setMessage(describeError(error))
     }
 
+    starting.delete(row.name)
     setBusy(false)
+    logStep('New session: finished', row.name)
   }
 
   const problem = message || row.mount_error || ''
@@ -1470,7 +1632,17 @@ export default {
   register(ctx) {
     plugin = ctx
 
+    // Says which calls this app has. An older app lacks some, and
+    // the plugin then leaves the feature out without a word.
+    logStep('loaded', {
+      can_ask_hermes: typeof sdk.host?.request === 'function',
+      can_open_sessions: typeof sdk.host?.openSession === 'function',
+      has_settings_pages: typeof ctx.registerSettingsPage === 'function',
+      has_events: typeof ctx.onEvent === 'function'
+    })
+
     ctx.onDispose?.(() => {
+      logStep('unloaded')
       plugin = null
     })
 
@@ -1524,7 +1696,10 @@ export default {
     ctx.setInterval(refreshIfSeen, POLL_MS)
 
     EVENTS_THAT_CHANGE_STATE.forEach(type => {
-      ctx.onEvent?.(type, () => refreshIfSeen())
+      ctx.onEvent?.(type, () => {
+        logQuiet(`app event ${type}`)
+        refreshIfSeen()
+      })
     })
 
     refresh()
