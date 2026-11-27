@@ -144,14 +144,19 @@ function showThemeToggle(toggle) {
 
 // ---- Screenshots ------------------------------------------------------
 
-// Where the row must be scrolled to for each card to sit at its
-// left edge.
-function shotStarts(row) {
-  const edge = row.getBoundingClientRect().left - row.scrollLeft;
+function shotLeft(card) {
+  return card.querySelector("figure").getBoundingClientRect().left;
+}
 
-  return [...row.children].map((card) => {
-    return card.getBoundingClientRect().left - edge;
-  });
+// Where the row must be scrolled to for each picture to sit where
+// the first one rests, in line with the page's column. The first
+// and last cards also hold the space at the row's two ends, so the
+// pictures are measured and not the cards.
+function shotStarts(row) {
+  const cards = [...row.children];
+  const first = shotLeft(cards[0]);
+
+  return cards.map((card) => shotLeft(card) - first);
 }
 
 // No speed is given here. The stylesheet sets it, and sets none for
@@ -292,6 +297,10 @@ function setUpShots(shots) {
 
   mark();
   setUpShotDialog(shots);
+
+  // The stylesheet takes the row's own scroll bar away now that the
+  // step buttons are there to do its work.
+  shots.dataset.shotsReady = "";
 }
 
 // ---- Run --------------------------------------------------------------

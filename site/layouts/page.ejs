@@ -16,8 +16,10 @@
 <body class="layout-page">
 <%- include("top.ejs") -%>
 <%- include("contents.ejs", { sections }) -%>
-<main class="page prose" id="main">
+<main class="page" id="main">
+<div class="page__inner prose">
 <%- content %>
+</div>
 </main>
 <%- include("foot.ejs") -%>
 </body>

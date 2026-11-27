@@ -665,17 +665,29 @@ main {
     counter-increment: section;
 }
 
-.section__inner,
 .page {
+    padding: var(--space-6) 0;
+}
+
+/* A section and a page are as wide as the window, and each is a
+ * container. So a block in the column can ask how wide the window
+ * is, as `100cqi`, and run out to its edges. The row of screenshots
+ * does.
+ *
+ * A container keeps to itself any count that is stepped inside it.
+ * The plate numbers still work because each section steps the count
+ * on itself, not on something inside it. Keep it that way. */
+.section,
+.page {
+    container-type: inline-size;
+}
+
+.section__inner,
+.page__inner {
     max-width: var(--column);
     margin: 0 auto;
     padding-right: var(--gutter);
     padding-left: var(--gutter);
-}
-
-.page {
-    padding-top: var(--space-6);
-    padding-bottom: var(--space-6);
 }
 
 /* Each section of the front page is numbered like a plate. */
@@ -1670,17 +1682,38 @@ main {
  * wide and tall pictures sit side by side. The cards are dark in
  * both themes, like the code blocks, because the app is. With no
  * script it is still a row that scrolls; the script only shows the
- * two step buttons and opens a picture larger. */
+ * two step buttons and opens a picture larger.
+ *
+ * The row follows the "On this page" bar. The first picture starts
+ * in line with the page's column and the row runs on to the
+ * window's own edges. So a picture is cut off by the window and by
+ * nothing else, never in mid-air where the column stops. Each end
+ * of the row fades out, to say there is more that way.
+ *
+ * `--shots-inset` is how far the column's text sits in from the
+ * window's edge. `100cqi` is the width of the section or the page
+ * the row is in, which is why those two are containers.
+ * `--shots-fade` is how wide the fade is at each end. It is never
+ * wider than the inset, so a picture at rest in the column is clear
+ * of it. */
 
 .shots {
     --shots-height: clamp(12rem, 40vw, 20rem);
+    --shots-inset: max(
+        var(--gutter),
+        calc((100cqi - var(--column)) / 2 + var(--gutter))
+    );
+    --shots-fade: min(var(--shots-inset), var(--space-6));
+    --shots-step: 2.5rem;
 
     position: relative;
-    margin: 0 0 var(--space-4);
+    margin: 0 calc(-1 * var(--shots-inset)) var(--space-4);
 }
 
-/* The row is a size container so that a card can be told "no wider
- * than the row", which a percentage cannot say here. */
+/* The mask is the fade. It stays put while the cards scroll under
+ * it, and it lets the page's own ground show through. The scroll
+ * padding makes a card stop in line with the column, not at the
+ * window's edge. */
 .shots__row {
     display: flex;
     gap: var(--space-3);
@@ -1689,8 +1722,26 @@ main {
     overflow-x: auto;
     overscroll-behavior-x: contain;
     list-style: none;
+    scroll-padding-inline: var(--shots-inset);
     scroll-snap-type: x mandatory;
-    container-type: inline-size;
+    mask-image: linear-gradient(
+        to right,
+        transparent,
+        #000 var(--shots-fade),
+        #000 calc(100% - var(--shots-fade)),
+        transparent
+    );
+}
+
+/* Once the script has shown the step buttons the bar under the row
+ * goes, as it does in the "On this page" bar. With no script it
+ * stays: it is then the only way to move the row with a mouse. */
+.shots[data-shots-ready] .shots__row {
+    scrollbar-width: none;
+}
+
+.shots[data-shots-ready] .shots__row::-webkit-scrollbar {
+    display: none;
 }
 
 .shots__card {
@@ -1709,6 +1760,17 @@ main {
     margin: 0;
 }
 
+/* The space at each end is on the first and last cards, not on the
+ * row, so it scrolls away with them. The first picture starts in
+ * line with the column and the last one stops in line with it. */
+.shots__card:first-child {
+    padding-left: var(--shots-inset);
+}
+
+.shots__card:last-child {
+    padding-right: var(--shots-inset);
+}
+
 .shots__card-figure {
     margin: 0;
 }
@@ -1719,13 +1781,13 @@ main {
 }
 
 /* A picture or a film. The height is fixed and the width follows
- * the picture's shape. One that would be wider than the row, or
+ * the picture's shape. One that would be wider than the column, or
  * narrower than a caption needs, is fitted inside the dark card. */
 .shots__card-media {
     display: block;
     width: auto;
     min-width: 12rem;
-    max-width: 100cqi;
+    max-width: calc(100cqi - 2 * var(--shots-inset));
     height: var(--shots-height);
     border: 1px solid var(--color-line);
     background: var(--color-code);
@@ -1745,16 +1807,16 @@ main {
     line-height: 1.35;
 }
 
-/* The step buttons sit over the two ends of the row, level with the
- * middle of the pictures. They are hidden until the script runs, and
- * stay hidden when every card already fits. */
+/* The step buttons sit over the two edges of the column, level with
+ * the middle of the pictures. They are hidden until the script runs,
+ * and stay hidden when every card already fits. */
 .shots__step {
     position: absolute;
     top: calc(var(--shots-height) / 2);
     display: grid;
     place-items: center;
-    width: 2.5rem;
-    height: 2.5rem;
+    width: var(--shots-step);
+    height: var(--shots-step);
     padding: 0;
     border: 1px solid var(--color-field-muted);
     border-radius: var(--radius-control);
@@ -1772,11 +1834,11 @@ main {
 }
 
 .shots__step-previous {
-    left: var(--space-2);
+    left: calc(var(--shots-inset) + var(--space-2));
 }
 
 .shots__step-next {
-    right: var(--space-2);
+    right: calc(var(--shots-inset) + var(--space-2));
 }
 
 .shots__step:hover {
