@@ -5,6 +5,7 @@ from __future__ import annotations
 import pytest
 
 from onsite import config
+from onsite import environments
 from onsite import health
 from onsite import routing
 from onsite import runtime
@@ -284,3 +285,107 @@ def test_a_changed_host_gets_its_own_breaker(tmp_path):
 
     assert harness.runtime.gate_for(moved) is not first
     assert harness.runtime.gate_for(old) is first
+
+
+# ---- environments ----------------------------------------------------
+
+
+def sandboxed(tmp_path, **block) -> dict:
+    settings = {"kind": "environment", "image": "debian:stable-slim"}
+    settings.update(block)
+
+    return {
+        "default": "mac",
+        "targets": {"web": settings, "mac": {"kind": "local"}},
+    }
+
+
+def hermes_data(tmp_path):
+    """A data folder inside a Hermes home, as the plugin is given."""
+
+    return tmp_path / "hermes" / "plugin-data" / "onsite"
+
+
+def test_an_environment_with_no_place_set_gets_the_default_one(tmp_path):
+    harness = Harness(hermes_data(tmp_path), sandboxed(tmp_path))
+    web = harness.runtime.load_config().target("web")
+
+    assert web.workspace.endswith("/.local/share/onsite/env/hermes/web")
+
+
+def test_a_place_named_in_the_settings_is_kept(tmp_path):
+    harness = Harness(
+        hermes_data(tmp_path),
+        sandboxed(tmp_path, workspace="/srv/onsite/web"),
+    )
+
+    assert harness.runtime.load_config().target("web").workspace == (
+        "/srv/onsite/web"
+    )
+
+
+def test_a_new_session_is_a_folder_its_first_command_runs_in(tmp_path):
+    place = tmp_path / "sessions"
+    harness = Harness(
+        hermes_data(tmp_path),
+        sandboxed(tmp_path, workspace=str(place)),
+    )
+    web = harness.runtime.load_config().target("web")
+
+    session = harness.runtime.open_session(web)
+
+    assert session.folder.parent == place
+    assert session.folder.is_dir()
+
+    harness.session_cwd = str(session.start)
+    harness.runtime.create_environment("~", 180, "session:a")
+
+    # The sandbox is built for the folder as the server names it.
+    assert harness.built == [("web", str(session.start), 180)]
+    assert harness.host_folders == [str(session.start)]
+
+
+def test_a_machine_is_not_asked_for_a_session_folder(tmp_path):
+    harness = Harness(hermes_data(tmp_path), sandboxed(tmp_path))
+    mac = harness.runtime.load_config().target("mac")
+
+    with pytest.raises(environments.SandboxError) as caught:
+        harness.runtime.open_session(mac)
+
+    assert "is not an environment" in str(caught.value)
+
+
+def test_only_a_session_of_the_environment_can_be_removed(tmp_path):
+    harness = Harness(
+        hermes_data(tmp_path),
+        sandboxed(tmp_path, workspace=str(tmp_path / "sessions")),
+    )
+    web = harness.runtime.load_config().target("web")
+
+    for name in ("..", "notes", "../../etc"):
+        with pytest.raises(environments.SandboxError) as caught:
+            harness.runtime.remove_session(web, name)
+
+        assert "is not a session" in str(caught.value)
+
+
+def test_removing_a_session_takes_its_folder(tmp_path, monkeypatch):
+    # No Docker is asked: the session never ran, and none is found.
+    monkeypatch.setattr(environments, "find_docker", lambda: "")
+
+    harness = Harness(
+        hermes_data(tmp_path),
+        sandboxed(tmp_path, workspace=str(tmp_path / "sessions")),
+    )
+    web = harness.runtime.load_config().target("web")
+    session = harness.runtime.open_session(web)
+
+    harness.runtime.remove_session(web, session.id)
+
+    assert not session.folder.exists()
+
+
+def test_a_profile_is_named_for_its_hermes_home(tmp_path):
+    harness = Harness(hermes_data(tmp_path), sandboxed(tmp_path))
+
+    assert harness.runtime.profile() == "hermes"
