@@ -1,5 +1,5 @@
 Dial-in, walked from the computer's side
-2026-11-27 00:30:52 EST
+2026-11-27 00:39:38 EST
 
 == 1. The server cannot reach the laptop
   [PASS] a login from the server to the laptop is refused
@@ -8,18 +8,18 @@ Dial-in, walked from the computer's side
 == 2. Add the laptop on the server, with the CLI
   [PASS] without --apply nothing is written and no command is shown
   [PASS] the plugin picked a port
-   | port 24470
+   | port 25484
   [PASS] it printed one command to run on the laptop
-   | ssh -N -o ExitOnForwardFailure=yes -o ConnectTimeout=10 -o ServerAliveInterval=15 -o ServerAliveCountMax=3 -o ControlPath=none -R 127.0.0.1:24470:127.0.0.1:22 hermes@server
+   | ssh -N -o ExitOnForwardFailure=yes -o ConnectTimeout=10 -o ServerAliveInterval=15 -o ServerAliveCountMax=3 -o ControlPath=none -R 127.0.0.1:25484:127.0.0.1:22 hermes@server
   [PASS] it printed the line that limits the laptop's key
-   | restrict,port-forwarding,permitlisten="127.0.0.1:24470",permitopen="127.0.0.1:24470",command="exit 1"
+   | restrict,port-forwarding,permitlisten="127.0.0.1:25484",permitopen="127.0.0.1:25484",command="exit 1"
   [PASS] before the laptop dials, status says it has not connected
-   | laptop  ssh    DOWN (it has not connected to this server, or its link dropped. Nothing answers on port 24470)
-   | (1.4s)
+   | laptop  ssh    DOWN (it has not connected to this server, or its link dropped. Nothing answers on port 25484)
+   | (1.6s)
 
 == 3. On the laptop: a key, then the printed command
   [PASS] the laptop ran the command and status turned to up
-   | laptop  ssh    up (80 ms)  dev, dials in on port 24470
+   | laptop  ssh    up (74 ms)  dev, dials in on port 25484
    | (seen 1.5s after the command was started)
   [PASS] the limited key cannot run a command on the server
    | exit 1
@@ -28,15 +28,15 @@ Dial-in, walked from the computer's side
 
 == 4. What the desktop app is told
   [PASS] the route hands over the same command and says connected
-   | {"ok": true, "port": 24470, "connected": true, "latency_ms": 79, "error": null}
+   | {"ok": true, "port": 25484, "connected": true, "latency_ms": 78, "error": null}
   [PASS] the machine list marks it as one that dials in, and up
    | {"label": "laptop (dev, dials in)", "dial_in": true, "connected": true, "mount_error": ""}
 
 == 5. Change the saved machine, the way the app does
   [PASS] saving it again keeps its port, so its link is not cut
-   | {"kind": "ssh", "host": "127.0.0.1", "user": "dev", "dial_in": "hermes@server", "port": 24470, "mount": "/mnt/onsite/laptop", "prefixes": ["/srv/dial"]}
+   | {"kind": "ssh", "host": "127.0.0.1", "user": "dev", "dial_in": "hermes@server", "port": 25484, "mount": "/mnt/onsite/laptop", "prefixes": ["/srv/dial"]}
   [PASS] it is still up
-   | laptop  ssh    up (79 ms)  dev, dials in on port 24470
+   | laptop  ssh    up (78 ms)  dev, dials in on port 25484
 
 == 6. Work through the link: mount, file, command
   [PASS] the laptop's disk mounts on the server through the link
@@ -57,7 +57,7 @@ Dial-in, walked from the computer's side
    | - **exit_code:** 0
    | - **cwd:** /home/dev/Development/sample
   [PASS] the file tools write and read the laptop's own files
-   | write_file: rig-note.txt [completed, 0.05s]
+   | write_file: rig-note.txt [completed, 0.04s]
    | ✅ write_file completed for `rig-note.txt`
    | Files: `/home/dev/Development/sample/rig-note.txt`
    | read_file: rig-note.txt [completed, 0.02s]
@@ -84,15 +84,15 @@ Dial-in, walked from the computer's side
 
 == 7. The other links through the same port
   [PASS] the link an MCP server on the laptop talks over works
-   | ssh -T -o BatchMode=yes -o ConnectTimeout=3 -o ServerAliveInterval=15 -o ServerAliveCountMax=3 -o StrictHostKeyChecking=accept-new -o LogLevel=ERROR -p 24470 -o HostKeyAlias=onsite-laptop dev@127.0.0.1 'sh -c '"'"'p=$("${SHELL:-sh}" -ic '"'"'"'"'"'"'"'"'printf "\n__ONSITE_QUIET_PATH__%s\n" "$PATH"'"'"'"'"'"'"'"'"' 2>/dev/null </dev/null | sed -n '"'"'"'"'"'"'"'"'s/^__ONSITE_QUIET_PATH__//p'"'"'"'"'"'"'"'"' | tail -n 1); [ -n "$p" ] && PATH="$p" && export PATH; exec cat'"'"''
+   | ssh -T -o BatchMode=yes -o ConnectTimeout=3 -o ServerAliveInterval=15 -o ServerAliveCountMax=3 -o StrictHostKeyChecking=accept-new -o LogLevel=ERROR -p 25484 -o HostKeyAlias=onsite-laptop dev@127.0.0.1 'sh -c '"'"'p=$("${SHELL:-sh}" -ic '"'"'"'"'"'"'"'"'printf "\n__ONSITE_QUIET_PATH__%s\n" "$PATH"'"'"'"'"'"'"'"'"' 2>/dev/null </dev/null | sed -n '"'"'"'"'"'"'"'"'s/^__ONSITE_QUIET_PATH__//p'"'"'"'"'"'"'"'"' | tail -n 1); [ -n "$p" ] && PATH="$p" && export PATH; exec cat'"'"''
    | -> over the link
   [PASS] a forward to a port on the laptop itself works (ssh -W)
-   | ssh -T -o BatchMode=yes -o ConnectTimeout=3 -o ServerAliveInterval=15 -o ServerAliveCountMax=3 -o StrictHostKeyChecking=accept-new -o LogLevel=ERROR -p 24470 -o HostKeyAlias=onsite-laptop -o Compression=yes -W 127.0.0.1:22 dev@127.0.0.1
+   | ssh -T -o BatchMode=yes -o ConnectTimeout=3 -o ServerAliveInterval=15 -o ServerAliveCountMax=3 -o StrictHostKeyChecking=accept-new -o LogLevel=ERROR -p 25484 -o HostKeyAlias=onsite-laptop -o Compression=yes -W 127.0.0.1:22 dev@127.0.0.1
    | -> SSH-2.0-OpenSSH_10.0p2 Debian-7+deb13u4
 
 == 8. Cut the link, then bring it back
   [PASS] a session in a folder of its own on the server runs there too
-   | terminal: pwd + 2 commands [completed, 0.08s]
+   | terminal: pwd + 2 commands [completed, 0.07s]
    | terminal result
    | - **output:** /srv/dial
    | dev
@@ -100,21 +100,21 @@ Dial-in, walked from the computer's side
    | - **exit_code:** 0
    | - **cwd:** /srv/dial
   [PASS] status says the link dropped, not what ssh says
-   | laptop  ssh    DOWN (it has not connected to this server, or its link dropped. Nothing answers on port 24470)
-   | (1.4s)
+   | laptop  ssh    DOWN (it has not connected to this server, or its link dropped. Nothing answers on port 25484)
+   | (1.5s)
   [PASS] a tool call on the link it just used says the link dropped
    | terminal: pwd + 2 commands [failed, 0.01s]
    | terminal result
-   | - **output:** ssh: connect to host 127.0.0.1 port 24470: Connection refused
-   | [onsite: no exit status from laptop (dev, dials in): it has not connected to this server, or its link dropped. Nothing answers on port 24470. The command may have run, may still be running, or may not have started. It was not retried.]
+   | - **output:** ssh: connect to host 127.0.0.1 port 25484: Connection refused
+   | [onsite: no exit status from laptop (dev, dials in): it has not connected to this server, or its link dropped. Nothing answers on port 25484. The command may have run, may still be running, or may not have started. It was not retried.]
    | - **exit_code:** 255
   [PASS] the next call is refused at once, and nothing is sent
    | terminal: pwd + 2 commands [failed, 0.0s]
    | terminal result
-   | - **output:** [onsite: target laptop (dev, dials in) is unreachable: it has not connected to this server, or its link dropped. Nothing answers on port 24470. No command was run and nothing was retried. The target is checked again in about 10s.]
+   | - **output:** [onsite: target laptop (dev, dials in) is unreachable: it has not connected to this server, or its link dropped. Nothing answers on port 25484. No command was run and nothing was retried. The target is checked again in about 10s.]
    | - **exit_code:** 255
   [PASS] the desktop app is told the same, with no second reason
-   | {"connected": false, "detail": "it has not connected to this server, or its link dropped. Nothing answers on port 24470", "mount_error": ""}
+   | {"connected": false, "detail": "it has not connected to this server, or its link dropped. Nothing answers on port 25484", "mount_error": ""}
   [PASS] a read through the mount fails and does not hang
    | cat: /mnt/onsite/laptop/home/dev/Development/sample/notes.txt: No such file or directory
    | (0.0s)
@@ -131,26 +131,26 @@ Dial-in, walked from the computer's side
    | alpha
    | bravo
    | charlie
-   | (mounted 0.4s after it was asked)
+   | (mounted 0.3s after it was asked)
 
 == 9. Freeze the laptop: a link that is up and silent
   [PASS] status says the link is up but the laptop does not answer
    | laptop  ssh    DOWN (its link is up but it does not answer. It may be asleep or off the network)
    | (4.5s)
   [PASS] a tool call says so too, and nothing is sent
-   | terminal: pwd + 2 commands [failed, 3.02s]
+   | terminal: pwd + 2 commands [failed, 3.03s]
    | terminal result
    | - **output:** [onsite: target laptop (dev, dials in) is unreachable: its link is up but it does not answer. It may be asleep or off the network. No command was run and nothing was retried. The target is checked again in about 10s.]
    | - **exit_code:** 255
   [MEASURED] a turn of the session on the mount, frozen
-   | ended after 6.2s: terminal: pwd + 2 commands [failed, 0.0s]
+   | ended after 6.7s: terminal: pwd + 2 commands [failed, 0.01s]
    | terminal result
-   | - **output:** [onsite: target laptop (dev, dials in) is unreachable: its link is up but it does not answer. It may be asleep or off the network. No command was run and nothing was retried. The target is checked again in about 4s.]
+   | - **output:** [onsite: target laptop (dev, dials in) is unreachable: its link is up but it does not answer. It may be asleep or off the network. No command was run and nothing was retried. The target is checked again in about 3s.]
    | - **exit_code:** 255
   [PASS] the mount lets go of the frozen laptop: no dead mount stays
-   | gone 14.0s after the freeze
+   | gone 14.5s after the freeze
   [PASS] thawed, the same link answers again: the laptop did not dial
-   | laptop  ssh    up (84 ms)  dev, dials in on port 24470
+   | laptop  ssh    up (77 ms)  dev, dials in on port 25484
    | (1.6s after the thaw)
   [PASS] and the session works again
    | terminal: pwd + 2 commands [completed, 0.2s]
@@ -167,32 +167,32 @@ Dial-in, walked from the computer's side
 
 == 10. Another account on the server takes the port
   [PASS] status says something else answers, and that nothing was sent
-   | laptop  ssh    DOWN (something else answers on port 24470, or `laptop` has a new host key. It is not the key first filed, so nothing was sent to it. To take the new key for a computer that was set up afresh: ssh-keygen -R onsite-laptop)
-   | (1.4s)
-  [PASS] the stand-in saw a connection that ended before any login
-   | Server listening on 127.0.0.1 port 24470.
-   | Connection closed by 127.0.0.1 port 51886 [preauth]
-  [PASS] the laptop's own command says its port is taken
-   | Error: remote port forwarding failed for listen port 24470
-  [PASS] with the port let go, the laptop is back under its own key
-   | laptop  ssh    up (75 ms)  dev, dials in on port 24470
+   | laptop  ssh    DOWN (something else answers on port 25484, or `laptop` has a new host key. It is not the key first filed, so nothing was sent to it. To take the new key for a computer that was set up afresh: ssh-keygen -R onsite-laptop)
    | (1.5s)
+  [PASS] the stand-in saw a connection that ended before any login
+   | Server listening on 127.0.0.1 port 25484.
+   | Connection closed by 127.0.0.1 port 50768 [preauth]
+  [PASS] the laptop's own command says its port is taken
+   | Error: remote port forwarding failed for listen port 25484
+  [PASS] with the port let go, the laptop is back under its own key
+   | laptop  ssh    up (76 ms)  dev, dials in on port 25484
+   | (1.6s)
 
 == 11. A second computer never shares the port
   [PASS] the second computer was given a port of its own
-   | laptop: 24470, desktop: 28549
+   | laptop: 25484, desktop: 20100
   [PASS] asking for the first one's port is refused
    | onsite: the settings are not usable.
-   |   - `laptop` and `desktop` both use port 24470. A computer that dials in needs a port of its own
+   |   - `laptop` and `desktop` both use port 25484. A computer that dials in needs a port of its own
    | Run `hermes onsite init`, or edit `plugins.entries.onsite.settings` in config.yaml.
 
 == 12. Keep it running: a loop in place of the service
   [PASS] the service file starts the same link, with nobody to ask
-   | /usr/bin/env ssh -N -o BatchMode=yes -o ExitOnForwardFailure=yes -o ConnectTimeout=10 -o ServerAliveInterval=15 -o ServerAliveCountMax=3 -o ControlPath=none -R 127.0.0.1:24470:127.0.0.1:22 hermes@server
+   | /usr/bin/env ssh -N -o BatchMode=yes -o ExitOnForwardFailure=yes -o ConnectTimeout=10 -o ServerAliveInterval=15 -o ServerAliveCountMax=3 -o ControlPath=none -R 127.0.0.1:25484:127.0.0.1:22 hermes@server
   [PASS] the loop opened the link
-   | laptop   ssh    up (79 ms)  dev, dials in on port 24470
+   | laptop   ssh    up (75 ms)  dev, dials in on port 25484
   [PASS] killed, the link comes back by itself
-   | laptop   ssh    up (77 ms)  dev, dials in on port 24470
+   | laptop   ssh    up (74 ms)  dev, dials in on port 25484
    | (6.5s after it was killed)
 
 == 13. The laptop falls off the network, then returns
@@ -202,24 +202,24 @@ Dial-in, walked from the computer's side
    | laptop   ssh    DOWN (its link is up but it does not answer. It may be asleep or off the network)
    | (4.5s)
   [PASS] back on the network, the loop dials in again by itself
-   | laptop   ssh    up (78 ms)  dev, dials in on port 24470
-   | (7.4s after the network came back, 60s off it)
+   | laptop   ssh    up (82 ms)  dev, dials in on port 25484
+   | (5.1s after the network came back, 60s off it)
 
 == 14. The printed service file, under a real systemd
   [PASS] a second computer starts with systemd as its service manager
    | degraded
   [PASS] saved and turned on with the printed lines, it opens the link
    | systemctl --user daemon-reload && systemctl --user enable --now onsite-dial-in.service
-   | desktop  ssh    up (92 ms)  dev, dials in on port 28549
+   | desktop  ssh    up (96 ms)  dev, dials in on port 20100
    | (1.6s)
   [PASS] two computers are connected at once, each on its own port
-   | laptop   ssh    up (82 ms)  dev, dials in on port 24470
-   | desktop  ssh    up (100 ms)  dev, dials in on port 28549
+   | laptop   ssh    up (82 ms)  dev, dials in on port 25484
+   | desktop  ssh    up (96 ms)  dev, dials in on port 20100
   [PASS] killed, systemd starts the link again by itself
-   | desktop  ssh    up (95 ms)  dev, dials in on port 28549
+   | desktop  ssh    up (102 ms)  dev, dials in on port 20100
    | (5.8s after it was killed, NRestarts=1)
   [PASS] turned off with the printed line, the link closes
    | systemctl --user disable --now onsite-dial-in.service
-   | desktop  ssh    DOWN (it has not connected to this server, or its link dropped. Nothing answers on port 28549)
+   | desktop  ssh    DOWN (it has not connected to this server, or its link dropped. Nothing answers on port 20100)
 
 51 passed, 0 failed
