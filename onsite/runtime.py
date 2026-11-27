@@ -22,9 +22,11 @@ from pathlib import Path
 from typing import Any
 from typing import Callable
 
+from . import environments
 from . import mounts
 from . import routing
 from .config import ConfigError
+from .config import KIND_ENVIRONMENT
 from .config import KIND_SSH
 from .config import OnsiteConfig
 from .config import TargetSpec
@@ -148,16 +150,32 @@ class Runtime:
 
         return str(mounts.default_root(self._data_dir, name))
 
+    def default_workspace(self, name: str) -> str:
+        """Where an environment keeps its sessions when no place is
+        set."""
+
+        if self._data_dir is None:
+            return ""
+
+        return str(environments.default_root(self._data_dir, name))
+
     def with_default_mounts(self, config: OnsiteConfig) -> OnsiteConfig:
         """Give every SSH target a mount root, so any of its folders
-        can be opened with no set-up. A place named in the settings
-        is kept as it is."""
+        can be opened with no set-up, and every environment a folder
+        for its sessions. A place named in the settings is kept as it
+        is."""
 
         targets = {}
 
         for name, spec in config.targets.items():
             if spec.kind == KIND_SSH and not spec.mount:
                 spec = replace(spec, mount=self.default_mount(name))
+
+            if spec.kind == KIND_ENVIRONMENT and not spec.workspace:
+                spec = replace(
+                    spec,
+                    workspace=self.default_workspace(name),
+                )
 
             targets[name] = spec
 
@@ -260,6 +278,43 @@ class Runtime:
             return
 
         mounts.stop(spec, Path(spec.mount), self._data_dir)
+
+    def profile(self) -> str:
+        """The name a profile's sandboxes are labeled with."""
+
+        if self._data_dir is None:
+            return mounts.UNNAMED_PROFILE
+
+        return mounts.profile_name(self._data_dir)
+
+    def open_session(self, spec: TargetSpec) -> environments.Session:
+        """A new session folder in an environment, cloned and ready
+        to be opened. Its sandbox is made by its first command."""
+
+        if spec.kind != KIND_ENVIRONMENT or not spec.workspace:
+            raise environments.SandboxError(
+                f"{spec.label} is not an environment."
+            )
+
+        if self._data_dir is None:
+            raise environments.SandboxError(
+                "this process has no data folder"
+            )
+
+        return environments.open_session(spec, self._data_dir)
+
+    def remove_session(self, spec: TargetSpec, session_id: str) -> None:
+        """Take one session's sandbox and folder away, for good."""
+
+        root = environments.root_of(spec)
+        session = environments.session_of(spec, str(root / session_id))
+
+        if session is None:
+            raise environments.SandboxError(
+                f"`{session_id}` is not a session of {spec.label}."
+            )
+
+        environments.remove_session(spec, session)
 
     def load_config(self) -> OnsiteConfig:
         """Read the settings fresh, so an edit applies to the next
