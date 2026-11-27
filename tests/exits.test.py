@@ -79,3 +79,12 @@ def test_a_refusal_says_nothing_ran():
     assert result["returncode"] == exits.SSH_TRANSPORT_EXIT
     assert result["onsite"]["state"] == exits.STATE_NO_STATUS
     assert result["output"] == "[onsite: target is unreachable]"
+
+
+def test_a_refusal_names_the_plugin_once():
+    said = "onsite target laptop is unreachable: no answer."
+    result = exits.refusal("laptop", said)
+
+    assert result["output"] == (
+        "[onsite: target laptop is unreachable: no answer.]"
+    )

@@ -29,6 +29,7 @@ SSH_TRANSPORT_EXIT = 255
 SIGNAL_EXIT_FLOOR = 129
 SIGNAL_EXIT_CEILING = 192
 
+OWN_NAME_PREFIX = "onsite "
 RESULT_KEY = "onsite"
 
 VERDICT_LOST = "lost"
@@ -153,8 +154,13 @@ def annotate(
 def refusal(target: str, message: str) -> dict[str, Any]:
     """The result for a command that was never sent to its target."""
 
+    # The breaker's own words start with the plugin's name, for the
+    # places that show them bare. Inside the brackets the name is
+    # already there, and it read "onsite: onsite target".
+    said = message.removeprefix(OWN_NAME_PREFIX)
+
     result = {
-        "output": f"[onsite: {message}]",
+        "output": f"[onsite: {said}]",
         "returncode": SSH_TRANSPORT_EXIT,
     }
 
