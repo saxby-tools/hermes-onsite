@@ -333,16 +333,15 @@ checked in the real app yet.
 <!-- onsite:notice {"kind": "untested"} -->
 
 The cards with Run and Copy, the New session button and the Machines
-page have passed their tests, but no person has used them inside the
-real Hermes Desktop app. The chip and the pane have been seen there.
+page have been used inside the real Hermes Desktop app, on a test rig
+with a scripted model in place of a real one. So have the chip, the
+pane and the app's file tree on a computer's files. The app's own
+folder picker has not been seen on those files.
 
-Nobody has yet seen the app's own folder picker and file tree on a
-computer's files. The server shows those files, and that part is
-tested. How the app looks with them is not.
-
-No person has yet answered Hermes' yes-or-no question for a real
-command through onsite. The tests show the question appears and that
-a "no" holds.
+Hermes' yes-or-no question has been answered in the real app, on the
+same rig. A "no" left the folder where it was, and a "yes" removed
+it. No person has yet answered it for a command a real model asked
+for.
 
 A laptop that really falls asleep has not been tried. The tests cut
 the network link, which is not quite the same.
