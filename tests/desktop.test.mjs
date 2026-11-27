@@ -951,6 +951,66 @@ test('a session is started in the profile the app is on', { skip: SKIP }, async 
   assert.equal(calls.rpc[0][1].profile, 'buster')
 })
 
+// The app keeps its "show every profile" switch where a page keeps
+// small settings. The test page has none unless one is put there.
+function withAllProfilesSwitch(value) {
+  globalThis.localStorage = { getItem: () => value }
+
+  return () => {
+    delete globalThis.localStorage
+  }
+}
+
+test('on a named profile the app is told whose session it opens', { skip: SKIP }, async () => {
+  const { box, calls, click, host } = await openPaneMachines()
+
+  host.state.profile = atom('buster')
+
+  await click(box.querySelector('[data-onsite-new-session="laptop"]'))
+
+  // Without the profile, and with the list on that profile alone, the
+  // real app empties its file tree and never fills it again.
+  assert.deepEqual(calls.opened, [
+    ['stored-new', { expectHistory: false, profile: 'buster', keepAllProfilesScope: true }]
+  ])
+})
+
+test('on the default profile the list of profiles is left as it was', { skip: SKIP }, async () => {
+  const { box, calls, click, host } = await openPaneMachines()
+  const button = box.querySelector('[data-onsite-new-session="laptop"]')
+
+  host.state.profile = atom('default')
+
+  await click(button)
+
+  const putBack = withAllProfilesSwitch('true')
+
+  await click(button)
+  putBack()
+
+  assert.deepEqual(calls.opened.map(([, how]) => how), [
+    { expectHistory: false, profile: 'default', keepAllProfilesScope: false },
+    { expectHistory: false, profile: 'default', keepAllProfilesScope: true }
+  ])
+})
+
+test('a page that will not let its settings be read still opens the session', { skip: SKIP }, async () => {
+  const { box, calls, click, host } = await openPaneMachines()
+
+  host.state.profile = atom('default')
+  globalThis.localStorage = {
+    getItem: () => {
+      throw new Error('denied')
+    }
+  }
+
+  await click(box.querySelector('[data-onsite-new-session="laptop"]'))
+  delete globalThis.localStorage
+
+  assert.equal(calls.opened.length, 1)
+  assert.equal(calls.opened[0][1].keepAllProfilesScope, false)
+})
+
 test('an app that cannot start sessions is given the folder to open', { skip: SKIP }, async () => {
   const { box, calls, click, host, made } = await openPaneMachines()
 
