@@ -152,6 +152,21 @@ def parse_number(raw_args: str) -> int | None:
     return int(text)
 
 
+def hand_to_agent(ctx, text: str, session_key: str) -> bool:
+    """Put `text` into the chat the command came from.
+
+    The session is named whenever Hermes gave one. The desktop app's
+    backend only takes a message for a session it is told by name.
+    With no name it looks for a messaging gateway in its own process,
+    finds none, and the Run button did nothing but print a hint.
+    """
+
+    if session_key:
+        return bool(ctx.inject_message(text, session_key=session_key))
+
+    return bool(ctx.inject_message(text))
+
+
 def build_run_command(ctx, runtime: Runtime):
     def run_command(
         raw_args: str = "",
@@ -175,7 +190,11 @@ def build_run_command(ctx, runtime: Runtime):
 
         # The agent runs it, not this handler. That keeps the command
         # inside the terminal tool, where Hermes' approval gate is.
-        sent = ctx.inject_message(messages.format_run_request(proposal))
+        sent = hand_to_agent(
+            ctx,
+            messages.format_run_request(proposal),
+            session_key,
+        )
 
         if not sent:
             return messages.format_run_blocked(proposal)
