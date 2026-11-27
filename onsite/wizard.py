@@ -11,7 +11,9 @@ from __future__ import annotations
 
 from typing import Any
 from typing import Callable
+from typing import Mapping
 
+from . import dialin
 from .config import DEFAULT_SSH_PORT
 from .config import OnsiteConfig
 from .config import KIND_LOCAL
@@ -27,6 +29,11 @@ NO_TARGETS = (
     "`hermes onsite init` on a terminal to be asked."
 )
 
+NO_SERVER = (
+    "--dial-in needs --server USER@ADDRESS: this server, as that "
+    "computer logs in to it."
+)
+
 NO_DEFAULT = (
     "No default target was named. Add `--default NAME`. It is the "
     "target used when no folder rule matches. With exactly one "
@@ -34,6 +41,9 @@ NO_DEFAULT = (
 )
 
 INDENT = "  "
+
+ANSWER_YES = "yes"
+ANSWERS_NO = ("n", "no")
 
 
 class FlagError(ValueError):
@@ -75,6 +85,35 @@ def parse_ssh(value: str) -> tuple[str, dict[str, Any]]:
     return name, block
 
 
+def add_dial_ins(
+    targets: dict[str, dict[str, Any]],
+    dial_in: tuple[str, ...] | list[str],
+    server: str | None,
+    saved: Mapping[str, Any],
+) -> None:
+    """Add each computer that dials in, with a port of its own.
+
+    A computer already saved under the same name keeps its port. Its
+    own command names that port, and a new one would cut its link.
+    """
+
+    if dial_in and not server:
+        raise FlagError(NO_SERVER)
+
+    for value in dial_in:
+        name, account = split_pair("--dial-in", value)
+        block = {"kind": KIND_SSH, "user": account, "dial_in": server}
+
+        # A port is kept away from the targets named in this run and
+        # from the ones in the file, so two never share one.
+        known = {**saved, **targets}
+
+        try:
+            targets[name] = dialin.complete(name, block, known)
+        except dialin.DialInError as error:
+            raise FlagError(f"--dial-in {name}: {error}") from None
+
+
 def need_target(targets: dict, flag: str, name: str) -> dict[str, Any]:
     if name not in targets:
         raise FlagError(f"{flag} names `{name}`, which is not a target")
@@ -92,8 +131,11 @@ def settings_from_flags(
     default: str | None,
     mount: tuple[str, ...] | list[str] = (),
     start: tuple[str, ...] | list[str] = (),
+    dial_in: tuple[str, ...] | list[str] = (),
+    server: str | None = None,
+    saved: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
-    if not ssh and not local:
+    if not ssh and not local and not dial_in:
         raise FlagError(NO_TARGETS)
 
     targets: dict[str, dict[str, Any]] = {}
@@ -101,6 +143,8 @@ def settings_from_flags(
     for value in ssh:
         name, block = parse_ssh(value)
         targets[name] = block
+
+    add_dial_ins(targets, dial_in, server, saved or {})
 
     for name in local:
         targets[name] = {"kind": KIND_LOCAL}
@@ -151,12 +195,50 @@ def ask(
     return answer or default
 
 
-def interview(read: Callable[[str], str]) -> dict[str, Any]:
+def ask_address(
+    read: Callable[[str], str],
+    name: str,
+    saved: Mapping[str, Any],
+) -> dict[str, Any]:
+    """Where the machine is: an address the server can log in to, or,
+    for one the server cannot reach, how that machine reaches the
+    server."""
+
+    reachable = ask(
+        read,
+        "Can the Hermes server log in to it over SSH? (yes or no)",
+        ANSWER_YES,
+    )
+
+    if reachable.lower() not in ANSWERS_NO:
+        host = ask(read, "Its host name or address")
+        user = ask(read, "The user to log in as")
+
+        return {"kind": KIND_SSH, "host": host, "user": user}
+
+    user = ask(read, "The user to log in as, on that machine")
+    server = ask(
+        read,
+        "The Hermes server, as that machine logs in to it "
+        "(USER@ADDRESS)",
+    )
+    block = {"kind": KIND_SSH, "user": user, "dial_in": server}
+
+    try:
+        return dialin.complete(name, block, saved)
+    except dialin.DialInError as error:
+        raise FlagError(str(error)) from None
+
+
+def interview(
+    read: Callable[[str], str],
+    saved: Mapping[str, Any] | None = None,
+) -> dict[str, Any]:
     """Ask for the common setup: one machine over SSH and this one."""
 
     ssh_name = ask(read, "Name for the machine you sit at", DEFAULT_SSH_NAME)
-    host = ask(read, "Its host name or address")
-    user = ask(read, "The user to log in as")
+    ssh_block = ask_address(read, ssh_name, saved or {})
+    user = ssh_block["user"]
     prefix = ask(
         read,
         "Sessions in folders under this path run there",
@@ -168,12 +250,7 @@ def interview(read: Callable[[str], str]) -> dict[str, Any]:
         "(blank for none)",
     )
 
-    ssh_block: dict[str, Any] = {
-        "kind": KIND_SSH,
-        "host": host,
-        "user": user,
-        "prefixes": [prefix],
-    }
+    ssh_block["prefixes"] = [prefix]
 
     if source:
         destination = ask(read, "Its path on that machine", prefix)

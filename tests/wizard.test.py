@@ -5,6 +5,7 @@ from __future__ import annotations
 import pytest
 
 from onsite import config
+from onsite import dialin
 from onsite import wizard
 
 
@@ -98,6 +99,7 @@ def test_no_default_and_no_local_says_which_flag_to_add():
 def test_the_interview_builds_the_common_setup():
     answers = iter([
         "",
+        "",
         "laptop.example",
         "dev",
         "",
@@ -110,10 +112,145 @@ def test_the_interview_builds_the_common_setup():
     parsed = wizard.validate(settings)
 
     assert parsed.default == "mac"
+    assert parsed.target("laptop").host == "laptop.example"
+    assert parsed.target("laptop").dial_in == ""
     assert parsed.target("laptop").prefixes == ("/home/dev",)
     assert parsed.target("laptop").path_map == (
         ("/Users/dev/Development", "/home/dev/Development"),
     )
+
+
+# ---- a machine that dials in -------------------------------------------
+
+
+def offer_ports(monkeypatch, *ports):
+    """Stand in for the random draw and for the look at each port."""
+
+    left = list(ports)
+
+    monkeypatch.setattr(dialin, "draw_port", lambda: left.pop(0))
+    monkeypatch.setattr(dialin, "port_is_free", lambda port: True)
+
+
+def test_a_dial_in_flag_builds_a_block_that_loads(monkeypatch):
+    offer_ports(monkeypatch, 20500)
+
+    settings = build(
+        ssh=[],
+        prefix=[],
+        dial_in=["laptop=dev"],
+        server="you@server.example",
+    )
+    spec = wizard.validate(settings).target("laptop")
+
+    assert spec.dial_in == "you@server.example"
+    assert spec.user == "dev"
+    assert spec.host == "127.0.0.1"
+    assert spec.port == 20500
+
+
+def test_a_dial_in_flag_needs_the_server():
+    with pytest.raises(wizard.FlagError, match="--server USER@ADDRESS"):
+        build(ssh=[], prefix=[], dial_in=["laptop=dev"])
+
+
+def test_two_dial_in_flags_get_two_ports(monkeypatch):
+    # The draw offers the first machine's port again.
+    offer_ports(monkeypatch, 20500, 20500, 20777)
+
+    settings = build(
+        ssh=[],
+        prefix=[],
+        dial_in=["laptop=dev", "desk=dev"],
+        server="you@server.example",
+    )
+
+    assert settings["targets"]["laptop"]["port"] == 20500
+    assert settings["targets"]["desk"]["port"] == 20777
+
+
+def test_running_init_again_keeps_a_saved_machines_port(monkeypatch):
+    # `init` writes the whole list. A machine that already dials in
+    # must come out with the port its own command names.
+    offer_ports(monkeypatch, 20999)
+
+    saved = {
+        "laptop": {
+            "kind": "ssh",
+            "host": "127.0.0.1",
+            "port": 20500,
+            "user": "dev",
+            "dial_in": "you@server.example",
+        },
+    }
+    settings = build(
+        ssh=[],
+        prefix=[],
+        dial_in=["laptop=dev"],
+        server="you@server.example",
+        saved=saved,
+    )
+
+    assert settings["targets"]["laptop"]["port"] == 20500
+
+
+def test_a_dial_in_server_that_is_not_a_plain_login_is_refused(monkeypatch):
+    offer_ports(monkeypatch, 20500)
+
+    settings = build(
+        ssh=[],
+        prefix=[],
+        dial_in=["laptop=dev"],
+        server="you@server.example; id",
+    )
+
+    with pytest.raises(config.ConfigError, match="USER@ADDRESS"):
+        wizard.validate(settings)
+
+
+def test_no_free_port_is_said_with_the_flag_it_came_from(monkeypatch):
+    monkeypatch.setattr(dialin, "port_is_free", lambda port: False)
+
+    with pytest.raises(wizard.FlagError, match="--dial-in laptop: no free"):
+        build(
+            ssh=[],
+            prefix=[],
+            dial_in=["laptop=dev"],
+            server="you@server.example",
+        )
+
+
+def test_a_folder_rule_can_be_given_to_a_machine_that_dials_in(monkeypatch):
+    offer_ports(monkeypatch, 20500)
+
+    settings = build(
+        ssh=[],
+        dial_in=["laptop=dev"],
+        server="you@server.example",
+    )
+
+    assert settings["targets"]["laptop"]["prefixes"] == ["/home/dev/"]
+
+
+def test_the_interview_asks_how_a_machine_out_of_reach_gets_in(monkeypatch):
+    offer_ports(monkeypatch, 20500)
+
+    answers = iter([
+        "",
+        "no",
+        "dev",
+        "you@server.example",
+        "",
+        "",
+        "",
+    ])
+
+    settings = wizard.interview(lambda question: next(answers))
+    spec = wizard.validate(settings).target("laptop")
+
+    assert spec.dial_in == "you@server.example"
+    assert spec.port == 20500
+    assert spec.prefixes == ("/home/dev",)
 
 
 def test_the_block_is_shown_where_it_will_live():
