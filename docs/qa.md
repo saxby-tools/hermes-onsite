@@ -12,7 +12,7 @@ The examples use made-up names. The host, `host.example`, is the
 machine that runs the Hermes gateway. The target, `laptop.example`,
 is a Linux laptop. Your user on both is `you`, and the test profile
 is `test`. Put your own names in. Journeys 1 to 13 touch only the
-`qa` and `test` profiles. The rig, in journeys 11 and 14, swaps the
+`qa` and `test` profiles. The rig, in journeys 11 and 15, swaps the
 config of the profile it is given for the length of a run. That is
 `buster` unless you pass `--profile`.
 
@@ -494,19 +494,124 @@ Never tested.
 - [ ] Ask for a risky command. Note whether Hermes' approval prompt
       shows on the phone and whether you can answer it.
 
-## 14. The automatic tests
+## 14. A laptop the host cannot reach
+
+**Never tried from a real laptop.** It has been walked between test
+containers. Use a computer the host cannot log in to: a laptop on a
+phone's hotspot or behind a home router, with the VPN off. Its name
+here is `roamer`. This journey also adds one line to
+`~/.ssh/authorized_keys` on the host and one on the laptop.
+
+- [ ] From the host, this fails or times out:
+
+```bash
+ssh you@roamer.example true
+```
+
+- [ ] On the laptop, its SSH server is on, and this returns at once
+      with no question:
+
+```bash
+ssh you@host.example true
+```
+
+- [ ] On the laptop, fetch the host's public key, so the host can
+      log in through the link. Use the name of the host's own key
+      file:
+
+```bash
+ssh you@host.example cat .ssh/id_ed25519.pub >> ~/.ssh/authorized_keys
+```
+
+- [ ] In the desktop app, open Settings, Plugins, Onsite, then
+      Machines. Click "Add a machine". Name it `roamer`. Under
+      "Where it is" pick "Another machine, which connects to the
+      server by itself". The Address and Port fields go away. Note
+      what "This server, as that machine logs in to it over SSH" is
+      filled with. If the app reaches the host over SSH, it should
+      be that login. Fill in your account on the laptop and click
+      Save.
+- [ ] The row reads `you, dials in on port` and a number between
+      20000 and 29999. Under it a box titled "Connect roamer" has a
+      red dot and "Waiting: it has not connected to this server, or
+      its link dropped. Nothing answers on port" and the same number.
+- [ ] Click Copy beside step 1. Paste it in a terminal on the
+      laptop and run it. It asks once whether to trust the host. Say
+      yes. It then prints nothing and does not return.
+- [ ] Without a click, the box turns to a green dot and "Connected"
+      with a time, within about five seconds. Note how long.
+- [ ] Under the steps the page shows the key the server filed for
+      `roamer`. On the laptop, this prints the same ED25519 line:
+
+```bash
+ssh-keygen -lf /etc/ssh/ssh_host_ed25519_key.pub
+```
+
+- [ ] On the host, the last line names the port and reads `up`. The
+      second command prints the same command the app showed, and
+      "State: connected":
+
+```bash
+hermes -p test onsite status
+```
+
+```bash
+hermes -p test onsite dial-in roamer
+```
+
+- [ ] Click the chip, then "New session" beside `roamer`. Ask for
+      `uname -n`. It prints the laptop's name. The file tree shows
+      the laptop's files.
+- [ ] Press Ctrl-C on the command on the laptop. Within about ten
+      seconds the chip's dot is red. Its hover text reads "State:
+      not connected (it has not connected to this server, or its
+      link dropped" and the port. The pane's line for `roamer`
+      starts "Not connected:" and ends "Its command is in Settings,
+      Plugins, Onsite, Machines." Nowhere does it only say
+      "Connection refused".
+- [ ] Ask for a command. The error names `roamer` and says the same
+      thing. Nothing ran.
+- [ ] Run the command on the laptop again. Within about fifteen
+      seconds the next command runs and the file tree is back. You
+      did nothing on the host.
+- [ ] Keep it running. In the box, pick the laptop's system at step
+      2. Save the file where it says, and run the lines under it on
+      the laptop. Stop the command you started by hand. The link
+      stays up. Restart the laptop and log in. Note how long until
+      the chip is green, with nothing typed.
+- [ ] Close the laptop's lid for two minutes and open it. Note how
+      long until the chip is green. If it takes more than a minute,
+      look at what the link said. On Linux:
+      `journalctl --user -u onsite-dial-in -n 20`. "remote port
+      forwarding failed" means the host held the old link's port.
+- [ ] Move the laptop to another network, such as from the hotspot
+      to Wi-Fi, and note the same. Then add the two lines the README
+      gives under "Let the server notice a dead link" to the host's
+      `/etc/ssh/sshd_config`, restart its SSH server, and note it
+      again. It should now be back within about a minute.
+- [ ] Limit the key. Copy the line at step 3 and put it in front of
+      the laptop's key in `~/.ssh/authorized_keys` on the host, then
+      a space. The link still comes up. From the laptop,
+      `ssh you@host.example id` now prints nothing and fails.
+- [ ] Add a second computer the same way. Its port is a different
+      number.
+- [ ] When done: turn the service off with the line the page gives,
+      click Remove beside `roamer`, and take both lines out of the
+      two `authorized_keys` files.
+
+## 15. The automatic tests
 
 Run these from a clone of the repository, on the host. The rig uses a
 profile named `buster` unless you pass `--profile`, and needs Docker
 and `HERMES_HOME`, as in journey 11.
 
-- [ ] Unit tests: 508 pass and one is skipped.
+- [ ] Unit tests: 653 pass and one is skipped.
 
 ```bash
 uv run --no-project --with pytest --with pillow --with cryptography python -m pytest -q
 ```
 
-- [ ] Desktop tests: 67 pass and none is skipped. They borrow React
+- [ ] Desktop tests: 91 pass and none is skipped. They borrow React
       from a Hermes checkout at `~/.hermes/hermes-agent`, or the
       folder named in `HERMES_SRC`. Without one they are skipped, not
       failed.
@@ -523,6 +628,13 @@ python3 rig/run.py --apply
 
 ```bash
 python3 rig/run.py --apply --real you@laptop.example
+```
+
+- [ ] The dial-in walk, which needs Docker alone and builds its own
+      two computers. Every line reads PASS:
+
+```bash
+python3 rig/dial/walk.py --apply
 ```
 
 ## When you are done
