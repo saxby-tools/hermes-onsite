@@ -11,6 +11,10 @@ A target's `mount` is one more map entry: the folder on the host
 where the target's whole disk is mounted. A session opened under it
 runs in the real folder on the target.
 
+An environment's `workspace` is one more again: the folder on the host
+that holds its sessions. A session opened under it runs in a sandbox,
+at the same path, so its entry maps the folder to itself.
+
 A brain and a hand rarely agree on paths, so a route also carries the
 folder to start in on the target. This module is pure. It imports
 nothing from Hermes and touches no network.
@@ -22,6 +26,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from .config import OnsiteConfig
+from .config import KIND_ENVIRONMENT
 from .config import KIND_LOCAL
 from .config import TargetSpec
 from .config import is_absolute
@@ -37,6 +42,7 @@ REASON_PINNED = "pinned"
 REASON_PREFIX = "prefix"
 REASON_PATH_MAP = "path_map"
 REASON_MOUNT = "mount"
+REASON_ENVIRONMENT = "environment"
 REASON_DEFAULT = "default"
 
 
@@ -91,6 +97,11 @@ def map_entries(spec: TargetSpec) -> list[tuple[str, str, str]]:
 
     if spec.mount:
         entries.append((spec.mount, ROOT, REASON_MOUNT))
+
+    if spec.kind == KIND_ENVIRONMENT and spec.workspace:
+        entries.append(
+            (spec.workspace, spec.workspace, REASON_ENVIRONMENT)
+        )
 
     return entries
 
