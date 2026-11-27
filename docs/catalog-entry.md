@@ -135,8 +135,8 @@ capabilities:
       for the laptop, and a scripted model in place of a real one.
       Say so in the pull request. Pin each to the same commit as
       `sha`. The guide's pictures are drawings and must not be listed
-      as screenshots. The seventh file there is an animation for the
-      site alone.
+      as screenshots. The animation there, `00-new-session.gif`,
+      is for the site alone.
 - [ ] The status line says what is true on the day, in both
       `README.md` and `onsite/README.md`. The second is the one the
       catalog shows.
