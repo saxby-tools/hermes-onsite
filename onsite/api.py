@@ -11,6 +11,7 @@ This module imports nothing from Hermes.
 
 from __future__ import annotations
 
+from pathlib import PurePosixPath
 from typing import Any
 
 from . import messages
@@ -123,14 +124,22 @@ def probe_row(runtime, spec, known: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def mount_problem(runtime, spec) -> str:
+def mount_problem(runtime, spec, connected: bool = True) -> str:
     """Why a target's files cannot be shown on the host, or nothing.
 
     Asking mounts the disk if it is not mounted, so the folder picker
     and the file tree can reach it by the time a person looks.
+
+    A target that does not answer is not asked to mount. The try
+    would only time out, and the failure would then be remembered
+    past the moment the target comes back. The state already says it
+    is away.
     """
 
     if spec.kind != KIND_SSH:
+        return ""
+
+    if not connected:
         return ""
 
     try:
@@ -141,19 +150,41 @@ def mount_problem(runtime, spec) -> str:
     return ""
 
 
-def session_mount_problem(runtime, payload: dict[str, Any]) -> str:
+def under_mount(folder: str, spec) -> bool:
+    """Whether a folder on the host is on a target's mount.
+
+    Told from the two paths alone. The folder itself is never asked:
+    it may be on a mount whose target sleeps, and that can hang.
+    """
+
+    if not folder or not spec.mount:
+        return False
+
+    place = PurePosixPath(folder)
+    root = PurePosixPath(spec.mount)
+
+    return place == root or root in place.parents
+
+
+def session_mount_problem(
+    runtime,
+    payload: dict[str, Any],
+    folder: str = "",
+) -> str:
     """Why the session's own folder cannot be shown, or nothing.
 
     A session opened under a mount is in a folder that is only there
-    while the mount is. A restart of the host takes every mount down.
-    The chip asks this every few seconds, so the mount is back before
-    a person has to go looking for it.
+    while the mount is. A restart of the host takes every mount down,
+    and so does a target that went away for a while. The chip asks
+    this every few seconds, so the mount is back before a person has
+    to go looking for it.
+
+    `folder` is where the app says the session is. A session that has
+    had its first message is routed by where it started, not by its
+    folder, so the reason alone would miss it.
     """
 
     if not payload.get("ok"):
-        return ""
-
-    if payload.get("reason") != REASON_MOUNT:
         return ""
 
     try:
@@ -161,7 +192,25 @@ def session_mount_problem(runtime, payload: dict[str, Any]) -> str:
     except ConfigError:
         return ""
 
-    return mount_problem(runtime, spec)
+    by_reason = payload.get("reason") == REASON_MOUNT
+
+    if not by_reason and not under_mount(folder, spec):
+        return ""
+
+    return mount_problem(runtime, spec, bool(payload.get("connected")))
+
+
+def row_state(runtime, spec, known: dict[str, Any]) -> dict[str, Any]:
+    """A target's state for the pane, and why its files cannot be
+    shown if they cannot. The probe comes first: a target that does
+    not answer is not asked to mount."""
+
+    probe = probe_row(runtime, spec, known)
+
+    return {
+        "mount_error": mount_problem(runtime, spec, probe["connected"]),
+        **probe,
+    }
 
 
 def describe_targets(
@@ -181,8 +230,7 @@ def describe_targets(
             "kind": spec.kind,
             "label": spec.label,
             "default": spec.name == config.default,
-            "mount_error": mount_problem(runtime, spec),
-            **probe_row(runtime, spec, known or {}),
+            **row_state(runtime, spec, known or {}),
         })
 
     return rows
@@ -204,7 +252,11 @@ def status_payload(runtime, body: Any, with_targets: bool = False) -> dict:
     payload = runtime.status(session_id=session_id, cwd=read_cwd(body))
     payload["api_version"] = API_VERSION
     payload["run_allowed"] = runtime.run_allowed()
-    payload["mount_error"] = session_mount_problem(runtime, payload)
+    payload["mount_error"] = session_mount_problem(
+        runtime,
+        payload,
+        read_cwd(body),
+    )
 
     if with_targets:
         payload["rows"] = describe_targets(runtime, answer_of(payload))

@@ -127,6 +127,59 @@ def test_a_mount_that_fails_is_named_in_the_status(tmp_path, monkeypatch):
     assert payload["mount_error"] == "this server has no `sshfs`"
 
 
+def test_a_started_session_under_a_mount_gets_it_back_too(
+    tmp_path,
+    mount_asks,
+):
+    """After its first message a session is routed by where it
+    started. Its folder is still on the mount."""
+
+    built = build(tmp_path)
+    folder = mounts.default_root(tmp_path, "laptop") / "home" / "dev" / "app"
+
+    built.pins.set(
+        "session:key-1",
+        "laptop",
+        runtime.SOURCE_ROUTE,
+        "/home/dev/app",
+        "id-1",
+    )
+
+    payload = api.status_payload(
+        built,
+        {"cwd": str(folder), "session_ids": ["id-1"]},
+        with_targets=False,
+    )
+
+    assert payload["reason"] != "mount"
+    assert payload["target"] == "laptop"
+    assert mount_asks == ["laptop"]
+
+
+def test_a_target_that_is_away_is_not_asked_to_mount(tmp_path, mount_asks):
+    folder = mounts.default_root(tmp_path, "laptop") / "home" / "dev" / "app"
+    payload = api.status_payload(
+        build(tmp_path, laptop_up=False),
+        {"cwd": str(folder), "rows": True},
+        with_targets=True,
+    )
+
+    assert payload["connected"] is False
+    assert payload["mount_error"] == ""
+    assert payload["rows"][0]["mount_error"] == ""
+    assert mount_asks == []
+
+
+def test_a_folder_beside_a_mount_is_not_on_it(tmp_path):
+    built = build(tmp_path)
+    spec = built.load_config().target("laptop")
+
+    assert api.under_mount(spec.mount, spec) is True
+    assert api.under_mount(f"{spec.mount}/home/dev", spec) is True
+    assert api.under_mount(f"{spec.mount}-old/home", spec) is False
+    assert api.under_mount("", spec) is False
+
+
 def test_a_session_elsewhere_mounts_nothing(tmp_path, mount_asks):
     payload = api.status_payload(
         build(tmp_path),
