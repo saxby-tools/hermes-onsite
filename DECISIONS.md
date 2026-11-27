@@ -1398,11 +1398,15 @@ it, as in entry 64. A scripted model stood in for a real one.
   say "not set up". It says "no answer". A run card forgot it was
   sent when the app reloaded. A folder that already had a project
   wrote a warning to the console on every click.
-- **Hermes' Docker image is not ready as shipped.** Four things are
+- **Hermes' Docker image is not ready as shipped.** Five things are
   missing, and the README now lists them: `sshfs`, the FUSE device
   open to Hermes' account, a folder for mounts outside `/opt/data`,
-  and Hermes' own `HERMES_DASHBOARD_FILES_ROOT`. The last is the
-  hard one. In that image Hermes lets the app read `/opt/data` and
+  Hermes' own `HERMES_DASHBOARD_FILES_ROOT`, and a wider
+  `HERMES_WRITE_SAFE_ROOT`. Without the last, Hermes' file tools
+  refuse every write on a target, because the image lets them write
+  under `/opt/data` alone and judges a target's path as if it were
+  the server's. The files root is the hard one. In that image Hermes
+  lets the app read `/opt/data` and
   nothing else, and entry 63 keeps mounts out of `/opt/data`. With
   the setting on the mount folder, the app reads the mounts and a
   session on the server loses its file tree. That is a real cost,
