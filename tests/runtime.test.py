@@ -6,6 +6,7 @@ import pytest
 
 from onsite import config
 from onsite import health
+from onsite import mounts
 from onsite import routing
 from onsite import runtime
 
@@ -284,3 +285,86 @@ def test_a_changed_host_gets_its_own_breaker(tmp_path):
 
     assert harness.runtime.gate_for(moved) is not first
     assert harness.runtime.gate_for(old) is first
+
+
+# ---- a mount that went away ----------------------------------------------
+
+
+def healing(tmp_path, monkeypatch, mounted=False):
+    """A runtime, the folder of a session on the laptop's mount, and
+    the targets it was asked to mount."""
+
+    harness = Harness(tmp_path)
+    spec = harness.runtime.load_config().target("laptop")
+    asked = []
+
+    def fake_ensure(target, mount_root, data_dir, system=None):
+        asked.append(target.name)
+
+        return mounts.Mounted(mount_root, "/home/dev")
+
+    listed = {spec.mount} if mounted else set()
+
+    monkeypatch.setattr(mounts, "ensure", fake_ensure)
+    monkeypatch.setattr(mounts, "mount_points", lambda system: listed)
+
+    return harness.runtime, f"{spec.mount}/home/dev/app", asked, spec
+
+
+def test_a_mount_that_went_away_is_put_back_before_a_tool_runs(
+    tmp_path,
+    monkeypatch,
+):
+    built, folder, asked, spec = healing(tmp_path, monkeypatch)
+
+    built.heal_mount(folder)
+
+    assert asked == ["laptop"]
+
+
+def test_a_mount_that_is_up_is_not_asked_for_again(tmp_path, monkeypatch):
+    built, folder, asked, spec = healing(tmp_path, monkeypatch, mounted=True)
+
+    built.heal_mount(folder)
+
+    assert asked == []
+
+
+def test_a_folder_on_no_mount_mounts_nothing(tmp_path, monkeypatch):
+    built, folder, asked, spec = healing(tmp_path, monkeypatch)
+
+    built.heal_mount("/Users/dev/work")
+    built.heal_mount("")
+
+    assert asked == []
+
+
+def test_a_target_the_breaker_holds_shut_is_not_dialed_for_a_mount(
+    tmp_path,
+    monkeypatch,
+):
+    built, folder, asked, spec = healing(tmp_path, monkeypatch)
+    gate = built.gate_for(spec)
+
+    while gate.breaker.decide() != health.DECISION_REFUSE:
+        gate.trip("no answer")
+
+    built.heal_mount(folder)
+
+    assert asked == []
+
+
+def test_a_mount_that_fails_does_not_stop_the_tool_call(
+    tmp_path,
+    monkeypatch,
+):
+    built, folder, asked, spec = healing(tmp_path, monkeypatch)
+
+    def refuse(target, mount_root, data_dir, system=None):
+        raise mounts.MountError("this server has no `sshfs`")
+
+    monkeypatch.setattr(mounts, "ensure", refuse)
+
+    built.heal_mount(folder)
+
+    assert built.mount_failure("laptop") == "this server has no `sshfs`"

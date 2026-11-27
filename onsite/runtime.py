@@ -30,6 +30,7 @@ from .config import OnsiteConfig
 from .config import TargetSpec
 from .config import is_absolute
 from .config import parse_config
+from .health import DECISION_REFUSE
 from .health import Gate
 from .moves import Move
 from .moves import Moves
@@ -197,6 +198,57 @@ class Runtime:
             self._mount_failures.pop(spec.name, None)
 
         return found
+
+    def mount_failure(self, name: str) -> str:
+        """What the last try to mount a target said, or nothing if
+        the last try worked."""
+
+        with self._mounts_lock:
+            failed = self._mount_failures.get(name)
+
+        if failed is None:
+            return ""
+
+        return failed[1]
+
+    def heal_mount(self, folder: str) -> None:
+        """Mount again the disk a folder is on, if it has gone.
+
+        A Linux mount lets go when its target stops answering, and a
+        restart of the host takes every mount down. The desktop app
+        puts one back while it is in view. A session in a terminal or
+        a chat app has only this, called before a tool runs. It never
+        raises: the tool call says in its own words what is wrong.
+        """
+
+        try:
+            config = self.load_config()
+        except ConfigError:
+            return
+
+        for spec in config.targets.values():
+            if spec.kind != KIND_SSH:
+                continue
+
+            if not mounts.under_mount(folder, spec):
+                continue
+
+            self.mount_if_gone(spec)
+
+            return
+
+    def mount_if_gone(self, spec: TargetSpec) -> None:
+        if mounts.is_mounted(Path(spec.mount), mounts.host_system()):
+            return
+
+        # A target the breaker holds shut is not dialed for a mount.
+        if self.gate_for(spec).breaker.decide() == DECISION_REFUSE:
+            return
+
+        try:
+            self.mount(spec)
+        except mounts.MountError as error:
+            logger.debug("onsite: no mount for %s: %s", spec.name, error)
 
     def host_folder(
         self,
