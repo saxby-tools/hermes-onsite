@@ -53,7 +53,12 @@ const COPIED_MS = 1500
 // Hermes refuses a title that another session already has. A second
 // session on the same machine gets a number after its title. The
 // refusal has no code of its own, so it is known by its words.
-const TITLE_TRIES = 5
+//
+// The number is looked up first, and the tries after it are the
+// safety net. They are many on purpose. Hermes' lookup does not see a
+// session that was archived, yet its title is still taken, so the
+// lookup can say "free" for a run of titles that are all refused.
+const TITLE_TRIES = 50
 const TITLE_SEARCH_LIMIT = 65536
 const TITLE_TAKEN = /already in use/i
 
@@ -75,7 +80,9 @@ const RUN_OFF_NOTE =
   'plugins.entries.onsite.allow_gateway_injection true'
 
 // How the app reports a route that the host does not have.
-const NOT_FOUND = '404'
+// The status code alone, not the same digits inside a longer number
+// such as a session's id.
+const NOT_FOUND = /(^|\D)404(\D|$)/
 
 const AREA_CHIP = 'statusBar.right'
 const AREA_PANES = 'panes'
@@ -401,7 +408,7 @@ function errorText(error) {
 // goes wrong with a request is no answer at all: a server that is
 // busy or restarting must not read as a plugin that is not set up.
 function isMissingPlugin(error) {
-  return errorText(error).includes(NOT_FOUND)
+  return NOT_FOUND.test(errorText(error))
 }
 
 function describeError(error) {
@@ -595,10 +602,6 @@ function stateText(status) {
     return 'checking…'
   }
 
-  if (status.silent) {
-    return 'no answer'
-  }
-
   if (!status.ok) {
     return 'not set up'
   }
@@ -738,17 +741,23 @@ function chipLabel(status) {
   return `onsite: ${status.target}`
 }
 
+// What to say when there is no good answer to show. A server that
+// did not reply is told apart from one that has no onsite set up.
+function statusProblem(status) {
+  if (status.silent) {
+    return `The Hermes server did not answer onsite: ${status.error}`
+  }
+
+  return status.error || 'onsite is not set up on the host.'
+}
+
 function chipTip(status) {
   if (!status) {
     return 'onsite: checking where this session runs'
   }
 
-  if (status.silent) {
-    return `The Hermes server did not answer onsite: ${status.error}`
-  }
-
   if (!status.ok) {
-    return status.error || 'onsite is not set up on the host.'
+    return statusProblem(status)
   }
 
   const lines = [
@@ -811,7 +820,7 @@ function StatusLines({ status }) {
   if (!status.ok) {
     return jsx('div', {
       className: 'whitespace-pre-wrap',
-      children: status.error || 'onsite is not set up on the host.'
+      children: statusProblem(status)
     })
   }
 
@@ -970,12 +979,14 @@ async function titleTaken(title, profile) {
   return (found?.sessions ?? []).length > 0
 }
 
-// The first number no session of this name has yet.
+// A number no session of this name has yet.
 //
-// Sessions are numbered as they are made, so the numbers in use run
-// from 1 with no gap. Doubling finds a free one in a few questions,
-// and halving the gap finds the first. Trying each title in turn cost
-// one refused call for every old session, on a link that may be slow.
+// Sessions are numbered as they are made, so the numbers in use
+// mostly run from 1 with no gap. Doubling finds a free one in a few
+// questions, and halving the gap finds the first free one when there
+// is no gap, or some free one when there is. Trying each title in
+// turn cost one refused call for every old session, on a link that
+// may be slow.
 async function freeNumber(title, profile) {
   let taken = 0
   let free = 1
@@ -1017,11 +1028,11 @@ async function firstNumber(title, profile) {
   }
 }
 
-// Gives a new session the first title that is free: "you on laptop",
-// then "you on laptop 2", and so on. Without a title the session has
-// no saved row, and the app cannot open it. The number is looked up
-// first. The tries after it are for a title somebody else took in
-// between.
+// Gives a new session a title that is free: "you on laptop", then
+// "you on laptop 2", and so on. Without a title the session has no
+// saved row, and the app cannot open it. The number is looked up
+// first. The tries after it are for a title the lookup could not
+// see, or one somebody else took in between.
 async function titleSession(sessionId, title, profile) {
   const first = await firstNumber(title, profile)
   let refusal = null

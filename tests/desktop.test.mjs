@@ -1001,6 +1001,62 @@ test('the number for a new session is looked up, not tried in turn', { skip: SKI
   assert.equal(box.querySelector('[role="alert"]'), null)
 })
 
+test('titles the lookup cannot see are still got past', { skip: SKIP }, async () => {
+  const { box, calls, click, host } = await openPaneMachines()
+  const archived = new Set(['dev on laptop'])
+  const answer = host.request
+
+  for (let number = 2; number <= 12; number += 1) {
+    archived.add(`dev on laptop ${number}`)
+  }
+
+  // Hermes' lookup leaves an archived session out, and its title is
+  // refused all the same.
+  host.request = async (method, params) => {
+    const made = await answer(method, params)
+
+    if (method === 'session.list') {
+      return { sessions: [] }
+    }
+
+    if (method === 'session.title' && archived.has(params.title)) {
+      throw new Error(`Title '${params.title}' is already in use by session 1`)
+    }
+
+    return made
+  }
+
+  await click(box.querySelector('[data-onsite-new-session="laptop"]'))
+
+  const titles = calls.rpc.filter(([method]) => method === 'session.title')
+
+  assert.equal(titles[titles.length - 1][1].title, 'dev on laptop 13')
+  assert.equal(calls.opened.length, 1)
+  assert.equal(box.querySelector('[role="alert"]'), null)
+})
+
+test('an id with 404 in it is not read as a missing plugin', { skip: SKIP }, async () => {
+  const { backend, made, mount, settle } = await setup()
+  const box = await mount(made.contributions.chip.render())
+
+  backend.fail = 'session 20261127_044021_3d3f87 is busy'
+  await settle(made.intervals[0])
+
+  const chip = box.querySelector('[data-onsite-chip]')
+
+  assert.match(chip.textContent, /no answer/)
+})
+
+test('the pane says so when the server did not answer', { skip: SKIP }, async () => {
+  const { backend, made, mount, settle } = await setup()
+  const box = await mount(made.contributions.pane.render())
+
+  backend.fail = 'timed out after 8000 ms'
+  await settle(made.intervals[0])
+
+  assert.match(box.textContent, /did not answer onsite: timed out/)
+})
+
 test('a Hermes that cannot look titles up is tried from the first', { skip: SKIP }, async () => {
   const { box, calls, click, host, logs } = await openPaneMachines()
   const answer = host.request
