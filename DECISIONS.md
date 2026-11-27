@@ -1356,6 +1356,136 @@ move did not hold everywhere.
 - **Reverse.** Make `openingIn` return `{ expectHistory: false }`.
   Worth doing when the app stops making the switch.
 
+### 65. An environment is a third kind of target: a sandbox on the server
+
+Nov. 26, 2026. A spike on the branch `feature/environments`. Not
+released, and not merged. The number changes when the branch lands.
+
+- **Question.** The owner's rule is that onsite acts like Claude
+  Code. There a session runs on this computer, on a machine over
+  SSH, or in a cloud environment. onsite had the first two. Can it
+  have the third?
+- **What Claude Code's are, read Nov. 26.** A cloud environment is a
+  saved set-up: a network level, plain variables and a setup script.
+  A session in one gets a fresh virtual machine on Anthropic's
+  servers with the repository cloned into it. The agent itself runs
+  in that machine. The script runs as root before the agent starts,
+  and its result is kept as a snapshot for about seven days. The
+  network level is None, Limited (a list of package sites) or Full.
+  Logins never enter the machine: a proxy outside it adds them to
+  requests for GitHub and for sites the person lists. Work comes
+  back as a branch the session pushes, and a pull request made from
+  the app. The session keeps going with the laptop shut. An idle
+  machine is paused with its files, and later thrown away, after
+  which the conversation is kept and a new machine is made.
+  A company can also run the sessions on its own servers. Then, in
+  the docs' words, "isolation is your deployment's responsibility".
+  - <https://code.claude.com/docs/en/claude-code-on-the-web>
+  - <https://code.claude.com/docs/en/cloud-environments>
+  - <https://code.claude.com/docs/en/web-quickstart>
+  - <https://code.claude.com/docs/en/desktop>
+  - <https://code.claude.com/docs/en/self-hosted-environments>
+- **What is different here.** Hermes stays on the server and only
+  its commands and file edits go to a target. So a sandbox here
+  never holds the agent, a model key or the Hermes home. It is the
+  closest to Claude Code's self-hosted kind: the owner's own server
+  does the isolating.
+- **Options for the sandbox.** A container on the server, by Docker.
+  A hosted one, by Modal, Daytona or Vercel, each of which Hermes
+  already has a backend for. Hermes' own Docker backend as it is.
+- **Pick.** A container on the server. It needs no account and no
+  new dependency: the `docker` and `git` programs, and Hermes' own
+  base class for running a command. A hosted sandbox has no folder
+  on the server, so the app's file tree would need a mount of it,
+  as a machine does. That is a later backend, not this spike.
+- **Why not Hermes' own Docker class.** It was read in full. It
+  shares the skills folders, the cache folders and any login file a
+  skill registered into its container, and it passes on variables
+  skills ask for. A sandbox here gets the session's folder and
+  nothing else, and the line that makes it is all in one function,
+  `build_run_command`. The cost is about 1,100 lines that are now
+  the plugin's, 180 of them tied to Hermes' private base class. What
+  is lost is Hermes' egress proxy, which keeps real keys outside a
+  container. It can be joined later.
+- **Where a session's files are.** In a folder on the server's own
+  disk, `~/.local/share/onsite/env/<profile>/<environment>/<id>`,
+  or under a `workspace` the settings name. It is shared into the
+  container at the same path. So the app's picker and tree show it
+  with no mount, and no path is translated. A place inside the
+  Hermes home is refused, as in entry 63.
+- **What a person sets.** A target of kind `environment`: `image`,
+  and if wanted `repository`, `setup`, `network`, `env`,
+  `workspace`. It cannot be the default target, and it takes no
+  folder rules. A session runs in it only when opened in one of its
+  folders.
+- **New session.** `hermes onsite env new <name>`, or New session
+  beside it in the pane, makes the folder and clones the repository
+  into it. The clone is made on the server by `git`, with whatever
+  logins the server's account has, and it never stops to ask for
+  one. The session's first command makes the container, then runs
+  the setup script in it once, as root.
+- **What lasts.** The container is the session's, not Hermes'. It
+  is used again by a later session in the same folder and after
+  Hermes restarts. One that a restart of the server stopped is
+  started again. One that is gone is made again, and the script
+  runs again. The folder outlasts all of that. Nothing ends a
+  sandbox but `hermes onsite env rm <name> <id>`, which removes the
+  container and the folder.
+- **How work comes back.** In the spike, as files: the folder is on
+  the server. A push was designed and not built. It must not run
+  `git` on the server inside the folder, because the sandbox can
+  write that repository's settings and hooks, and git would run
+  them as the server's account. The safe route is git's own for a
+  repository that is not trusted: fetch from the folder into a
+  clean copy, and push that.
+- **Run for real.** Hermes 0.23.2 in its official image, with the
+  plugin, a stub model and the Docker socket of the Mac's Docker
+  Desktop, so each sandbox was a sibling of the Hermes container.
+  Sessions were driven over ACP. A command ran in the sandbox as
+  root, with another host name, no `/opt/data`, no Docker socket
+  and no network device. The file tools wrote there. Both files
+  showed in the folder on the server. The setup script ran once.
+  The same sandbox was used again by a second session, by a new
+  Hermes container, after `docker stop`, and after `docker stop`
+  under a Hermes that kept running. After `docker rm` a new one was
+  made and set up. A sandbox with `network: true` reached a package
+  site. An image with no `bash`, a failing script and a folder that
+  is no session were each refused in words. The pane's own route,
+  through Hermes' dashboard server, made a session. Removal left no
+  container and no file.
+- **Run again on a Linux disk.** A folder shared from a Mac shows
+  every file as the reader's own. With the sessions on the Docker
+  machine's own disk, two faults showed and were fixed. Git in the
+  sandbox refused the clone as somebody else's, so the sandbox's
+  own git settings now name it as safe. And a session whose sandbox
+  was lost could not be removed, so a container is made only to
+  empty its folder.
+- **Left as found.** On Linux, a file the sandbox makes is root's.
+  The server's account can read it and cannot change or delete it,
+  short of removing the session.
+- **Found on the way.** The official image sets
+  `HERMES_WRITE_SAFE_ROOT=/opt/data`. Hermes' file tools then refuse
+  to write anywhere else, on any backend. In that image, the folder
+  of sessions has to be added to it, and so, it seems, does every
+  machine's mount. Hermes also starts a gateway by itself on first
+  use, and it keeps the first caller's variables and code.
+- **What the container does not do.** It shares the server's kernel.
+  A hole in the kernel or in Docker is root on the server. Docker
+  access for Hermes' account is the same as root there, so with it
+  a session on the "Hermes server" target is root too. With the
+  network on, the sandbox reaches the server's own network and
+  services, and there is no list of allowed sites. Memory, processor
+  and disk are not capped. Rootless Docker and Podman were not
+  tried.
+- **Not checked.** The button in the real app. A real Linux server.
+  A private repository. A clone from a network address. A setup
+  script that takes minutes. Two profiles at once.
+- **The owner's calls.** Whether the network is off or on by
+  default. Where a login for a push comes from. Whether a sandbox
+  runs as root or as the server's account. When a sandbox ends by
+  itself. Which hosted sandbox comes first.
+- **Reverse.** Delete the branch. Nothing on `main` changed.
+
 ## Open decisions from the brief
 
 | # | Decision | What the build did |
