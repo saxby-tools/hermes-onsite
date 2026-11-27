@@ -222,7 +222,7 @@ async function loadPlugin(require, host) {
 function createContext(backend) {
   const made = {
     contributions: {}, intervals: [], events: {}, copied: [], requests: [],
-    pages: []
+    pages: [], stopped: []
   }
 
   const ctx = {
@@ -252,7 +252,7 @@ function createContext(backend) {
     setInterval: fn => {
       made.intervals.push(fn)
 
-      return () => {}
+      return () => made.stopped.push(fn)
     },
     onEvent: (type, listener) => {
       made.events[type] = listener
@@ -1470,5 +1470,502 @@ test('an app with no settings pages still loads the plugin', { skip: SKIP }, asy
 
   assert.notEqual(made.contributions.chip, undefined)
   assert.equal(made.pages.length, 0)
+})
+
+/* ------------------------------------------------------------------ */
+/* A MACHINE THAT DIALS IN                                             */
+/* ------------------------------------------------------------------ */
+
+const LINK_COMMAND =
+  'ssh -N -o ExitOnForwardFailure=yes -R 127.0.0.1:20500:127.0.0.1:22 ' +
+  'you@server.example'
+
+const DIALS_IN = {
+  kind: 'ssh',
+  host: '127.0.0.1',
+  port: 20500,
+  user: 'dev',
+  dial_in: 'you@server.example',
+  mount: '/mnt/onsite/tablet'
+}
+
+const WITH_DIAL_IN = {
+  ...SAVED,
+  targets: { ...SAVED.targets, tablet: DIALS_IN }
+}
+
+const STEPS = {
+  ok: true,
+  target: 'tablet',
+  label: 'tablet (dev, dials in)',
+  port: 20500,
+  connected: false,
+  detail: 'it has not connected to this server, or its link dropped',
+  latency_ms: 0,
+  host_keys: [],
+  command: LINK_COMMAND,
+  key_options: 'restrict,port-forwarding,permitlisten="127.0.0.1:20500"',
+  keep: {
+    linux: {
+      path: '~/.config/systemd/user/onsite-dial-in.service',
+      text: '[Unit]\nDescription=onsite\n',
+      start: ['systemctl --user daemon-reload', 'systemctl --user enable'],
+      note: 'It runs while you are logged in.'
+    },
+    macos: {
+      path: '~/Library/LaunchAgents/onsite.plist',
+      text: '<plist version="1.0"></plist>\n',
+      start: ['launchctl bootstrap gui/$(id -u) onsite.plist'],
+      note: 'It starts again by itself.'
+    }
+  }
+}
+
+async function openWithDialIn() {
+  const made = await openMachines()
+
+  made.backend.routes['/targets'] = () => WITH_DIAL_IN
+  made.backend.routes['/targets/save'] = () => WITH_DIAL_IN
+  made.backend.routes['/dial-in'] = () => STEPS
+
+  const box = await made.mount(made.machines.render())
+
+  await made.settle()
+
+  return { ...made, box }
+}
+
+function savedTarget(made) {
+  const [, options] = made.requests.find(([route]) => route === '/targets/save')
+
+  return options.body
+}
+
+function field(box, name) {
+  return box.querySelector(`[data-onsite-field="${name}"]`)
+}
+
+test('a new machine can be one that connects to the server by itself', { skip: SKIP }, async () => {
+  const { box, choose, click } = await openMachines()
+
+  await click(box.querySelector('[data-onsite-add]'))
+  await choose(field(box, 'kind'), 'dial-in')
+
+  assert.match(field(box, 'kind').textContent, /connects to the server by itself/)
+  assert.equal(field(box, 'host'), null)
+  assert.equal(field(box, 'port'), null)
+  assert.notEqual(field(box, 'user'), null)
+  assert.equal(field(box, 'server').placeholder, 'you@server.example')
+})
+
+test('it cannot be tested before it is saved, because it has no port yet', { skip: SKIP }, async () => {
+  const { box, choose, click } = await openMachines()
+
+  await click(box.querySelector('[data-onsite-add]'))
+  await choose(field(box, 'kind'), 'dial-in')
+
+  assert.equal(box.querySelector('[data-onsite-test]'), null)
+})
+
+test('saving it sends the account and the server, and no address or port', { skip: SKIP }, async () => {
+  const { box, choose, click, made } = await openWithDialIn()
+
+  await click(box.querySelector('[data-onsite-add]'))
+  await choose(field(box, 'name'), 'desk')
+  await choose(field(box, 'kind'), 'dial-in')
+  await choose(field(box, 'user'), 'dev')
+  await choose(field(box, 'server'), ' you@server.example ')
+  await click(box.querySelector('[data-onsite-save]'))
+
+  const body = savedTarget(made)
+
+  assert.equal(body.name, 'desk')
+  assert.equal(body.target.kind, 'ssh')
+  assert.equal(body.target.user, 'dev')
+  assert.equal(body.target.dial_in, 'you@server.example')
+  assert.equal('host' in body.target, false)
+  assert.equal('port' in body.target, false)
+})
+
+test('once saved, the page shows the one command to run on it', { skip: SKIP }, async () => {
+  const { backend, box, choose, click, made } = await openWithDialIn()
+
+  backend.routes['/dial-in'] = body => ({ ...STEPS, target: body.target })
+
+  await click(box.querySelector('[data-onsite-add]'))
+  await choose(field(box, 'name'), 'tablet')
+  await choose(field(box, 'kind'), 'dial-in')
+  await choose(field(box, 'user'), 'dev')
+  await choose(field(box, 'server'), 'you@server.example')
+  await click(box.querySelector('[data-onsite-save]'))
+
+  const steps = box.querySelector('[data-onsite-dial-in="tablet"]')
+  const command = steps.querySelector('[data-onsite-copy-block="command"]')
+  const [, options] = made.requests.find(([route]) => route === '/dial-in')
+
+  assert.equal(options.body.target, 'tablet')
+  assert.equal(command.querySelector('code').textContent, LINK_COMMAND)
+  assert.match(command.textContent, /On tablet, run this in a terminal/)
+})
+
+test('Copy puts the exact link command on the clipboard', { skip: SKIP }, async () => {
+  const { box, click, made } = await openWithDialIn()
+
+  await click(box.querySelector('[data-onsite-link="tablet"]'))
+
+  const command = box.querySelector('[data-onsite-copy-block="command"]')
+
+  await click(command.querySelector('[data-action="copy"]'))
+
+  assert.deepEqual(made.copied, [LINK_COMMAND])
+})
+
+test('the steps say by themselves when the machine has arrived', { skip: SKIP }, async () => {
+  const { backend, box, click, made, settle } = await openWithDialIn()
+
+  await click(box.querySelector('[data-onsite-link="tablet"]'))
+
+  const state = () => box.querySelector('[data-onsite-link-state]').textContent
+
+  assert.match(state(), /^Waiting: it has not connected to this server/)
+
+  backend.routes['/dial-in'] = () => ({
+    ...STEPS,
+    connected: true,
+    detail: '',
+    latency_ms: 76,
+    host_keys: ['ED25519 SHA256:abc']
+  })
+
+  // The poll the steps took out is the last one the plugin asked for.
+  await settle(made.intervals[made.intervals.length - 1])
+
+  assert.equal(state(), 'Connected (76 ms).')
+  assert.match(
+    box.querySelector('[data-onsite-host-keys]').textContent,
+    /ED25519 SHA256:abc/
+  )
+})
+
+test('only a machine that dials in has a Connect button', { skip: SKIP }, async () => {
+  const { box } = await openWithDialIn()
+
+  assert.notEqual(box.querySelector('[data-onsite-link="tablet"]'), null)
+  assert.equal(box.querySelector('[data-onsite-link="laptop"]'), null)
+  assert.equal(box.querySelector('[data-onsite-link="mac"]'), null)
+  assert.match(
+    box.querySelector('[data-onsite-machine="tablet"]').textContent,
+    /dev, dials in on port 20500/
+  )
+})
+
+test('the steps show how to keep the link running on either system', { skip: SKIP }, async () => {
+  const { box, choose, click } = await openWithDialIn()
+
+  await click(box.querySelector('[data-onsite-link="tablet"]'))
+
+  const file = () => box.querySelector('[data-onsite-copy-block="keep-file"]')
+  const start = () => box.querySelector('[data-onsite-copy-block="keep-start"]')
+
+  // jsdom says it is not a Mac, so Linux is offered first.
+  assert.match(file().textContent, /onsite-dial-in\.service/)
+  assert.match(start().querySelector('code').textContent, /daemon-reload\n/)
+
+  await choose(field(box, 'system'), 'macos')
+
+  assert.match(file().textContent, /LaunchAgents\/onsite\.plist/)
+  assert.match(start().querySelector('code').textContent, /launchctl bootstrap/)
+})
+
+test('the steps offer the line that limits the machine\'s key', { skip: SKIP }, async () => {
+  const { box, click } = await openWithDialIn()
+
+  await click(box.querySelector('[data-onsite-link="tablet"]'))
+
+  const options = box.querySelector('[data-onsite-copy-block="key-options"]')
+
+  assert.equal(options.querySelector('code').textContent, STEPS.key_options)
+  assert.match(options.textContent, /authorized_keys file on the server/)
+})
+
+test('Close puts the steps away, and Connect brings them back', { skip: SKIP }, async () => {
+  const { box, click } = await openWithDialIn()
+
+  await click(box.querySelector('[data-onsite-link="tablet"]'))
+  await click(box.querySelector('[data-onsite-link-close]'))
+
+  assert.equal(box.querySelector('[data-onsite-dial-in]'), null)
+
+  await click(box.querySelector('[data-onsite-link="tablet"]'))
+
+  assert.notEqual(box.querySelector('[data-onsite-dial-in="tablet"]'), null)
+})
+
+test('Close stops asking the host about the machine', { skip: SKIP }, async () => {
+  const { box, click, made } = await openWithDialIn()
+
+  await click(box.querySelector('[data-onsite-link="tablet"]'))
+
+  const poll = made.intervals[made.intervals.length - 1]
+
+  assert.deepEqual(made.stopped, [])
+
+  await click(box.querySelector('[data-onsite-link-close]'))
+
+  assert.deepEqual(made.stopped, [poll])
+})
+
+test('a slow answer is not asked for a second time', { skip: SKIP }, async () => {
+  const { backend, box, click, made, settle } = await openWithDialIn()
+  let release = null
+
+  backend.routes['/dial-in'] = () =>
+    new Promise(resolve => {
+      release = () => resolve(STEPS)
+    })
+
+  await click(box.querySelector('[data-onsite-link="tablet"]'))
+
+  const poll = made.intervals[made.intervals.length - 1]
+  const asked = () =>
+    made.requests.filter(([route]) => route === '/dial-in').length
+
+  assert.equal(asked(), 1)
+
+  await settle(poll)
+  await settle(poll)
+
+  assert.equal(asked(), 1)
+
+  // The slow answer lands. The next question is asked again.
+  backend.routes['/dial-in'] = () => STEPS
+
+  await settle(release)
+  await settle(poll)
+
+  assert.equal(asked(), 2)
+})
+
+test('steps that stop being readable leave no old state behind', { skip: SKIP }, async () => {
+  const { backend, box, click, made, settle } = await openWithDialIn()
+
+  await click(box.querySelector('[data-onsite-link="tablet"]'))
+
+  assert.notEqual(box.querySelector('[data-onsite-copy-block]'), null)
+
+  backend.routes['/dial-in'] = () => ({ ok: false, error: 'gone' })
+  await settle(made.intervals[made.intervals.length - 1])
+
+  const steps = box.querySelector('[data-onsite-dial-in="tablet"]')
+
+  assert.match(steps.textContent, /gone/)
+  assert.equal(steps.querySelector('[data-onsite-copy-block]'), null)
+  assert.equal(
+    steps.querySelector('[data-onsite-link-state]').textContent,
+    'Checking…'
+  )
+})
+
+test('a machine that dials in is not saved without a server', { skip: SKIP }, async () => {
+  const { box, choose, click, made } = await openMachines()
+
+  await click(box.querySelector('[data-onsite-add]'))
+  await choose(field(box, 'name'), 'desk')
+  await choose(field(box, 'kind'), 'dial-in')
+  await choose(field(box, 'user'), 'dev')
+  await click(box.querySelector('[data-onsite-save]'))
+
+  assert.equal(made.requests.some(([route]) => route === '/targets/save'), false)
+  assert.match(
+    box.querySelector('[role="status"]').textContent,
+    /Fill in the server/
+  )
+})
+
+test('steps the host will not give say why', { skip: SKIP }, async () => {
+  const { backend, box, click } = await openWithDialIn()
+
+  backend.routes['/dial-in'] = () => ({
+    ok: false,
+    error: '`tablet` does not dial in. The server logs in to it.'
+  })
+
+  await click(box.querySelector('[data-onsite-link="tablet"]'))
+
+  const steps = box.querySelector('[data-onsite-dial-in="tablet"]')
+
+  assert.match(steps.textContent, /does not dial in/)
+  assert.equal(steps.querySelector('[data-onsite-copy-block]'), null)
+})
+
+test('editing a machine that dials in keeps its port', { skip: SKIP }, async () => {
+  const { box, click, made } = await openWithDialIn()
+
+  await click(box.querySelector('[data-onsite-edit="tablet"]'))
+
+  assert.equal(field(box, 'kind').value, 'dial-in')
+  assert.equal(field(box, 'server').value, 'you@server.example')
+  assert.notEqual(box.querySelector('[data-onsite-test]'), null)
+
+  await click(box.querySelector('[data-onsite-save]'))
+
+  const body = savedTarget(made)
+
+  assert.equal(body.target.port, 20500)
+  assert.equal(body.target.dial_in, 'you@server.example')
+  assert.equal(body.target.mount, '/mnt/onsite/tablet')
+  assert.equal('host' in body.target, false)
+})
+
+test('a machine the server dialed loses its old port when it dials in', { skip: SKIP }, async () => {
+  const opened = await openMachines()
+  const { backend, choose, click, made, machines, mount, settle } = opened
+  const laptop = { ...SAVED.targets.laptop, port: 2222 }
+
+  backend.routes['/targets'] = () => ({
+    ...SAVED,
+    targets: { ...SAVED.targets, laptop }
+  })
+
+  const page = await mount(machines.render())
+
+  await settle()
+  await click(page.querySelector('[data-onsite-edit="laptop"]'))
+  await choose(field(page, 'kind'), 'dial-in')
+  await choose(field(page, 'server'), 'you@server.example')
+  await click(page.querySelector('[data-onsite-save]'))
+
+  const body = savedTarget(made)
+
+  // 2222 was the laptop's own SSH port. It is not a port on the server.
+  assert.equal('port' in body.target, false)
+  assert.equal('host' in body.target, false)
+  assert.deepEqual(body.target.prefixes, ['/home/dev/'])
+})
+
+test('a machine that stops dialing in loses the setting', { skip: SKIP }, async () => {
+  const { box, choose, click, made } = await openWithDialIn()
+
+  await click(box.querySelector('[data-onsite-edit="tablet"]'))
+  await choose(field(box, 'kind'), 'ssh')
+
+  // The server's loopback address and the port the host picked are
+  // not that machine's own. The form does not offer them as such.
+  assert.equal(field(box, 'host').value, '')
+  assert.equal(field(box, 'port').value, '')
+
+  await choose(field(box, 'host'), 'tablet.example')
+  await click(box.querySelector('[data-onsite-save]'))
+
+  const body = savedTarget(made)
+
+  assert.equal('dial_in' in body.target, false)
+  assert.equal(body.target.host, 'tablet.example')
+  assert.equal(body.target.port, '')
+})
+
+function connectAs(host, connection) {
+  host.activeConnectionId = () => connection.id
+  host.connections = async () => [
+    { id: 'other', kind: 'ssh', host: 'elsewhere.example', user: 'x' },
+    connection
+  ]
+}
+
+test('the server field is filled with how the app reaches the server', { skip: SKIP }, async () => {
+  const { box, choose, click, host, settle } = await openMachines()
+
+  connectAs(host, { id: 'main', kind: 'ssh', host: 'server.example', user: 'you', port: 22 })
+
+  await click(box.querySelector('[data-onsite-add]'))
+  await choose(field(box, 'kind'), 'dial-in')
+  await settle()
+
+  assert.equal(field(box, 'server').value, 'you@server.example')
+})
+
+test('a port other than 22 is kept in the suggestion', { skip: SKIP }, async () => {
+  const { box, choose, click, host, settle } = await openMachines()
+
+  connectAs(host, { id: 'main', kind: 'ssh', host: 'server.example', user: 'you', port: 2222 })
+
+  await click(box.querySelector('[data-onsite-add]'))
+  await choose(field(box, 'kind'), 'dial-in')
+  await settle()
+
+  assert.equal(field(box, 'server').value, 'you@server.example:2222')
+})
+
+test('a connection with no port named suggests none', { skip: SKIP }, async () => {
+  const { box, choose, click, host, settle } = await openMachines()
+
+  connectAs(host, { id: 'main', kind: 'ssh', host: 'server', user: '', port: null })
+
+  await click(box.querySelector('[data-onsite-add]'))
+  await choose(field(box, 'kind'), 'dial-in')
+  await settle()
+
+  assert.equal(field(box, 'server').value, 'server')
+})
+
+test('an app that reaches the server another way suggests nothing', { skip: SKIP }, async () => {
+  const { box, choose, click, host, settle } = await openMachines()
+
+  connectAs(host, { id: 'main', kind: 'remote', url: 'https://server.example' })
+
+  await click(box.querySelector('[data-onsite-add]'))
+  await choose(field(box, 'kind'), 'dial-in')
+  await settle()
+
+  assert.equal(field(box, 'server').value, '')
+})
+
+test('the chip says a machine that dials in is not connected', { skip: SKIP }, async () => {
+  const { backend, made, mount, settle } = await setup()
+  const box = await mount(made.contributions.chip.render())
+
+  backend.status = {
+    ...DOWN,
+    dial_in: true,
+    label: 'laptop (dev, dials in)',
+    detail: 'it has not connected to this server, or its link dropped'
+  }
+  await settle(made.intervals[0])
+
+  const tip = box.querySelector('[data-onsite-chip]').getAttribute('title')
+
+  assert.match(tip, /State: not connected \(it has not connected to this server/)
+  assert.doesNotMatch(tip, /not reachable/)
+})
+
+test('the pane says where the command of a machine that is not there is', { skip: SKIP }, async () => {
+  const { backend, made, mount, settle } = await setup()
+
+  backend.status = {
+    ...UP,
+    rows: [
+      {
+        name: 'tablet',
+        kind: 'ssh',
+        label: 'tablet (dev, dials in)',
+        dial_in: true,
+        connected: false,
+        detail: 'it has not connected to this server, or its link dropped',
+        mount_error: ''
+      },
+      { name: 'laptop', kind: 'ssh', label: 'laptop', connected: false, detail: 'no answer' }
+    ]
+  }
+
+  const box = await mount(made.contributions.pane.render())
+
+  await settle()
+
+  const row = name => box.querySelector(`[data-onsite-machine-row="${name}"]`)
+  const said = row('tablet').querySelector('[role="alert"]').textContent
+
+  assert.match(said, /Not connected: it has not connected to this server/)
+  assert.match(said, /Settings, Plugins, Onsite, Machines/)
+  assert.equal(row('laptop').querySelector('[role="alert"]'), null)
 })
 
