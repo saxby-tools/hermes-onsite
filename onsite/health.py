@@ -11,6 +11,7 @@ This module imports nothing from Hermes.
 
 from __future__ import annotations
 
+import logging
 import subprocess
 import threading
 import time
@@ -18,10 +19,13 @@ import time
 from dataclasses import dataclass
 from typing import Callable
 
+from . import dialin
 from .config import DEFAULT_SSH_PORT
 from .config import KIND_LOCAL
 from .config import TargetSpec
 
+
+logger = logging.getLogger(__name__)
 
 STATE_CLOSED = "closed"
 STATE_OPEN = "open"
@@ -223,13 +227,43 @@ def probe_ssh(spec: TargetSpec) -> ProbeResult:
     return ProbeResult(False, detail, elapsed)
 
 
+def describe_failure(spec: TargetSpec, detail: str) -> str:
+    """Why a target cannot be reached, in words that fit the target.
+
+    A computer that dials in is reached at a port on the host itself.
+    What `ssh` says about that port, such as "Connection refused",
+    would send a person looking in the wrong place.
+    """
+
+    if not spec.dial_in:
+        return detail
+
+    plain = dialin.explain(spec.name, spec.port, detail)
+
+    # What `ssh` itself said is kept where a person who is stuck can
+    # find it, in case the plain words read it wrong.
+    if plain != detail:
+        logger.debug("onsite: %s: ssh said: %s", spec.label, detail)
+
+    return plain
+
+
 def probe_target(spec: TargetSpec) -> ProbeResult:
     # The local target is the machine this code runs on. If this line
     # runs, it is up.
     if spec.kind == KIND_LOCAL:
         return ProbeResult(True, "", 0)
 
-    return probe_ssh(spec)
+    result = probe_ssh(spec)
+
+    if result.ok:
+        return result
+
+    return ProbeResult(
+        False,
+        describe_failure(spec, result.detail),
+        result.elapsed_ms,
+    )
 
 
 class Gate:
@@ -297,4 +331,4 @@ class Gate:
         raise self.refuse()
 
     def trip(self, detail: str) -> None:
-        self.breaker.record_failure(detail)
+        self.breaker.record_failure(describe_failure(self.spec, detail))
