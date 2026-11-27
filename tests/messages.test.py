@@ -228,6 +228,120 @@ def test_the_cli_status_marks_the_default_target():
     assert "   laptop  ssh    up (41 ms)" in text
 
 
+# ---- environments -----------------------------------------------------
+
+
+SANDBOXED = config.parse_config({
+    "default": "mac",
+    "targets": {
+        "web": {
+            "kind": "environment",
+            "image": "debian:stable-slim",
+            "workspace": "/srv/onsite/web",
+        },
+        "mac": {"kind": "local"},
+    },
+})
+SESSION_ID = "20261126-231502-9f3a"
+SESSION_FOLDER = f"/srv/onsite/web/{SESSION_ID}"
+
+
+def test_the_prompt_note_says_a_sandbox_is_a_sandbox():
+    route = routing.Route(
+        "web",
+        SESSION_FOLDER,
+        routing.REASON_ENVIRONMENT,
+    )
+    text = messages.format_prompt_section(route, SANDBOXED)
+
+    assert "a sandbox made for this session" in text
+    assert "the image `debian:stable-slim`" in text
+    assert "with no network" in text
+    assert "Only the session's folder is shared with it" in text
+    assert f"They start in `{SESSION_FOLDER}`" in text
+
+
+def test_the_prompt_note_says_when_a_sandbox_has_a_network():
+    opened = config.parse_config({
+        "default": "mac",
+        "targets": {
+            "web": {
+                "kind": "environment",
+                "image": "debian:stable-slim",
+                "network": True,
+            },
+            "mac": {"kind": "local"},
+        },
+    })
+    route = routing.Route("web", "~", routing.REASON_OVERRIDE)
+
+    assert "with network access" in messages.format_prompt_section(
+        route,
+        opened,
+    )
+
+
+def test_an_environment_is_ready_not_connected():
+    status = {"connected": True, "kind": "environment", "latency_ms": 4}
+
+    assert messages.describe_state(status) == "ready (Docker is answering)"
+
+
+def test_status_gives_a_reason_for_a_session_in_an_environment():
+    assert messages.REASON_TEXT[routing.REASON_ENVIRONMENT] == (
+        "the session folder is one of its sessions"
+    )
+
+
+def test_the_cli_status_lines_up_with_an_environment_in_it():
+    rows = [
+        {"name": "web", "kind": "environment", "state": "up"},
+        {"name": "mac", "kind": "local", "state": "up"},
+    ]
+
+    text = messages.format_cli_status("/Users/dev/app", UP, rows)
+
+    assert "   web  environment  up" in text
+    assert " * mac  local        up" in text
+
+
+def test_an_environment_row_counts_sessions_and_sandboxes():
+    assert messages.format_environment_state(3, 1, 2) == (
+        "up  sessions: 3, sandboxes running: 1, stopped: 2"
+    )
+
+
+def test_a_new_session_says_where_it_is_and_how_to_remove_it():
+    text = messages.format_session_opened(
+        SANDBOXED.target("web"),
+        SESSION_ID,
+        f"{SESSION_FOLDER}/project",
+    )
+
+    assert f"{SESSION_FOLDER}/project" in text.splitlines()
+    assert "made by its first command" in text
+    assert f"hermes onsite env rm web {SESSION_ID}" in text
+
+
+def test_sessions_are_listed_with_the_folder_each_opens_in():
+    web = SANDBOXED.target("web")
+    text = messages.format_sessions(web, [(SESSION_ID, SESSION_FOLDER)])
+
+    assert f"  {SESSION_ID}  {SESSION_FOLDER}" in text
+    assert messages.format_sessions(web, []) == (
+        "web (sandbox, debian:stable-slim) has no sessions."
+    )
+
+
+def test_a_removed_session_says_what_went_with_it():
+    text = messages.format_session_removed(
+        SANDBOXED.target("web"),
+        SESSION_ID,
+    )
+
+    assert "its sandbox and its folder" in text
+
+
 # ---- the screen report ------------------------------------------------
 
 
