@@ -139,3 +139,62 @@ def test_a_root_prefix_catches_everything():
     })
 
     assert routing.route("/var/log", wide).cwd == "/var/log"
+
+
+# ---- environments ----------------------------------------------------
+
+
+SANDBOXED = config.parse_config({
+    "default": "mac",
+    "targets": {
+        "web": {
+            "kind": "environment",
+            "image": "debian:stable-slim",
+            "workspace": "/srv/onsite/web",
+        },
+        "mac": {"kind": "local"},
+    },
+})
+
+SESSION = "/srv/onsite/web/20261126-231502-9f3a"
+
+
+def test_a_session_folder_of_an_environment_runs_in_it():
+    route = routing.route(f"{SESSION}/project/src", SANDBOXED)
+
+    assert route.target == "web"
+    assert route.reason == routing.REASON_ENVIRONMENT
+
+
+def test_a_sandbox_sees_its_folder_at_the_same_path_as_the_host():
+    route = routing.route(f"{SESSION}/project/src", SANDBOXED)
+
+    assert route.cwd == f"{SESSION}/project/src"
+
+
+def test_a_folder_beside_an_environment_does_not_run_in_it():
+    route = routing.route("/srv/onsite/website", SANDBOXED)
+
+    assert route.target == "mac"
+    assert route.reason == routing.REASON_DEFAULT
+
+
+def test_an_environment_with_no_place_yet_matches_no_folder():
+    bare = config.parse_config({
+        "default": "mac",
+        "targets": {
+            "web": {"kind": "environment", "image": "debian:stable-slim"},
+            "mac": {"kind": "local"},
+        },
+    })
+
+    assert routing.route(SESSION, bare).target == "mac"
+
+
+def test_a_session_moved_to_an_environment_from_elsewhere_has_no_folder():
+    # `/onsite web` from a folder that is no session of it. The
+    # backend then refuses to run anything, and says how to start one.
+    route = routing.resolve("/home/dev/app", SANDBOXED, "web")
+
+    assert route.target == "web"
+    assert route.cwd == routing.HOME
