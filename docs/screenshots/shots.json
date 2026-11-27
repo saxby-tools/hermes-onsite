@@ -1,1 +1,37 @@
-[]
+[
+  {
+    "file": "01-session.png",
+    "alt": "Hermes Desktop with a chat named api on laptop. The agent answers that it is on the laptop. A pane on the right names the laptop, says it is connected, and lists two computers.",
+    "caption": "A session on your laptop. The pane names the computer the tools run on."
+  },
+  {
+    "file": "02-files.png",
+    "alt": "The same chat with the app's Files tab open. It lists the project's folders and files: scripts, src, tests, config.json, package.json and README.md.",
+    "caption": "The app's own file tree shows the laptop's real files."
+  },
+  {
+    "file": "03-approval.png",
+    "alt": "The agent wants to run rm -rf build. Hermes shows the command with three buttons: Reject, Always allow and Run.",
+    "caption": "A risky command stops at Hermes' own question before it runs on the laptop."
+  },
+  {
+    "file": "04-run-card.png",
+    "alt": "A card in the chat reads Proposed command number 1, git push origin main, with Run and Copy buttons. The same command is listed in the pane.",
+    "caption": "A command the agent proposes waits for you, with Run and Copy."
+  },
+  {
+    "file": "05-machines.png",
+    "alt": "The Machines page in Settings. A form for the laptop has its address, the account to log in as, a port, a key file and a folder for its files. Under it: Connected in 86 ms.",
+    "caption": "Add, change and test computers on the Machines page in Settings."
+  },
+  {
+    "file": "06-away.png",
+    "alt": "The laptop's dot is red and its state reads not reachable. In the chat a command shows exit 255 and a note that the target is unreachable and no command was run.",
+    "caption": "When the laptop is away, nothing runs, and both the chip and the agent say so."
+  },
+  {
+    "file": "07-new-session.gif",
+    "alt": "A click on New session beside the laptop opens a chat. A question is typed, a command runs, and the answer comes in.",
+    "caption": "From New session to the first answer. Every picture here is the real app on a test rig, with a scripted model in place of a real one."
+  }
+]
