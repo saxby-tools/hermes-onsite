@@ -1424,6 +1424,29 @@ it, as in entry 64. A scripted model stood in for a real one.
   tool's answer. The name on the plugin's card in Capabilities. The
   Bots tab. The switch that turns Run off. Anything on Hermes
   Desktop 0.23.4.
+- **A second reader, the same night.** A fresh reviewer was given
+  the night's code and none of the reasoning. One finding was a
+  real fault in the new title search: Hermes' lookup leaves an
+  archived session out while its title stays taken, so five
+  archived sessions of one name made "New session" fail for good.
+  The fifty tries are back behind the lookup. The others were
+  holes around the dropped `reconnect`. A session in a terminal had
+  nothing to bring its mount back, so the hook that runs before the
+  terminal and file tools now does it. An `sshfs` that is killed
+  leaves a dead mount in the system's list, and it was taken for a
+  healthy one. A mount made on a waking target could keep an empty
+  start folder. A changed mount folder left the old mount up. All
+  fixed, each with a test.
+- **Left as the reviewer found it.** In a chat app, `/run` now hands
+  its command to the gateway, where before it was always refused,
+  and it is marked sent once the gateway takes it, whether or not
+  the gateway delivers it. A timed-out poll still empties the
+  pane's list of machines until the next good answer. While a
+  target sleeps, a mount an older build left inside the Hermes
+  home is not taken down until the target answers.
+- **Not run for real.** The hook's mount check, in a terminal
+  session on a Linux server after a target returns. It is covered
+  by unit tests and by the same mount call the app's check makes.
 - **Not done.** Taking a dead mount down the moment the first probe
   fails, which would cut the 12 seconds to about 3. It needs a
   forced unmount and a killed process, and a single lost probe
