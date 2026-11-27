@@ -3,11 +3,13 @@
 from __future__ import annotations
 
 import copy
+import subprocess
 
 import pytest
 
 from onsite import api
 from onsite import config
+from onsite import dialin
 from onsite import health
 from onsite import mounts
 from onsite import runtime
@@ -448,3 +450,302 @@ def test_listing_the_machines_mounts_each_ssh_disk(tmp_path, monkeypatch):
     api.status_payload(harness.runtime, {}, with_targets=True)
 
     assert asked == ["laptop"]
+
+
+# ---- a machine that dials in -------------------------------------------
+
+
+# What the form sends for a new machine that connects by itself: the
+# account there and how it reaches the server. No address, no port.
+DIAL_IN_FORM = {
+    "kind": "ssh",
+    "user": "dev",
+    "dial_in": "you@server.example",
+    "key": "",
+    "mount": "",
+    "prefixes": [],
+}
+
+DIAL_IN_SETTINGS = {
+    "default": "mac",
+    "targets": {
+        "laptop": {
+            "kind": "ssh",
+            "host": "127.0.0.1",
+            "port": 20500,
+            "user": "dev",
+            "dial_in": "you@server.example",
+        },
+        "mac": {"kind": "local"},
+    },
+}
+
+REFUSED = "ssh: connect to host 127.0.0.1 port 20500: Connection refused"
+NOT_CONNECTED = "it has not connected to this server, or its link dropped"
+
+
+def offer_ports(monkeypatch, *ports):
+    """Stand in for the random draw and for the look at each port."""
+
+    left = list(ports)
+
+    monkeypatch.setattr(dialin, "draw_port", lambda: left.pop(0))
+    monkeypatch.setattr(dialin, "port_is_free", lambda port: True)
+
+
+def ssh_says(monkeypatch, stderr: str, code: int = 255) -> None:
+    def fake_run(command, **kwargs):
+        return subprocess.CompletedProcess(command, code, "", stderr)
+
+    monkeypatch.setattr(health.subprocess, "run", fake_run)
+
+
+def save_dial_in(harness, name: str, **changes) -> dict:
+    return api.save_target_payload(
+        harness.runtime,
+        {"name": name, "target": {**DIAL_IN_FORM, **changes}},
+    )
+
+
+def test_saving_a_machine_that_dials_in_picks_its_port(tmp_path, monkeypatch):
+    offer_ports(monkeypatch, 20500)
+
+    harness = Harness(tmp_path)
+    payload = save_dial_in(harness, "desk")
+
+    assert payload["ok"] is True
+    assert harness.settings["targets"]["desk"] == {
+        "kind": "ssh",
+        "host": "127.0.0.1",
+        "user": "dev",
+        "dial_in": "you@server.example",
+        "port": 20500,
+    }
+
+
+def test_a_second_machine_never_gets_the_first_ones_port(
+    tmp_path,
+    monkeypatch,
+):
+    # The draw offers the first machine's port again.
+    offer_ports(monkeypatch, 20500, 20500, 20777)
+
+    harness = Harness(tmp_path)
+
+    save_dial_in(harness, "desk")
+    save_dial_in(harness, "tablet")
+
+    assert harness.settings["targets"]["desk"]["port"] == 20500
+    assert harness.settings["targets"]["tablet"]["port"] == 20777
+
+
+def test_saving_it_again_keeps_its_port(tmp_path, monkeypatch):
+    # Its own command names the port. A new one would cut its link.
+    offer_ports(monkeypatch, 20500, 20999)
+
+    harness = Harness(tmp_path)
+
+    save_dial_in(harness, "desk")
+    save_dial_in(harness, "desk", user="me")
+
+    assert harness.settings["targets"]["desk"]["port"] == 20500
+    assert harness.settings["targets"]["desk"]["user"] == "me"
+
+
+def test_a_server_that_is_not_a_plain_login_is_not_saved(
+    tmp_path,
+    monkeypatch,
+):
+    offer_ports(monkeypatch, 20500)
+
+    harness = Harness(tmp_path)
+    payload = save_dial_in(harness, "desk", dial_in="you@server; id")
+
+    assert payload["ok"] is False
+    assert "the server is named as USER@ADDRESS" in payload["error"]
+    assert harness.saves == 0
+
+
+def test_a_saved_machine_that_dials_in_can_be_tested_from_its_form(
+    tmp_path,
+    monkeypatch,
+):
+    # Its form sends no address, as on a save. The address and the
+    # port are the plugin's to add before it is tried.
+    tried = []
+
+    def fake_probe(spec):
+        tried.append((spec.host, spec.port, spec.user, spec.dial_in))
+
+        return health.ProbeResult(True, "", 41)
+
+    monkeypatch.setattr(api, "probe_target", fake_probe)
+
+    harness = Harness(tmp_path, DIAL_IN_SETTINGS)
+    payload = api.test_target_payload(
+        harness.runtime,
+        {"name": "laptop", "target": {**DIAL_IN_FORM, "port": 20500}},
+    )
+
+    assert payload["ok"] is True
+    assert payload["connected"] is True
+    assert tried == [("127.0.0.1", 20500, "dev", "you@server.example")]
+
+
+def test_the_page_is_handed_the_one_command_to_run(tmp_path, monkeypatch):
+    ssh_says(monkeypatch, REFUSED)
+    monkeypatch.setattr(dialin, "keys_on_file", lambda alias, known: [])
+
+    harness = Harness(tmp_path, DIAL_IN_SETTINGS)
+    payload = api.dial_in_payload(harness.runtime, {"target": "laptop"})
+
+    assert payload["ok"] is True
+    assert payload["port"] == 20500
+    assert payload["command"].startswith("ssh -N ")
+    assert payload["command"].endswith(
+        "-R 127.0.0.1:20500:127.0.0.1:22 you@server.example"
+    )
+    assert 'permitlisten="127.0.0.1:20500"' in payload["key_options"]
+    assert sorted(payload["keep"]) == ["linux", "macos"]
+
+
+def test_the_page_is_told_the_machine_has_not_arrived(tmp_path, monkeypatch):
+    ssh_says(monkeypatch, REFUSED)
+    monkeypatch.setattr(dialin, "keys_on_file", lambda alias, known: [])
+
+    harness = Harness(tmp_path, DIAL_IN_SETTINGS)
+    payload = api.dial_in_payload(harness.runtime, {"target": "laptop"})
+
+    assert payload["connected"] is False
+    assert NOT_CONNECTED in payload["detail"]
+    assert "Connection refused" not in payload["detail"]
+
+
+def test_the_page_is_told_when_it_arrives_and_under_which_key(
+    tmp_path,
+    monkeypatch,
+):
+    asked = []
+
+    def fake_keys(alias, known_hosts):
+        asked.append(alias)
+
+        return ["ED25519 SHA256:abc"]
+
+    ssh_says(monkeypatch, "", code=0)
+    monkeypatch.setattr(dialin, "keys_on_file", fake_keys)
+
+    harness = Harness(tmp_path, DIAL_IN_SETTINGS)
+    payload = api.dial_in_payload(harness.runtime, {"target": "laptop"})
+
+    assert payload["connected"] is True
+    assert payload["host_keys"] == ["ED25519 SHA256:abc"]
+    assert asked == ["onsite-laptop"]
+
+
+@pytest.mark.parametrize("name, said", [
+    ("laptop", "does not dial in"),
+    ("mac", "is the Hermes server"),
+    ("nobody", "is not one of the machines"),
+])
+def test_only_a_machine_that_dials_in_has_a_command(tmp_path, name, said):
+    payload = api.dial_in_payload(Harness(tmp_path).runtime, {"target": name})
+
+    assert payload["ok"] is False
+    assert said in payload["error"]
+
+
+def test_a_machine_that_has_not_arrived_is_not_asked_for_its_disk(
+    tmp_path,
+    monkeypatch,
+):
+    # The row already says it is not connected. A mount tried now
+    # would only add the mount program's words for the same thing.
+    _, asked = mounted(monkeypatch, tmp_path)
+    ssh_says(monkeypatch, REFUSED)
+
+    harness = Harness(tmp_path, DIAL_IN_SETTINGS)
+    payload = api.status_payload(harness.runtime, {}, with_targets=True)
+    rows = {row["name"]: row for row in payload["rows"]}
+
+    assert rows["laptop"]["dial_in"] is True
+    assert rows["laptop"]["connected"] is False
+    assert NOT_CONNECTED in rows["laptop"]["detail"]
+    assert rows["laptop"]["mount_error"] == ""
+    assert rows["mac"]["dial_in"] is False
+    assert asked == []
+
+
+def test_a_machine_that_has_arrived_gets_its_disk_mounted(
+    tmp_path,
+    monkeypatch,
+):
+    _, asked = mounted(monkeypatch, tmp_path)
+    ssh_says(monkeypatch, "", code=0)
+
+    harness = Harness(tmp_path, DIAL_IN_SETTINGS)
+
+    api.status_payload(harness.runtime, {}, with_targets=True)
+
+    assert asked == ["laptop"]
+
+
+def test_a_mount_that_fails_for_want_of_a_link_says_so_and_is_retried(
+    tmp_path,
+    monkeypatch,
+):
+    tries = []
+
+    def refuse(spec, mount_root, data_dir, system=None):
+        tries.append(spec.name)
+
+        raise mounts.MountError("read: Connection reset by peer")
+
+    monkeypatch.setattr(mounts, "ensure", refuse)
+    ssh_says(monkeypatch, REFUSED)
+
+    harness = Harness(tmp_path, DIAL_IN_SETTINGS)
+
+    for _ in range(2):
+        payload = api.open_payload(harness.runtime, {"target": "laptop"})
+
+        assert payload["ok"] is False
+        assert "cannot be mounted yet" in payload["error"]
+        assert NOT_CONNECTED in payload["error"]
+        assert "Connection reset" not in payload["error"]
+
+    # Not held back for thirty seconds: the machine may dial in at
+    # any moment, and the mount should be there when it has.
+    assert tries == ["laptop", "laptop"]
+
+
+def test_a_mount_that_fails_with_the_link_up_keeps_its_own_reason(
+    tmp_path,
+    monkeypatch,
+):
+    def refuse(spec, mount_root, data_dir, system=None):
+        raise mounts.MountError("this server has no `sshfs`. Install it")
+
+    monkeypatch.setattr(mounts, "ensure", refuse)
+    ssh_says(monkeypatch, "", code=0)
+
+    harness = Harness(tmp_path, DIAL_IN_SETTINGS)
+    payload = api.open_payload(harness.runtime, {"target": "laptop"})
+
+    assert "has no `sshfs`" in payload["error"]
+
+
+def test_a_session_is_told_its_machine_dials_in(tmp_path, monkeypatch):
+    mounted(monkeypatch, tmp_path)
+    ssh_says(monkeypatch, REFUSED)
+
+    settings = copy.deepcopy(DIAL_IN_SETTINGS)
+    settings["default"] = "laptop"
+
+    harness = Harness(tmp_path, settings)
+    payload = api.status_payload(harness.runtime, {"cwd": "/tmp"})
+
+    assert payload["target"] == "laptop"
+    assert payload["dial_in"] is True
+    assert payload["label"] == "laptop (dev, dials in)"
+    assert payload["mount_error"] == ""
