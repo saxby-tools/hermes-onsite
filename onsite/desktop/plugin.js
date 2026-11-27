@@ -10,7 +10,9 @@
  *   3. RUN CARD        the same Run and Copy, inline in the transcript
  *   4. NEW SESSION     start a session on a machine, in the folder
  *                      where its disk is mounted, from the pane
- *   5. MACHINES PAGE   add, edit, test and remove machines, in Settings
+ *   5. MACHINES PAGE   add, edit, test and remove machines, in Settings,
+ *                      and hand over the one command that connects a
+ *                      machine the server cannot reach
  *
  * The desktop loader takes one plain ESM file. Only three imports
  * resolve, there is no build step, and UI is jsx() calls.
@@ -101,6 +103,42 @@ const MACHINES_PAGE_TITLE = 'Machines'
 const KIND_SSH = 'ssh'
 const KIND_LOCAL = 'local'
 
+// A machine the server cannot reach, which connects to the server by
+// itself. To the host it is an ssh machine with one more setting,
+// `dial_in`. The form shows it as a kind of its own, because a person
+// fills in different things for it.
+const KIND_DIAL_IN = 'dial-in'
+
+const KIND_LABELS = [
+  [KIND_SSH, 'Another machine, which the server can log in to'],
+  [KIND_DIAL_IN, 'Another machine, which connects to the server by itself'],
+  [KIND_LOCAL, 'The machine Hermes runs on']
+]
+
+const NO_SERVER_NOTE =
+  'Fill in the server, as that machine logs in to it, such as ' +
+  'you@server.example.'
+
+// While the steps for a machine that dials in are on screen, the
+// host is asked this often whether the machine has arrived.
+const DIAL_IN_POLL_MS = 3000
+
+// What `ssh` uses when no port is named.
+const SSH_PORT = 22
+
+// The two systems a link can be kept running on, as the host names
+// them, and what a person calls them.
+const SYSTEM_LINUX = 'linux'
+const SYSTEM_MAC = 'macos'
+const SYSTEM_LABELS = [
+  [SYSTEM_LINUX, 'Linux'],
+  [SYSTEM_MAC, 'macOS']
+]
+
+// The file an SSH server reads the keys an account accepts from. It
+// is only named to the person. Nothing here opens it.
+const KEYS_FILE = 'authorized_keys'
+
 // The same words as LOCAL_LABEL in config.py. Never "this machine":
 // the app is often open on a different computer than Hermes.
 const LOCAL_LABEL = 'Hermes server'
@@ -134,6 +172,7 @@ const EMPTY_MACHINE = {
   user: '',
   port: '',
   key: '',
+  server: '',
   prefixes: '',
   mount: '',
   screen: SCREEN_AUTO,
@@ -604,6 +643,12 @@ function stateText(status) {
 
   if (!status.ok) {
     return 'not set up'
+  }
+
+  // A machine that dials in is not out of reach: it has not come, or
+  // its link is down. The host's own words say which.
+  if (!status.connected && status.dial_in) {
+    return `not connected (${status.detail || 'no answer'})`
   }
 
   if (!status.connected) {
@@ -1134,6 +1179,24 @@ async function openSessionAt(cwd, title) {
   return true
 }
 
+// Why a machine that dials in is not there, and where its command
+// is. A red dot alone would leave a person to guess that the next
+// step is on the machine and not on the server.
+function linkProblem(row) {
+  if (!row.dial_in) {
+    return ''
+  }
+
+  if (row.connected) {
+    return ''
+  }
+
+  return (
+    `Not connected: ${row.detail || 'no answer'}. Its command is in ` +
+    'Settings, Plugins, Onsite, Machines.'
+  )
+}
+
 // One machine in the pane. A machine reached over SSH gets a button
 // that opens a session in its start folder. The app's own picker then
 // starts there, so nobody has to know where the host mounted it.
@@ -1175,7 +1238,7 @@ function PaneMachine({ row }) {
     logStep('New session: finished', row.name)
   }
 
-  const problem = message || row.mount_error || ''
+  const problem = message || row.mount_error || linkProblem(row)
 
   return jsxs('li', {
     className: 'flex flex-col gap-0.5',
@@ -1321,14 +1384,42 @@ function RunCard({ attrs, sessionId, streaming }) {
 /* 5. MACHINES PAGE                                                    */
 /* ------------------------------------------------------------------ */
 
+function kindOf(block) {
+  if (block?.kind === KIND_LOCAL) {
+    return KIND_LOCAL
+  }
+
+  if (block?.dial_in) {
+    return KIND_DIAL_IN
+  }
+
+  return KIND_SSH
+}
+
+// The address and port a machine that the server logs in to was
+// saved with. A machine that dials in has neither of its own: its
+// saved address is the server's loopback and its port is one the
+// host picked. They are left out of the form, so a person who
+// switches it to "the server can log in to" types the real ones.
+function ownAddress(block) {
+  if (block?.dial_in) {
+    return { host: '', port: '' }
+  }
+
+  return {
+    host: block?.host ?? '',
+    port: block?.port === undefined ? '' : String(block.port)
+  }
+}
+
 function machineToForm(name, block, isDefault) {
   return {
     name,
-    kind: block?.kind === KIND_LOCAL ? KIND_LOCAL : KIND_SSH,
-    host: block?.host ?? '',
+    kind: kindOf(block),
+    ...ownAddress(block),
     user: block?.user ?? '',
-    port: block?.port === undefined ? '' : String(block.port),
     key: block?.key ?? '',
+    server: block?.dial_in ?? '',
     prefixes: (block?.prefixes ?? []).join('\n'),
     mount: block?.mount ?? '',
     screen: block?.screen ?? SCREEN_AUTO,
@@ -1337,6 +1428,52 @@ function machineToForm(name, block, isDefault) {
     // Settings this form does not show are kept as they were.
     kept: block ?? {}
   }
+}
+
+// The settings of a machine that dials in. The person gives the
+// account and how the machine reaches the server. The host adds the
+// address and picks the port, so neither is sent. A port is kept
+// only from a machine that already dialed in: any other machine's
+// port is its own SSH port, which means something else.
+function dialInTarget(form, target) {
+  target.dial_in = form.server.trim()
+
+  delete target.host
+
+  if (!form.kept?.dial_in) {
+    delete target.port
+  }
+
+  return target
+}
+
+// An app connection over SSH, written the way the host takes a
+// server: `you@server.example`, with the port when it is not 22.
+function serverText(connection) {
+  const host = String(connection.host ?? '').trim()
+  const user = String(connection.user ?? '').trim()
+
+  if (host === '') {
+    return ''
+  }
+
+  const login = user === '' ? host : `${user}@${host}`
+  const port = Number(connection.port ?? 0)
+
+  if (!Number.isInteger(port)) {
+    return login
+  }
+
+  // The app leaves the port out, or empty, for the usual one.
+  if (port < 1) {
+    return login
+  }
+
+  if (port === SSH_PORT) {
+    return login
+  }
+
+  return `${login}:${port}`
 }
 
 function formToTarget(form) {
@@ -1352,6 +1489,7 @@ function formToTarget(form) {
     delete target.port
     delete target.key
     delete target.mount
+    delete target.dial_in
 
     for (const key of SCREEN_KEYS) {
       delete target[key]
@@ -1360,12 +1498,20 @@ function formToTarget(form) {
     return target
   }
 
-  target.host = form.host.trim()
+  target.kind = KIND_SSH
   target.user = form.user.trim()
   target.key = form.key.trim()
   target.mount = form.mount.trim()
-  target.port = form.port.trim() === '' ? '' : Number(form.port)
   target.screen = form.screen === SCREEN_AUTO ? '' : form.screen
+
+  if (form.kind === KIND_DIAL_IN) {
+    return dialInTarget(form, target)
+  }
+
+  delete target.dial_in
+
+  target.host = form.host.trim()
+  target.port = form.port.trim() === '' ? '' : Number(form.port)
 
   return target
 }
@@ -1375,7 +1521,41 @@ function describeMachine(block) {
     return LOCAL_LABEL
   }
 
+  if (block?.dial_in) {
+    return `${block.user ?? '?'}, dials in on port ${block.port ?? '?'}`
+  }
+
   return `${block?.user ?? '?'}@${block?.host ?? '?'}`
+}
+
+// How the app itself reaches the server, when it does so over SSH.
+// The machine the app is on is most often the one being added, and
+// it reaches the server the same way. Any other kind of connection
+// has no account name to offer, so nothing is suggested for it.
+async function suggestServer() {
+  const list = sdk.host?.connections
+  const active = sdk.host?.activeConnectionId
+
+  if (typeof list !== 'function') {
+    return ''
+  }
+
+  if (typeof active !== 'function') {
+    return ''
+  }
+
+  try {
+    const id = active()
+    const found = (await list()).find(item => item.id === id)
+
+    if (found?.kind !== KIND_SSH) {
+      return ''
+    }
+
+    return serverText(found)
+  } catch {
+    return ''
+  }
 }
 
 function Field({ label, name, value, onChange, placeholder, disabled }) {
@@ -1397,6 +1577,12 @@ function Field({ label, name, value, onChange, placeholder, disabled }) {
 
 function MachineForm({ form, note, busy, onChange, onSave, onTest, onCancel }) {
   const overSsh = form.kind === KIND_SSH
+  const dialsIn = form.kind === KIND_DIAL_IN
+  const remote = overSsh || dialsIn
+
+  // A machine that dials in can only be tested once it is saved. The
+  // host picks its port then, and there is nothing to try before.
+  const canTest = overSsh || (dialsIn && Boolean(form.kept?.dial_in))
 
   return jsxs('div', {
     className: 'flex flex-col gap-2 rounded border border-(--ui-border) p-3',
@@ -1422,10 +1608,9 @@ function MachineForm({ form, note, busy, onChange, onSave, onTest, onCancel }) {
             'data-onsite-field': 'kind',
             value: form.kind,
             onChange: event => onChange('kind', event.target.value),
-            children: [
-              jsx('option', { value: KIND_SSH, children: 'Another machine, over SSH' }),
-              jsx('option', { value: KIND_LOCAL, children: 'The machine Hermes runs on' })
-            ]
+            children: KIND_LABELS.map(([value, label]) =>
+              jsx('option', { value, children: label }, value)
+            )
           })
         ]
       }),
@@ -1438,12 +1623,22 @@ function MachineForm({ form, note, busy, onChange, onSave, onTest, onCancel }) {
             onChange
           })
         : null,
-      overSsh
+      remote
         ? jsx(Field, {
-            label: 'Log in as',
+            label: dialsIn ? 'Your account on that machine' : 'Log in as',
             name: 'user',
             value: form.user,
             placeholder: 'you',
+            onChange
+          })
+        : null,
+      dialsIn
+        ? jsx(Field, {
+            label:
+              'This server, as that machine logs in to it over SSH',
+            name: 'server',
+            value: form.server,
+            placeholder: 'you@server.example',
             onChange
           })
         : null,
@@ -1456,7 +1651,7 @@ function MachineForm({ form, note, busy, onChange, onSave, onTest, onCancel }) {
             onChange
           })
         : null,
-      overSsh
+      remote
         ? jsx(Field, {
             label: 'Key file (leave empty to use your SSH setup)',
             name: 'key',
@@ -1465,7 +1660,7 @@ function MachineForm({ form, note, busy, onChange, onSave, onTest, onCancel }) {
             onChange
           })
         : null,
-      overSsh
+      remote
         ? jsx(Field, {
             label: MOUNT_LABEL,
             name: 'mount',
@@ -1474,7 +1669,7 @@ function MachineForm({ form, note, busy, onChange, onSave, onTest, onCancel }) {
             onChange
           })
         : null,
-      overSsh
+      remote
         ? jsxs('label', {
             className: 'flex flex-col gap-1',
             children: [
@@ -1537,7 +1732,7 @@ function MachineForm({ form, note, busy, onChange, onSave, onTest, onCancel }) {
             onClick: onSave,
             children: 'Save'
           }),
-          overSsh
+          canTest
             ? jsx('button', {
                 type: 'button',
                 className: BUTTON_CLASS,
@@ -1560,7 +1755,9 @@ function MachineForm({ form, note, busy, onChange, onSave, onTest, onCancel }) {
   })
 }
 
-function MachineRow({ name, block, isDefault, busy, onEdit, onRemove }) {
+function MachineRow(props) {
+  const { name, block, isDefault, busy, onEdit, onLink, onRemove } = props
+
   return jsxs('div', {
     className: 'flex items-center gap-2',
     'data-onsite-machine': name,
@@ -1575,6 +1772,16 @@ function MachineRow({ name, block, isDefault, busy, onEdit, onRemove }) {
           })
         ]
       }),
+      block?.dial_in
+        ? jsx('button', {
+            type: 'button',
+            className: BUTTON_CLASS,
+            'data-onsite-link': name,
+            disabled: busy,
+            onClick: onLink,
+            children: 'Connect'
+          })
+        : null,
       jsx('button', {
         type: 'button',
         className: BUTTON_CLASS,
@@ -1702,11 +1909,261 @@ function OnsiteHome() {
   })
 }
 
+// The system the app is on, as a first guess at the system of the
+// machine being connected. They are most often the same machine.
+function guessSystem() {
+  const platform = String(globalThis.navigator?.platform ?? '')
+
+  if (/mac/i.test(platform)) {
+    return SYSTEM_MAC
+  }
+
+  return SYSTEM_LINUX
+}
+
+function describeLink(info) {
+  if (!info) {
+    return 'Checking…'
+  }
+
+  if (info.connected) {
+    return `Connected (${info.latency_ms} ms).`
+  }
+
+  return `Waiting: ${info.detail || 'no answer'}.`
+}
+
+// A piece of text a person copies to the other machine: what it is
+// for, the text, and a Copy button.
+function CopyBlock({ label, text, name }) {
+  return jsxs('div', {
+    className: 'flex flex-col gap-1',
+    'data-onsite-copy-block': name,
+    children: [
+      jsxs('div', {
+        className: 'flex items-start justify-between gap-2',
+        children: [
+          jsx('span', { children: label }),
+          jsx(CopyButton, { text })
+        ]
+      }),
+      jsx('code', { className: CODE_CLASS, children: text })
+    ]
+  })
+}
+
+// How to keep the link running across restarts of the machine. The
+// plugin installs nothing there: the person saves the file and turns
+// it on.
+function KeepRunning({ info, system, onSystem }) {
+  const keep = info.keep?.[system]
+
+  if (!keep) {
+    return null
+  }
+
+  return jsxs('div', {
+    className: 'flex flex-col gap-2',
+    'data-onsite-keep': system,
+    children: [
+      jsxs('label', {
+        className: 'flex items-center gap-2',
+        children: [
+          jsx('span', {
+            children: '2. To keep it running after a restart. That machine runs'
+          }),
+          jsx('select', {
+            className: joinClasses(INPUT_CLASS, 'w-auto'),
+            'data-onsite-field': 'system',
+            value: system,
+            onChange: event => onSystem(event.target.value),
+            children: SYSTEM_LABELS.map(([value, label]) =>
+              jsx('option', { value, children: label }, value)
+            )
+          })
+        ]
+      }),
+      jsx(CopyBlock, {
+        label: `Save this there as ${keep.path}`,
+        name: 'keep-file',
+        text: keep.text
+      }),
+      jsx(CopyBlock, {
+        label: 'Then turn it on, there',
+        name: 'keep-start',
+        text: keep.start.join('\n')
+      }),
+      jsx('div', { className: TEXT_MUTED, children: keep.note })
+    ]
+  })
+}
+
+function HostKeys({ info }) {
+  if (!Array.isArray(info.host_keys)) {
+    return null
+  }
+
+  if (info.host_keys.length === 0) {
+    return null
+  }
+
+  return jsxs('div', {
+    className: joinClasses(TEXT_SMALL, TEXT_MUTED, 'whitespace-pre-wrap'),
+    'data-onsite-host-keys': true,
+    children: [
+      `The key the server filed for ${info.target}. On that machine, `,
+      '"ssh-keygen -lf /etc/ssh/ssh_host_ed25519_key.pub" should ',
+      `print the same:\n${info.host_keys.join('\n')}`
+    ]
+  })
+}
+
+// The steps that connect a machine that dials in. The server cannot
+// start the link: it has to be opened from the machine. So the page
+// hands over one command, and says by itself when the machine has
+// arrived.
+function DialInSteps({ name, onClose }) {
+  const [info, setInfo] = useState(null)
+  const [note, setNote] = useState('')
+  const [system, setSystem] = useState(guessSystem())
+
+  useEffect(() => {
+    let shown = true
+    let asking = false
+
+    const show = answer => {
+      if (!shown) {
+        return
+      }
+
+      // Steps that can no longer be read are taken off the screen,
+      // so an old "Connected" never stands beside the reason.
+      if (!answer?.ok) {
+        setInfo(null)
+        setNote(answer?.error || 'The steps could not be read.')
+
+        return
+      }
+
+      setInfo(answer)
+      setNote('')
+    }
+
+    const load = async () => {
+      if (windowIsHidden()) {
+        return
+      }
+
+      // One question at a time. A machine that is asleep can take
+      // longer to answer than the gap between two questions, and an
+      // older answer must not land on top of a newer one.
+      if (asking) {
+        return
+      }
+
+      asking = true
+
+      try {
+        show(await post('/dial-in', { target: name }))
+      } catch (error) {
+        show({ ok: false, error: describeError(error) })
+      }
+
+      asking = false
+    }
+
+    load()
+
+    const stop = plugin?.setInterval?.(load, DIAL_IN_POLL_MS)
+
+    return () => {
+      shown = false
+      stop?.()
+    }
+  }, [name])
+
+  return jsxs('div', {
+    className: 'flex flex-col gap-3 rounded border border-(--ui-border) p-3',
+    'data-onsite-dial-in': name,
+    children: [
+      jsxs('div', {
+        className: 'flex items-center gap-2',
+        children: [
+          jsx('span', {
+            className: 'font-medium',
+            children: `Connect ${name}`
+          }),
+          jsx(Dot, { tone: info?.connected ? TONE_UP : TONE_DOWN }),
+          jsx('span', {
+            'data-onsite-link-state': true,
+            role: 'status',
+            children: describeLink(info)
+          }),
+          jsx('button', {
+            type: 'button',
+            className: joinClasses(BUTTON_CLASS, 'ml-auto'),
+            'data-onsite-link-close': true,
+            onClick: onClose,
+            children: 'Close'
+          })
+        ]
+      }),
+      note ? jsx('div', { className: TEXT_MUTED, children: note }) : null,
+      info
+        ? jsx(CopyBlock, {
+            label:
+              `1. On ${name}, run this in a terminal and leave it ` +
+              'running. That machine must be able to log in to the ' +
+              'server over SSH.',
+            name: 'command',
+            text: info.command
+          })
+        : null,
+      info
+        ? jsx(KeepRunning, { info, system, onSystem: setSystem })
+        : null,
+      info
+        ? jsx(CopyBlock, {
+            label:
+              '3. Optional. So that machine\'s key can hold the link ' +
+              'and do nothing else on the server, put this in front ' +
+              `of its line in your account's ${KEYS_FILE} file on ` +
+              'the server, then a space.',
+            name: 'key-options',
+            text: info.key_options
+          })
+        : null,
+      info ? jsx(HostKeys, { info }) : null
+    ]
+  })
+}
+
+// Puts a suggested server into a form that is still open on a
+// machine that dials in and still has none. The suggestion comes
+// back a moment after it was asked for, and the person may have
+// typed one or closed the form by then.
+function fillServer(form, server) {
+  if (!form) {
+    return form
+  }
+
+  if (form.kind !== KIND_DIAL_IN) {
+    return form
+  }
+
+  if (form.server !== '') {
+    return form
+  }
+
+  return { ...form, server }
+}
+
 function MachinesPage() {
   const [settings, setSettings] = useState(null)
   const [form, setForm] = useState(null)
   const [note, setNote] = useState('')
   const [busy, setBusy] = useState(false)
+  const [linking, setLinking] = useState('')
 
   // One request at a time. Each answer is the whole list again, so
   // the page always shows what the settings file holds.
@@ -1738,18 +2195,52 @@ function MachinesPage() {
     ask('/targets', {}, showList)
   }, [])
 
-  const change = (name, value) => setForm({ ...form, [name]: value })
+  const change = (name, value) => {
+    const next = { ...form, [name]: value }
 
-  const save = () =>
-    ask(
+    setForm(next)
+
+    // The first time a person picks "connects by itself", the server
+    // field is filled with how the app itself reaches the server.
+    if (name !== 'kind' || value !== KIND_DIAL_IN || next.server !== '') {
+      return
+    }
+
+    suggestServer().then(server => {
+      if (server === '') {
+        return
+      }
+
+      setForm(current => fillServer(current, server))
+    })
+  }
+
+  const save = () => {
+    const name = form.name.trim()
+    const dialsIn = form.kind === KIND_DIAL_IN
+
+    // Said here, in the form's own words. The host would only say
+    // that an address is missing, and this form has no address field.
+    if (dialsIn && form.server.trim() === '') {
+      setNote(NO_SERVER_NOTE)
+
+      return null
+    }
+
+    return ask(
       '/targets/save',
-      {
-        name: form.name.trim(),
-        target: formToTarget(form),
-        default: form.isDefault
-      },
-      showList
+      { name, target: formToTarget(form), default: form.isDefault },
+      answer => {
+        showList(answer)
+
+        // The next step for a machine that dials in is on that
+        // machine, so its command is shown at once.
+        if (answer?.ok && dialsIn) {
+          setLinking(name)
+        }
+      }
     )
+  }
 
   const test = () =>
     ask(
@@ -1785,11 +2276,25 @@ function MachinesPage() {
                 machineToForm(name, settings.targets[name], settings.default === name)
               )
             },
-            onRemove: () => ask('/targets/remove', { name }, showList)
+            onLink: () => setLinking(linking === name ? '' : name),
+            onRemove: () => {
+              if (linking === name) {
+                setLinking('')
+              }
+
+              ask('/targets/remove', { name }, showList)
+            }
           },
           name
         )
       ),
+      linking && settings?.targets?.[linking]?.dial_in
+        ? jsx(
+            DialInSteps,
+            { name: linking, onClose: () => setLinking('') },
+            linking
+          )
+        : null,
       form
         ? jsx(MachineForm, {
             form,
