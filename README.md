@@ -207,6 +207,9 @@ For a profile that does not have onsite yet.
 | Hermes warns about a custom, unreviewed source | Expected until onsite is in the Hermes catalog. |
 | Something in the app does nothing, or the file tree stays on Loading | Press F12 in the app to open its inspector. If nothing opens, F12 is turned off in Settings, Advanced. In the Console tab, type `[onsite]` in the filter box and click again. Each step is written there with how long it took and how it ended. |
 | `hermes plugins list` says "provenance: drift" | Expected. Hermes says it of any plugin installed from a folder of a repository. |
+| The pane says a machine "cannot be mounted" because the place "is inside the Hermes home" | The server has no usual place for mounts. Hermes' Docker image is one such server. Open Settings, Plugins, Onsite, Machines, click Edit, and name a folder outside the Hermes home under "Folder on the server for its files". See [A target's files on the host](#a-targets-files-on-the-host). |
+| The file tree reads "Path is outside the managed read boundary" | Hermes runs in its Docker image and only lets the app read `/opt/data`. See "Hermes in Docker" under [A target's files on the host](#a-targets-files-on-the-host). |
+| The chip reads `onsite: no answer` | The server did not reply in time. It may be busy or restarting. The chip asks again every five seconds. Hover over it for the reason. |
 
 #### Copy the desktop UI by hand
 
@@ -223,9 +226,12 @@ scp "$(dirname "$(hermes config path)")/plugins/onsite/desktop/plugin.js" you@la
 
 <!-- onsite:notice {"kind": "untested"} -->
 
-The command in option 1 has been run into an empty Hermes home. The
-two addresses have not yet been pasted into the real app. The copy
-by hand is the only way the desktop UI has been installed so far.
+The command in option 1 has been run into an empty Hermes home, and
+into a fresh profile on Hermes' own Docker image. The address that
+ends in `/onsite/desktop` has been pasted into the real app once, on
+a test rig with app version 0.23.2. It installed and the chip came
+up with no switch to turn on. The address for both parts has not
+been pasted into the real app.
 
 <!-- /onsite:notice -->
 
@@ -484,9 +490,34 @@ Hermes home. onsite does not use it and does not guess another. The
 mount fails, and the message names both folders. Make a folder
 outside the Hermes home that the account Hermes runs as can write
 to, such as `/mnt/onsite`, and name a place in it with `--mount` or
-the `mount` setting: `/mnt/onsite/laptop`. If an older version of
-onsite left a mount inside the Hermes home, the same check takes it
-down.
+the `mount` setting: `/mnt/onsite/laptop`. In the desktop app that
+is the field "Folder on the server for its files" on the Machines
+page. If an older version of onsite left a mount inside the Hermes
+home, the same check takes it down.
+
+**Hermes in Docker.** Hermes' own image needs four things before a
+target's files show in the desktop app. They were worked out on a
+test rig built from `nousresearch/hermes-agent:v0.23.2`, not on
+anybody's real server.
+
+1. **`sshfs` in the image.** It is not there. Build your own image
+   on top of Hermes' and add it: `apt-get install -y sshfs`.
+2. **The FUSE device.** The rig starts the container with
+   `--device /dev/fuse --cap-add SYS_ADMIN --security-opt
+   apparmor=unconfined`. Hermes does not run as root in the image,
+   so the rig also runs `chmod 0666 /dev/fuse` as root when the
+   container starts.
+3. **A place for the mounts**, outside `/opt/data` and owned by the
+   account Hermes runs as, as said above. Name it in each target's
+   `mount`.
+4. **`HERMES_DASHBOARD_FILES_ROOT=/mnt/onsite`** in the container's
+   environment. In this image Hermes lets the desktop app read files
+   under `/opt/data` and nowhere else. Without the setting a session
+   on a target still works, and its commands and file tools run on
+   the target, but the app's file tree reads "Path is outside the
+   managed read boundary". With it, the app reads the mounts and
+   nothing else, so a session on the server itself has no file tree.
+   The setting is Hermes' own, and Hermes' docs do not list it.
 
 **Where a new session starts.** In the folder a login on the target
 lands in, which is your home folder there. The plugin asks the
@@ -547,15 +578,21 @@ hermes onsite mount laptop --stop
   | openSUSE | `sudo zypper install sshfs` |
   | NixOS | `nix-env -iA nixos.sshfs` |
 
-**When the target is away.** The mount stays, and reading it fails
-within a few seconds, not forever. It works again by itself a few
-seconds after the target is back.
+**When the target is away.** On a macOS host the mount stays, and
+reading it fails within a few seconds, not forever. On a Linux host
+the mount lets go about twelve seconds after the target stops
+answering. The folder is then empty and reads fail at once, so a
+sleeping laptop cannot hold Hermes up. Either way it works again by
+itself a few seconds after the target is back, as long as the
+desktop app is open on a session in that folder or on the pane.
 
 <!-- onsite:notice {"kind": "untested"} -->
 
 The macOS route runs on one real host against one real Linux laptop.
 The Linux route has run in a container only, never on a real Linux
-server. Nobody has yet used either from the real desktop app.
+server. The Linux route has been used from the real desktop app, on
+a test rig: the file tree, a target frozen in mid-session and its
+return. The macOS route has been seen there once, by one person.
 
 <!-- /onsite:notice -->
 
