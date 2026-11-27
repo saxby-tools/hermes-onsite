@@ -1,5 +1,10 @@
 [
   {
+    "file": "00-new-session.gif",
+    "alt": "A click on New session beside the laptop opens a chat. A question is typed, a command runs, and the answer comes in.",
+    "caption": "From New session to the first answer. Every picture here is the real app on a test rig, with a scripted model in place of a real one."
+  },
+  {
     "file": "01-session.png",
     "alt": "Hermes Desktop with a chat named api on laptop. The agent answers that it is on the laptop. A pane on the right names the laptop, says it is connected, and lists two computers.",
     "caption": "A session on your laptop. The pane names the computer the tools run on."
@@ -28,10 +33,5 @@
     "file": "06-away.png",
     "alt": "The laptop's dot is red and its state reads not reachable. In the chat a command shows exit 255 and a note that the target is unreachable and no command was run.",
     "caption": "When the laptop is away, nothing runs, and both the chip and the agent say so."
-  },
-  {
-    "file": "07-new-session.gif",
-    "alt": "A click on New session beside the laptop opens a chat. A question is typed, a command runs, and the answer comes in.",
-    "caption": "From New session to the first answer. Every picture here is the real app on a test rig, with a scripted model in place of a real one."
   }
 ]
