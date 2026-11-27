@@ -41,6 +41,11 @@ FILE_TOOLS = frozenset({
     "search_files",
 })
 
+# The tools that work in the session's folder, which may be on a
+# target's mount.
+TERMINAL_TOOL = "terminal"
+MOUNT_USERS = FILE_TOOLS | {TERMINAL_TOOL}
+
 
 def anchor(tool_name: str, task_id: str) -> None:
     from .compat import anchor_file_tools
@@ -100,8 +105,33 @@ def refuse_foreign_mcp(runtime: Runtime, tool_name: str):
     }
 
 
+def heal_mount(runtime: Runtime) -> None:
+    """Put back the mount the session's folder is on, if it is gone.
+
+    Hermes checks a session's folder on the host before a command.
+    Without the mount that folder is not there, and a session in a
+    terminal has no desktop app polling to bring it back.
+    """
+
+    # Asking Hermes can fail in a client that has no session folder.
+    # The tool call goes on either way.
+    try:
+        from . import compat
+
+        folder = str(compat.current_session_cwd() or "")
+    except Exception:
+        logger.debug("onsite: no session folder", exc_info=True)
+
+        return
+
+    runtime.heal_mount(folder)
+
+
 def build_hook(runtime: Runtime):
     def before_tool_call(tool_name: str = "", task_id: str = "", **kwargs):
+        if tool_name in MOUNT_USERS:
+            heal_mount(runtime)
+
         if tool_name in FILE_TOOLS:
             anchor(tool_name, task_id)
             return None

@@ -194,6 +194,23 @@ def test_an_unknown_session_does_not_block(monkeypatch):
     ) is None
 
 
+def test_the_hook_puts_a_mount_back_for_tools_that_use_the_folder(
+    monkeypatch,
+):
+    healed = []
+
+    monkeypatch.setattr(hooks, "heal_mount", lambda runtime: healed.append(1))
+    monkeypatch.setattr(hooks, "anchor", lambda tool_name, task_id: None)
+
+    hook = hooks.build_hook(FakeRuntime())
+    hook(tool_name="terminal", task_id="t")
+    hook(tool_name="write_file", task_id="t")
+    hook(tool_name="mcp__laptop_files__read", task_id="t")
+    hook(tool_name="propose_command", task_id="t")
+
+    assert len(healed) == 2
+
+
 def test_the_hook_only_looks_at_mcp_tools(monkeypatch):
     seen = []
     monkeypatch.setattr(
