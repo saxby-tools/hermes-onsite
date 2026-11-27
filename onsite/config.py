@@ -69,6 +69,10 @@ TARGET_NAME_RE = re.compile(r"^[a-z][a-z0-9-]{0,31}$")
 # `ssh` reads a word that starts with a hyphen as one of its options.
 OPTION_MARK = "-"
 
+# `sshfs` reads a comma as the end of one option and the start of the
+# next.
+OPTION_SEPARATOR = ","
+
 SETTINGS_PATH = f"plugins.entries.{PLUGIN_ID}.settings"
 FIX_HINT = (
     f"Run `hermes onsite init`, or edit `{SETTINGS_PATH}` in config.yaml."
@@ -394,6 +398,28 @@ def read_login(name: str, key: str, raw: Any, problems: list[str]) -> str:
     return text
 
 
+def read_option_path(
+    name: str,
+    key: str,
+    raw: Any,
+    problems: list[str],
+) -> str:
+    """A target's `key` or `known_hosts` file.
+
+    `sshfs` takes its options as one list with commas between them,
+    and these two paths are options in it. A comma in a path would
+    end the option and start another, and some options run a program
+    on the host. So neither may hold one.
+    """
+
+    text = read_text(name, key, raw, problems)
+
+    if OPTION_SEPARATOR in text:
+        problems.append(f"`{name}.{key}` cannot have a comma in it")
+
+    return text
+
+
 def read_path_mode(name: str, raw: Any, problems: list[str]) -> str:
     if raw is None:
         return PATH_MODE_INTERACTIVE
@@ -466,8 +492,8 @@ def read_target(name: str, raw: Any, problems: list[str]) -> TargetSpec | None:
         host=host,
         user=user,
         port=read_port(name, raw.get("port"), problems),
-        key=read_text(name, "key", raw.get("key"), problems),
-        known_hosts=read_text(
+        key=read_option_path(name, "key", raw.get("key"), problems),
+        known_hosts=read_option_path(
             name,
             "known_hosts",
             raw.get("known_hosts"),

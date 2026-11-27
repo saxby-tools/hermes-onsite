@@ -192,3 +192,18 @@ def test_a_login_that_ssh_would_read_as_an_option_is_refused(key):
     assert caught.value.problems == [
         f"`laptop.{key}` cannot start with a hyphen",
     ]
+
+
+@pytest.mark.parametrize("key", ["key", "known_hosts"])
+def test_a_file_path_that_sshfs_would_read_as_two_options_is_refused(key):
+    # `sshfs` splits its option list at commas, and ProxyCommand runs
+    # a program on the host.
+    block = {"kind": "ssh", "host": "laptop.example", "user": "dev"}
+    block[key] = "/keys/id,ProxyCommand=touch /tmp/x"
+
+    with pytest.raises(config.ConfigError) as caught:
+        config.parse_config({"default": "laptop", "targets": {"laptop": block}})
+
+    assert caught.value.problems == [
+        f"`laptop.{key}` cannot have a comma in it",
+    ]
