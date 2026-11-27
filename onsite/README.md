@@ -157,6 +157,72 @@ Read this before you turn it on.
 The full lists are in the repository's README, under "What it
 touches", "Limits" and "What is tested".
 
+## Environments (not released)
+
+This part is a spike on a branch. It is not in any release, the
+guide does not cover it, and it may change or go.
+
+An environment is a third kind of target: a sandbox the server makes
+for one session. It is a Docker container on the Hermes server, with
+the session's folder shared into it. The work goes on with your own
+computer off. It needs Docker on the server, and an image that has
+`bash`.
+
+```yaml
+targets:
+  web:
+    kind: environment
+    image: debian:stable-slim
+    repository: https://host.example/you/project.git
+    network: false
+    setup: |
+      apt-get update && apt-get install -y shellcheck
+```
+
+```bash
+hermes onsite env new web
+```
+
+That prints a new folder on the server, with the repository cloned
+into it. Start `hermes` in it. In Hermes Desktop, click "New
+session" beside the environment in the pane. The session's first
+command makes the sandbox and runs `setup` in it once.
+`hermes onsite env list` shows the sessions. `hermes onsite env rm
+web <id>` removes one: its sandbox and its folder.
+
+Read this before you try it.
+
+- **The sandbox is a container, not a separate machine.** It shares
+  the server's kernel. A flaw in the kernel or in Docker could let
+  a command out, as root on the server.
+- **Hermes' account needs Docker, and Docker is root.** An account
+  that can use Docker can do anything on the server. With it, a
+  session on the Hermes server itself can too.
+- **The sandbox gets one folder.** Nothing else of the server is
+  shared: no part of the Hermes home, no skill, no key. Commands run
+  there as the container's root, with most of root's powers taken
+  away.
+- **`network: true` is the whole network.** That includes the
+  server's own network, and any service on the server that listens
+  beyond its loopback address. There is no list of allowed sites.
+  The default is off, and then `setup` cannot download anything.
+- **Nothing caps a sandbox's memory, processor or disk.**
+- **The clone uses the server account's own git logins.** The
+  plugin reads and keeps none, and none is put in the sandbox. So
+  the sandbox cannot push to a private repository, and nothing
+  pushes for it yet: the work is the files in the folder. Do not
+  put a secret in `env`: every command there can read it.
+- **Do not run `git` on the server in a session's folder.** The
+  sandbox can write that repository's settings and hooks, and git
+  would run them as your account.
+- **On a Linux server, files the sandbox makes belong to root.**
+  You can read them. To change or delete them, remove the session.
+- **A sandbox stays until you remove its session.** A restart of the
+  server stops it, and the next command starts it again.
+- **In Hermes' Docker image,** name a `workspace` outside
+  `/opt/data`, and add it to `HERMES_WRITE_SAFE_ROOT`, or Hermes'
+  file tools refuse to write there.
+
 ## License
 
 Free software under the GNU Affero General Public License, version 3
