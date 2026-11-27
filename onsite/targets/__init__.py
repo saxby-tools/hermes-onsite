@@ -14,6 +14,7 @@ from ..config import KIND_LOCAL
 from ..config import TargetSpec
 from ..health import Gate
 from ..health import TargetDown
+from ..health import describe_failure
 from .local import OnsiteLocalEnvironment
 from .ssh import OnsiteSshEnvironment
 
@@ -54,10 +55,12 @@ def build_ssh(
             persistent=persistent,
         )
     except EnvironmentConnectionError as error:
-        gate.trip(error.reason)
+        reason = describe_failure(spec, error.reason)
+
+        gate.trip(reason)
 
         raise EnvironmentConnectionError(
-            f"onsite target {spec.label}: {error.reason}",
+            f"onsite target {spec.label}: {reason}",
             retry_hint=RETRY_HINT,
         ) from error
 
