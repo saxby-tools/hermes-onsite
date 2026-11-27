@@ -40,6 +40,7 @@ from . import compat
 from . import messages
 from . import screen
 from .config import ConfigError
+from .config import KIND_ENVIRONMENT
 from .config import KIND_LOCAL
 from .config import SCREEN_AUTO
 from .config import SCREEN_DRIVER
@@ -362,6 +363,11 @@ def build_backend(runtime: Runtime, permission_mode: str):
         check_internals()
 
         return CuaDriverBackend(permission_mode=permission_mode)
+
+    # A sandbox has no screen. Saying so beats a login attempt to a
+    # machine that is not there.
+    if spec.kind == KIND_ENVIRONMENT:
+        raise RuntimeError(messages.SANDBOX_NO_SCREEN)
 
     route, driver_missing = settle_route(spec)
 
