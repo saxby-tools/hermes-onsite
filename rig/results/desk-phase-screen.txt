@@ -6,9 +6,13 @@
   |   System   Linux
   |   Desktop  x11
   |   Driver   /usr/local/bin/cua-driver
+  |   Sharing  answers on port 5900: 1280 by 800, no password asked
+  |   Route    Hermes' driver (`screen: auto`)
   | 
   | It can be driven.
   PASS  the check finds a desktop and a driver
+  PASS  it finds the target's screen sharing too
+  PASS  it names the route this target is set to use
 
 == Screen: a session sees the screen of its own machine
   PASS  looking needs no approval

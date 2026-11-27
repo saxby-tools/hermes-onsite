@@ -1,0 +1,34 @@
+# Screen control on a target
+
+== Screen: the target's screen can be found
+  --- hermes onsite screen laptop
+  | Screen of laptop (dev@127.0.0.1)
+  |   System   Linux
+  |   Desktop  x11
+  |   Driver   /usr/local/bin/cua-driver
+  |   Sharing  answers on port 5900: 1280 by 800, no password asked
+  |   Route    screen sharing, by position only (`screen: sharing`)
+  | 
+  | It can be driven.
+  | 
+  | Know before you rely on it:
+  |   - screen sharing shows pixels only. Hermes clicks by position, cannot name a button and cannot check that a click did what was meant.
+  PASS  the check finds a desktop and a driver
+  PASS  it finds the target's screen sharing too
+  PASS  it names the route this target is set to use
+
+== Screen: a session sees the screen of its own machine
+  PASS  looking needs no approval
+  PASS  the plugin picked the target's screen for this session
+  PASS  the screen backend started
+
+== Screen: a denied click and keystroke stay off it
+  PASS  Hermes' own prompt fired for each gated step
+        prompts: 3
+  PASS  nothing was typed on the target
+
+== Screen: an approved click and keystroke land on it
+  PASS  Hermes' own prompt fired for each gated step
+        prompts: 3
+  PASS  the typed line ran in the terminal on the target
+        file holds: 'screen-rig'
