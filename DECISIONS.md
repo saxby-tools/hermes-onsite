@@ -1447,6 +1447,22 @@ it, as in entry 64. A scripted model stood in for a real one.
 - **Not run for real.** The hook's mount check, in a terminal
   session on a Linux server after a target returns. It is covered
   by unit tests and by the same mount call the app's check makes.
+- **Two guards on the settings.** The dial-in work turned up that a
+  `user` or `host` starting with a hyphen is read by `ssh` as an
+  option: `-oProxyCommand=touch /tmp/x` made the file, run in a
+  container. A comma in a `key` or `known_hosts` path does the same
+  to `sshfs`. Both are refused when the settings are read. Only the
+  settings' owner can write them, so these guard against a slip.
+  Not done: no command the plugin builds sets `ForwardAgent=no`.
+- **Dial-in is built and is not on `main`.** Entry 58 parked it
+  until it had been walked from the computer's side. It has been,
+  between two containers, 51 checks, and in the real app on the
+  same rig: the machine was added on the Machines page, the printed
+  command was run on the stand-in laptop, and the panel read
+  "Connected" by itself. No real laptop behind a real router has
+  dialed in, and that is the walk entry 58 meant. The branch is
+  `feature/dial-in`, with its own entry. Landing it is the owner's
+  call.
 - **Not done.** Taking a dead mount down the moment the first probe
   fails, which would cut the 12 seconds to about 3. It needs a
   forced unmount and a killed process, and a single lost probe
