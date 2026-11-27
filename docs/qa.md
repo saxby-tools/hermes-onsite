@@ -71,7 +71,9 @@ command is not found, run `hermes -p test plugins enable onsite`.
 
 This is the path a stranger takes, so it is tested on a profile that
 has never seen the plugin. The command has been run into an empty
-Hermes home. Nobody has run it into a profile that a gateway serves.
+Hermes home, and into a fresh profile on Hermes' own Docker image
+with a gateway running. Nobody has run it into a profile on a real
+server.
 
 - [ ] Make a throwaway profile and install from GitHub:
 
@@ -94,8 +96,9 @@ hermes -p qa plugins install https://github.com/saxby-tools/hermes-onsite/tree/m
 ls "$(hermes -p qa config path | xargs dirname)/plugins/onsite"
 ```
 
-Now the desktop app's part, on the computer the app runs on. **This
-has never been tried.** It was read from Hermes' source.
+Now the desktop app's part, on the computer the app runs on. **Tried
+once, on a test rig** with app version 0.23.2. It went as the boxes
+below say, and the chip came up with no switch to turn on.
 
 - [ ] In the app, open Capabilities, then Plugins, and click "Install
       from Git". Paste this and click "Review repository":
@@ -245,8 +248,11 @@ On the laptop, in the desktop app, connected to the gateway.
       `mac` has none.
 - [ ] Click "New session". A new session opens, named for the
       laptop's home folder and the laptop, such as `you on laptop`.
-      Its chip reads `onsite: laptop`. **Never seen in the real
-      app.**
+      Its chip reads `onsite: laptop`. Seen on a test rig and once in
+      a person's own app.
+- [ ] Click "New session" three more times, one after the other. Each
+      opens at once, with a number after its name. The file tree
+      fills every time.
 - [ ] Ask that session for `pwd`. It prints your home folder on the
       laptop.
 - [ ] Open the app's command palette. Under Projects there is one
@@ -256,20 +262,30 @@ On the laptop, in the desktop app, connected to the gateway.
 - [ ] Change the session's folder with the app's own folder picker.
       The picker opens in your home folder on the laptop and lists
       the laptop's real folders. Pick `Development`. The app's file
-      tree shows that folder's real files. Open one. **Never seen in
-      the real app.** Note how long the tree takes to fill.
+      tree shows that folder's real files. Open one. The tree has
+      been seen in the real app. **The picker has not**: on the test
+      rig the app did not offer "Change working directory" at all.
+      Note how long the tree takes to fill.
 - [ ] The chip's tooltip has four lines: where tools run, the state,
       the folder and the reason. The reason is "the folder is on its
-      disk".
+      disk" before the first message, and "this session started
+      there" after it.
 - [ ] The pane shows the machine, its state in milliseconds, the
       folder and the reason above the list of machines.
 - [ ] In Capabilities, then Plugins, the card for the desktop part
       is named `onsite-desktop`. Note the name if it differs.
 - [ ] Ask the agent to propose a command. A run card appears in the
       transcript with Run and Copy buttons, and the same command in
-      the pane. **This has never been seen in the real app.**
+      the pane. Seen on a test rig, with a scripted model. **Not yet
+      with a real model**, which has to copy one line from the tool's
+      answer for the card to show.
 - [ ] Click Run. The button reads "Sent" and the command runs after
       any approval. Click Copy and paste: it is the exact command.
+      Until Nov. 27 the button did nothing in the app but print a
+      hint. If you see that hint with the setting on, the server
+      still runs the older code.
+- [ ] Reload the app with the card in view. Its button still reads
+      "Sent".
 - [ ] On the host, turn the `/run` setting off: the fourth command of
       "Before you start" with `false` in place of `true`. Ask for
       another proposed command. Within a few seconds its Run button
@@ -280,12 +296,13 @@ On the laptop, in the desktop app, connected to the gateway.
       listed, and a line names the profile these settings belong to.
       The page follows the profile picked in the Sessions tab. If
       Settings shows an "Applies to" row of profiles anywhere, it
-      does not change this page. Note where you see that row.
-      **Never seen in the real app.**
+      does not change this page. On the test rig that row is on
+      Model, Main model. Note it if you see it anywhere else.
 - [ ] Open Machines, under Onsite in the list on the left. The same
       two machines have Edit and Remove buttons.
 - [ ] Click Edit on `laptop`, then "Test connection". It says
-      "Connected in" some milliseconds.
+      "Connected in" some milliseconds. The form has a field named
+      "Folder on the server for its files". Leave it empty.
 - [ ] Add a machine named `spare` of the kind "The machine Hermes
       runs on" and save. It appears in the list. Remove it. It is
       gone, and gone from the profile's `config.yaml`.
@@ -315,14 +332,18 @@ been tested.** The rig only fakes it.
 - [ ] If Hermes says the working folder no longer exists instead,
       note that. The session's folder is on the laptop's mount, and
       a mount stops answering while the laptop sleeps.
-- [ ] In the desktop app, with a laptop session in view, the file
-      tree goes empty or shows an error within a few seconds of the
-      lid closing. The app itself does not freeze. Note what you
-      see.
+- [ ] In the desktop app, with a laptop session in view, the chip's
+      dot turns red within about ten seconds of the lid closing. The
+      file tree goes empty or shows an error. The app itself does not
+      freeze, and a session on another machine still answers. Note
+      what you see. On a test rig with a Linux server and a frozen
+      laptop this held: the mount let go after twelve seconds and the
+      tree read "Could not read this folder".
 - [ ] Ask again right away. It fails at once, without a wait.
 - [ ] Open the lid. Within about fifteen seconds, the next command
       runs with no restart of anything, and the app's file tree
-      shows the laptop's files again.
+      shows the laptop's files again. On the test rig both were back
+      in three seconds.
 - [ ] Start a long command (`sleep 60; echo done`), close the lid
       during it, and open it again. The result is reported as "no
       exit status", and the command is not run a second time.
@@ -479,13 +500,13 @@ Run these from a clone of the repository, on the host. The rig uses a
 profile named `buster` unless you pass `--profile`, and needs Docker
 and `HERMES_HOME`, as in journey 11.
 
-- [ ] Unit tests: 469 pass and one is skipped.
+- [ ] Unit tests: 489 pass and one is skipped.
 
 ```bash
 uv run --no-project --with pytest --with pillow --with cryptography python -m pytest -q
 ```
 
-- [ ] Desktop tests: 42 pass and none is skipped. They borrow React
+- [ ] Desktop tests: 64 pass and none is skipped. They borrow React
       from a Hermes checkout at `~/.hermes/hermes-agent`, or the
       folder named in `HERMES_SRC`. Without one they are skipped, not
       failed.
