@@ -1468,6 +1468,81 @@ it, as in entry 64. A scripted model stood in for a real one.
   forced unmount and a killed process, and a single lost probe
   would then drop a healthy mount.
 
+### 66. A computer the server cannot reach dials in
+
+Nov. 27, 2026. On the branch `feature/dial-in`. Not on `main` until
+the owner says so.
+
+- **Owner's call, Nov. 26.** "See if you can get the dial-in to be
+  a first class feature." Entry 58 parked it until it had been
+  walked from the computer's side.
+- **Options.** The remote forward the computer opens, as in entry
+  45. A unix-socket forward in a private folder, which needs a
+  change to the server's `sshd` and a helper on every link. A port
+  the server picks with `-R 0`, which the server cannot then learn.
+  A `RemoteForward` line in the person's own SSH settings, which
+  breaks the desktop app's own probe connections: run in
+  containers, they failed with "remote port forwarding failed".
+  Starting the link from the app's pane, which needs a door the
+  plugin SDK does not have and the catalog's rules keep a listed
+  plugin away from.
+- **Pick.** The remote forward to a port on the server's loopback
+  address. The plugin picks the port and prints one command. The
+  person runs it on their computer. A systemd unit or a launchd
+  agent keeps it running, and the plugin only prints those too. In
+  the settings it is an ordinary SSH target at `127.0.0.1` with one
+  new key, `dial_in`.
+- **Why.** No new listener, protocol or dependency. Commands, file
+  tools, both mounts, MCP, the screen link, the probe and the
+  breaker already carried a port and a host-key name, so nothing
+  was rerouted.
+- **The port.** Drawn at random from 20000 to 29999, checked with
+  one connection try, never shared by two computers of a profile,
+  and kept across saves.
+- **The lock.** The computer's host key is filed under
+  `onsite-<name>` on first contact. After that, something else
+  answering on the port gets no login and no command. The address
+  must be `127.0.0.1` and not `localhost`, which can also mean an
+  address another account could answer on.
+- **In plain words.** What `ssh` says about a dead port is
+  translated in one place and reaches the chip, the pane,
+  `hermes onsite status` and a tool's error: "it has not connected
+  to this server, or its link dropped", or "its link is up but it
+  does not answer".
+- **Checked between two containers, from the computer's side.** 51
+  checks, in `rig/results/dial-walk.txt`. The server could not log
+  in to the computer. The computer ran the printed command and was
+  up 1.5 seconds later. Commands, file tools, the mount, an MCP
+  link and the screen link went through. A cut link was said in
+  1.5 seconds and came back with nothing done on the server. A
+  frozen computer was said in 4.5 seconds and its mount let go in
+  14. A second `sshd` put on the port was refused and sent nothing.
+  A real systemd unit restarted a killed link in 6 seconds. With
+  the suggested restricted line in `authorized_keys`, the
+  computer's key could open the forward and nothing else.
+- **Checked in the real app, on the same rig.** The machine was
+  added on the Machines page. The panel showed the command, the
+  command was run on the stand-in computer, and the panel read
+  "Connected" by itself within four seconds. A session ran there. A
+  cut link and a frozen computer were said in the chip, the pane
+  and the tool's error, and both came back by themselves.
+- **Not checked.** A real laptop behind a real router, real sleep,
+  a laptop that moves between networks. The launchd agent on a Mac.
+  A macOS server. Hermes Desktop 0.23.4. Whether the server field
+  is filled in for a person whose app connects over SSH.
+- **Cost.** First contact is trust on first use: any account on the
+  server could listen on the port before the computer first
+  connects, and would be sent the session. The filed key is shown
+  for checking. A server whose `sshd` has no `ClientAliveInterval`
+  held a dead link's port for 16 minutes when the computer came
+  back at a new address, and fixing that needs root on the server.
+  `GatewayPorts yes` on the server would open the port to its
+  network. The host key outlives Remove, so a reused name is
+  refused until the key is cleared. The Connect panel logs in every
+  three seconds while it is open. About 600 lines of owned code.
+- **Reverse.** Revert the branch. The `onsite-<name>` host-key name
+  is older than it and stays.
+
 ## Open decisions from the brief
 
 | # | Decision | What the build did |
