@@ -28,8 +28,11 @@ from hermes_cli.config import load_config_readonly
 from hermes_constants import get_hermes_home
 
 # Private. See the module docstring.
+from tools.environments.base import BaseEnvironment
 from tools.environments.base import EnvironmentConnectionError
+from tools.environments.base_output import _popen_bash as popen_bash
 from tools.environments.local import LocalEnvironment
+from tools.environments.remote_common import bash_argv
 from tools.environments.ssh import SSHEnvironment
 
 from .config import BACKEND_NAME
@@ -62,6 +65,7 @@ _context = None
 PROMPT_PROBE_TASK_ID = "prompt-backend-probe"
 
 __all__ = [
+    "BaseEnvironment",
     "EnvironmentConnectionError",
     "LocalEnvironment",
     "PROMPT_PROBE_TASK_ID",
@@ -69,6 +73,7 @@ __all__ = [
     "TerminalEnvironmentProvider",
     "anchor_file_tools",
     "backend_selected",
+    "bash_argv",
     "bind",
     "current_session_cwd",
     "current_session_id",
@@ -79,6 +84,7 @@ __all__ = [
     "environment_key",
     "load_settings",
     "plugins_dir",
+    "popen_bash",
     "run_allowed",
     "save_settings",
     "terminal_persistence",
