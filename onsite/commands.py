@@ -11,6 +11,7 @@ import sys
 
 from pathlib import Path
 
+from . import dialin
 from . import mcptools
 from . import messages
 from . import mounts
@@ -20,6 +21,7 @@ from . import wizard
 from .config import ConfigError
 from .config import KIND_LOCAL
 from .config import TargetSpec
+from .config import parse_config
 from .health import probe_target
 from .proposals import STATUS_SENT
 from .runtime import CLEAR_OVERRIDE
@@ -44,6 +46,11 @@ EXIT_DOWN = 1
 EXIT_USAGE = 2
 
 TARGET_FOLDER_SEPARATOR = ":"
+
+DIAL_IN_DRY_NOTE = (
+    "the port picked for a new computer that dials in is picked "
+    "again when this is written."
+)
 
 NEXT_STEPS = (
     "Next:",
@@ -206,12 +213,23 @@ def build_run_command(ctx, runtime: Runtime):
     return run_command
 
 
+def describe_address(spec) -> str:
+    """Where a target is, for the list `status` prints."""
+
+    # A computer that dials in is at the server's own loopback
+    # address. Its port is what tells one from another.
+    if spec.dial_in:
+        return f"{spec.user}, dials in on port {spec.port}"
+
+    return f"{spec.user}@{spec.host}"
+
+
 def describe_row(spec) -> dict:
     probe = probe_target(spec)
     state = "up" if probe.ok else f"DOWN ({probe.detail})"
 
     if probe.ok and spec.kind != KIND_LOCAL:
-        state = f"up ({probe.elapsed_ms} ms)  {spec.user}@{spec.host}"
+        state = f"up ({probe.elapsed_ms} ms)  {describe_address(spec)}"
 
     return {"name": spec.name, "kind": spec.kind, "state": state}
 
@@ -248,15 +266,18 @@ def cli_status(runtime: Runtime, args) -> int:
 
 
 def wants_interview(args) -> bool:
-    if args.ssh or args.local:
+    if args.ssh or args.local or args.dial_in:
         return False
 
     return sys.stdin.isatty()
 
 
-def gather_settings(args) -> dict:
+def gather_settings(runtime: Runtime, args) -> dict:
+    # A computer that dials in keeps the port it was saved with.
+    saved = runtime.raw_settings()["targets"]
+
     if wants_interview(args):
-        return wizard.interview(input)
+        return wizard.interview(input, saved)
 
     return wizard.settings_from_flags(
         ssh=args.ssh,
@@ -268,12 +289,32 @@ def gather_settings(args) -> dict:
         default=args.default,
         mount=args.mount,
         start=args.start,
+        dial_in=args.dial_in,
+        server=args.server,
+        saved=saved,
     )
+
+
+def dial_in_names(settings: dict) -> list[str]:
+    targets = settings.get("targets") or {}
+
+    return [name for name, block in targets.items() if block.get("dial_in")]
+
+
+def has_new_port(settings: dict, saved: dict) -> bool:
+    """Whether a port was picked in this run for a computer that
+    dials in. One that was saved before keeps the port it had."""
+
+    for name in dial_in_names(settings):
+        if dialin.saved_port(saved, name) is None:
+            return True
+
+    return False
 
 
 def cli_init(runtime: Runtime, args) -> int:
     try:
-        settings = gather_settings(args)
+        settings = gather_settings(runtime, args)
         wizard.validate(settings)
     except (wizard.FlagError, ConfigError) as error:
         print(error)
@@ -286,8 +327,15 @@ def cli_init(runtime: Runtime, args) -> int:
     print(wizard.render_yaml(settings))
     print()
 
+    dialing = dial_in_names(settings)
+    saved = runtime.raw_settings()["targets"]
+
     if not args.apply:
         print(f"{mode} nothing was written. Add --apply to write it.")
+
+        if has_new_port(settings, saved):
+            print(f"{mode} {DIAL_IN_DRY_NOTE}")
+
         return EXIT_OK
 
     # The whole block is written, so a target left out this time is
@@ -302,7 +350,134 @@ def cli_init(runtime: Runtime, args) -> int:
     print()
     print("\n".join(NEXT_STEPS))
 
+    for name in dialing:
+        print()
+        print(f"To connect `{name}`, see: hermes onsite dial-in {name}")
+
     return EXIT_OK
+
+
+def show_dial_in(runtime: Runtime, name: str, system: str | None) -> int:
+    """Print what a person runs on a computer that dials in."""
+
+    try:
+        config = runtime.load_config()
+    except ConfigError as error:
+        print(error)
+        return EXIT_USAGE
+
+    spec = config.targets.get(name)
+
+    if spec is None or not spec.dial_in:
+        print(f"`{name}` is not a computer that dials in.")
+        print(messages.DIAL_IN_USAGE)
+        return EXIT_USAGE
+
+    info = dialin.instructions(name, spec.dial_in, spec.port)
+
+    if system is not None:
+        print(messages.format_dial_in_keep(name, info["keep"][system]))
+        return EXIT_OK
+
+    probe = probe_target(spec)
+    state = f"connected ({probe.elapsed_ms} ms)"
+
+    if not probe.ok:
+        state = f"not connected: {probe.detail}"
+
+    print(messages.format_dial_in(
+        name,
+        info,
+        state,
+        dialin.keys_on_file(spec.host_key_alias, spec.known_hosts),
+    ))
+
+    return EXIT_OK
+
+
+def build_dial_in_block(saved, args) -> dict:
+    """One computer's settings, from what was saved and the flags.
+
+    A target that is already there keeps what it has, such as its
+    mount place. A port is only kept when the target already dialed
+    in: the port of a target the server used to dial is the
+    computer's own SSH port, and means something else.
+    """
+
+    block = dict(saved) if isinstance(saved, dict) else {}
+
+    if not block.get("dial_in"):
+        block.pop("port", None)
+        block.pop("host", None)
+
+    if args.user:
+        block["user"] = args.user
+
+    if args.server:
+        block["dial_in"] = args.server
+
+    if args.port is not None:
+        block["port"] = args.port
+
+    return block
+
+
+def cli_dial_in(runtime: Runtime, args) -> int:
+    name = args.target
+    changing = args.user or args.server or args.port is not None
+
+    if not changing:
+        return show_dial_in(runtime, name, args.keep)
+
+    settings = runtime.raw_settings()
+    saved = settings["targets"].get(name)
+
+    # The Hermes server is not a computer that can dial in to itself,
+    # and it is often the default. It is not turned into one.
+    if isinstance(saved, dict) and saved.get("kind") == KIND_LOCAL:
+        print(f"`{name}` is the Hermes server. Give the computer a "
+              "name of its own.")
+        return EXIT_USAGE
+
+    block = build_dial_in_block(saved, args)
+
+    if not block.get("user") or not block.get("dial_in"):
+        print(messages.DIAL_IN_USAGE)
+        return EXIT_USAGE
+
+    picked = "port" not in block
+
+    try:
+        block = dialin.complete(name, block, settings["targets"])
+        settings["targets"][name] = block
+
+        if not settings.get("default"):
+            settings["default"] = name
+
+        parse_config(settings)
+    except (dialin.DialInError, ConfigError) as error:
+        print(error)
+        return EXIT_USAGE
+
+    if not args.apply:
+        print(messages.format_dial_in_dry(
+            MODE_DRY,
+            name,
+            wizard.render_yaml({"targets": {name: block}}),
+            picked,
+        ))
+        return EXIT_OK
+
+    try:
+        runtime.save_settings(settings)
+    except RuntimeError as error:
+        print(f"{MODE_LIVE} {error}")
+        return EXIT_USAGE
+
+    print(f"{MODE_LIVE} written.")
+    print()
+
+    return show_dial_in(runtime, name, args.keep)
 
 
 def mount_targets(config, name: str | None) -> list[TargetSpec]:
@@ -555,6 +730,20 @@ def setup_cli(parser) -> None:
         help="a machine reached over SSH. Repeat for more.",
     )
     init.add_argument(
+        "--dial-in",
+        action="append",
+        default=[],
+        metavar="NAME=USER",
+        help="a machine this server cannot reach, which connects to "
+        "the server by itself. USER is the account on it. Needs "
+        "--server. Repeat for more.",
+    )
+    init.add_argument(
+        "--server",
+        metavar="USER@ADDRESS[:PORT]",
+        help="this server, as a --dial-in machine logs in to it.",
+    )
+    init.add_argument(
         "--local",
         action="append",
         default=[],
@@ -615,6 +804,41 @@ def setup_cli(parser) -> None:
         "--apply",
         action="store_true",
         help="write the settings. Without it, they are only shown.",
+    )
+
+    dialed = actions.add_parser(
+        "dial-in",
+        help="add a machine this server cannot reach, which connects "
+        "to the server by itself, or show the command it runs. A dry "
+        "run unless --apply is given.",
+    )
+    dialed.add_argument("target", help="a name for the machine.")
+    dialed.add_argument(
+        "--user",
+        help="the account on the machine that tool calls run as.",
+    )
+    dialed.add_argument(
+        "--server",
+        metavar="USER@ADDRESS[:PORT]",
+        help="this server, as the machine logs in to it.",
+    )
+    dialed.add_argument(
+        "--port",
+        type=int,
+        help="the port on this server that leads to the machine. "
+        "Default: a free one is picked.",
+    )
+    dialed.add_argument(
+        "--keep",
+        choices=dialin.SYSTEMS,
+        help="show how to keep the link up across restarts of a "
+        "machine that runs this system.",
+    )
+    dialed.add_argument(
+        "--apply",
+        action="store_true",
+        help="write the machine's settings. Without it, they are "
+        "shown.",
     )
 
     mounted = actions.add_parser(
@@ -688,6 +912,9 @@ def build_cli_handler(ctx, runtime: Runtime):
 
         if action == "init":
             return cli_init(runtime, args)
+
+        if action == "dial-in":
+            return cli_dial_in(runtime, args)
 
         if action == "mount":
             return cli_mount(runtime, args)
