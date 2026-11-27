@@ -177,3 +177,18 @@ def test_screen_settings_are_written_only_when_they_differ():
     assert "screen_port" not in config.target_to_settings(plain)
     assert config.target_to_settings(custom)["screen"] == "sharing"
     assert config.target_to_settings(custom)["screen_port"] == 5901
+
+
+@pytest.mark.parametrize("key", ["user", "host"])
+def test_a_login_that_ssh_would_read_as_an_option_is_refused(key):
+    # `ssh` takes `-oProxyCommand=...@host` as an option, and that
+    # one runs a program on the host.
+    block = {"kind": "ssh", "host": "laptop.example", "user": "dev"}
+    block[key] = "-oProxyCommand=touch /tmp/x"
+
+    with pytest.raises(config.ConfigError) as caught:
+        config.parse_config({"default": "laptop", "targets": {"laptop": block}})
+
+    assert caught.value.problems == [
+        f"`laptop.{key}` cannot start with a hyphen",
+    ]
