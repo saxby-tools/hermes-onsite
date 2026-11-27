@@ -15,6 +15,7 @@ from ..config import normalize_path
 from ..health import Gate
 from ..health import STATE_CLOSED
 from ..health import TargetDown
+from ..health import describe_failure
 from ..health import last_line
 from ..routing import HOME
 from ..routing import has_prefix_for
@@ -287,7 +288,12 @@ class OnsiteSshEnvironment(SSHEnvironment):
             return None
 
         if verdict == exits.VERDICT_LOST:
-            detail = last_line(str(result.get("output") or ""))
+            # For a computer that dials in, what `ssh` said is about
+            # a port on the host. The model is told what it means.
+            detail = describe_failure(
+                self.onsite_spec,
+                last_line(str(result.get("output") or "")),
+            )
             self._onsite_gate.trip(detail)
 
             return detail or "the connection was lost"
