@@ -66,6 +66,9 @@ LOOPBACK_HOSTS = ("127.0.0.1", "::1", "localhost")
 HOST_KEY_ALIAS_PREFIX = "onsite-"
 TARGET_NAME_RE = re.compile(r"^[a-z][a-z0-9-]{0,31}$")
 
+# `ssh` reads a word that starts with a hyphen as one of its options.
+OPTION_MARK = "-"
+
 SETTINGS_PATH = f"plugins.entries.{PLUGIN_ID}.settings"
 FIX_HINT = (
     f"Run `hermes onsite init`, or edit `{SETTINGS_PATH}` in config.yaml."
@@ -375,6 +378,22 @@ def read_text(name: str, key: str, raw: Any, problems: list[str]) -> str:
     return raw.strip()
 
 
+def read_login(name: str, key: str, raw: Any, problems: list[str]) -> str:
+    """A target's `user` or `host`, which end up on an `ssh` command.
+
+    The two are handed to `ssh` as one word, `user@host`. A word that
+    starts with a hyphen is read as an option, and some options run a
+    program on the host. So neither may start with one.
+    """
+
+    text = read_text(name, key, raw, problems)
+
+    if text.startswith(OPTION_MARK):
+        problems.append(f"`{name}.{key}` cannot start with a hyphen")
+
+    return text
+
+
 def read_path_mode(name: str, raw: Any, problems: list[str]) -> str:
     if raw is None:
         return PATH_MODE_INTERACTIVE
@@ -432,8 +451,8 @@ def read_target(name: str, raw: Any, problems: list[str]) -> TargetSpec | None:
         problems.append(f"`{name}.kind` must be one of: {choices}")
         return None
 
-    host = read_text(name, "host", raw.get("host"), problems)
-    user = read_text(name, "user", raw.get("user"), problems)
+    host = read_login(name, "host", raw.get("host"), problems)
+    user = read_login(name, "user", raw.get("user"), problems)
 
     if kind == KIND_SSH and not host:
         problems.append(f"`{name}.host` is required for an ssh target")
