@@ -4,12 +4,12 @@
   --- in a laptop folder
   | Folder    <repo>/.rig/work/sample
   | Target    laptop (dev@127.0.0.1)
-  | State     connected (56 ms)
+  | State     connected (60 ms)
   | Start in  /home/dev/Development/sample
   | Why       the session folder is in its path map
   | 
   | Targets
-  |    laptop  ssh    up (53 ms)  dev@127.0.0.1
+  |    laptop  ssh    up (54 ms)  dev@127.0.0.1
   |  * mac     local  up
   | 
   | * is the default target.
@@ -67,18 +67,18 @@
 == Phase 3.3: /onsite shows and switches the target
   --- /onsite
   | Onsite:  laptop (dev@127.0.0.1)
-  | State:   connected (71 ms)
+  | State:   connected (67 ms)
   | Folder:  /home/dev/Development/sample
   | Why:     this session started there
   | Targets: laptop, mac (default)
   | Switch with /onsite <target>. Go back to the rules with /onsite auto.
   PASS  /onsite names the target, its state and the folder
   --- /onsite mac
-  | This session now runs on mac (this machine).
+  | This session now runs on mac (Hermes server).
   | The next tool call starts in <repo>/.rig/work/sample.
   | The agent is told with your next message.
   PASS  /onsite mac moves the session
-  --- terminal: pwd + 2 commands [completed, 0.22s]
+  --- terminal: pwd + 2 commands [completed, 0.25s]
   | terminal result
   | - **output:** <repo>/.rig/work/sample
   | <this-user>
@@ -89,11 +89,11 @@
   PASS  the model is told that the session moved to the Mac
   PASS  it is told once, not on every turn after
   PASS  /onsite auto goes back to the folder rules
-  --- terminal: pwd + 2 commands [completed, 0.27s]
+  --- terminal: pwd + 2 commands [completed, 0.21s]
   | terminal result
   | - **output:** /home/dev/Development/sample
   | dev
-  | 3ec071c07dbf
+  | 40ad64eb9c59
   | - **exit_code:** 0
   | - **cwd:** /home/dev/Development/sample
   PASS  the next tool call runs on the laptop again
