@@ -9,9 +9,10 @@ Only the repository's owner, or a major contributor, may submit it.
 
 ## The entry
 
-Two lines are filled in on the day: `sha` and the commit in `image`.
-Both must be the same full commit, because the catalog shows the
-README and the picture as they were at that commit. `sha` is 40
+Three things are filled in on the day: `sha`, the commit in `image`
+and the commit in each line of `screenshots`. All must be the same
+full commit, because the catalog shows the README and the pictures
+as they were at that commit. `sha` is 40
 small hex characters and must name a commit, not a tag.
 
 The README the catalog shows is the one in the plugin's folder,
@@ -78,6 +79,13 @@ category: tools
 requires_hermes: ">=0.23.2,<0.24"
 docs_url: https://saxby-tools.github.io/hermes-onsite/
 image: https://raw.githubusercontent.com/saxby-tools/hermes-onsite/<the same commit>/docs/brand/banner.png
+screenshots:
+  - https://raw.githubusercontent.com/saxby-tools/hermes-onsite/<the same commit>/docs/screenshots/01-session.png
+  - https://raw.githubusercontent.com/saxby-tools/hermes-onsite/<the same commit>/docs/screenshots/02-files.png
+  - https://raw.githubusercontent.com/saxby-tools/hermes-onsite/<the same commit>/docs/screenshots/03-approval.png
+  - https://raw.githubusercontent.com/saxby-tools/hermes-onsite/<the same commit>/docs/screenshots/04-run-card.png
+  - https://raw.githubusercontent.com/saxby-tools/hermes-onsite/<the same commit>/docs/screenshots/05-machines.png
+  - https://raw.githubusercontent.com/saxby-tools/hermes-onsite/<the same commit>/docs/screenshots/06-away.png
 readme: true
 platforms: [linux, macos]
 known_issues:
@@ -119,11 +127,16 @@ capabilities:
       `docs/brand/banner.png`, 1200 by 600, the subject on the right,
       because the listing lays the title over the left. It is in the
       entry as `image`. Pin it to the same commit as `sha`.
-- [ ] Screenshots of the chip, the pane, an approval and the
-      Machines page are in the repository, for `screenshots` and for
-      the pull request. Up to six, each pinned to the same commit.
-      They must be taken in the real app. The guide's pictures are
-      drawings and must not be listed as screenshots.
+- [x] Six screenshots are in `docs/screenshots/`, for `screenshots`
+      and for the pull request: a session, the file tree, an
+      approval, a run card, the Machines page and a laptop that is
+      away. They were taken in the real app, version 0.23.2, on a
+      test rig: Hermes' own Docker image, a container that stands in
+      for the laptop, and a scripted model in place of a real one.
+      Say so in the pull request. Pin each to the same commit as
+      `sha`. The guide's pictures are drawings and must not be listed
+      as screenshots. The seventh file there is an animation for the
+      site alone.
 - [ ] The status line says what is true on the day, in both
       `README.md` and `onsite/README.md`. The second is the one the
       catalog shows.
