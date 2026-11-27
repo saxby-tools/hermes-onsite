@@ -18,7 +18,9 @@ import time
 from dataclasses import dataclass
 from typing import Callable
 
+from . import environments
 from .config import DEFAULT_SSH_PORT
+from .config import KIND_ENVIRONMENT
 from .config import KIND_LOCAL
 from .config import TargetSpec
 
@@ -228,6 +230,11 @@ def probe_target(spec: TargetSpec) -> ProbeResult:
     # runs, it is up.
     if spec.kind == KIND_LOCAL:
         return ProbeResult(True, "", 0)
+
+    # An environment is up when the program that makes its sandboxes
+    # answers. No sandbox is made or started to find out.
+    if spec.kind == KIND_ENVIRONMENT:
+        return ProbeResult(*environments.probe())
 
     return probe_ssh(spec)
 
