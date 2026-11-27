@@ -11,6 +11,7 @@ from __future__ import annotations
 from typing import Any
 
 from .config import OnsiteConfig
+from .config import KIND_ENVIRONMENT
 from .config import KIND_LOCAL
 from .config import SCREEN_DRIVER
 from .config import SCREEN_SHARING
@@ -19,6 +20,7 @@ from .moves import Move
 from .proposals import Proposal
 from .rfb import SECURITY_PASSWORD
 from .routing import REASON_DEFAULT
+from .routing import REASON_ENVIRONMENT
 from .routing import REASON_MOUNT
 from .routing import REASON_OVERRIDE
 from .routing import REASON_PATH_MAP
@@ -28,6 +30,20 @@ from .routing import Route
 
 
 PROMPT_SECTION_ID = "onsite"
+
+ENV_USAGE = "\n".join([
+    "Usage: hermes onsite env new <environment>",
+    "       hermes onsite env list [environment]",
+    "       hermes onsite env rm <environment> <session>",
+])
+NOT_AN_ENVIRONMENT = "`{name}` is not an environment."
+SANDBOX_NO_SCREEN = (
+    "This session runs in a sandbox, which has no screen to control."
+)
+
+# The kind column of `hermes onsite status` is never narrower than
+# this, so a list of machines alone looks as it always did.
+MIN_KIND_WIDTH = 5
 DIRECTIVE_NAME = "onsite-run"
 
 REASON_TEXT = {
@@ -36,6 +52,7 @@ REASON_TEXT = {
     REASON_PREFIX: "the session folder is under one of its prefixes",
     REASON_PATH_MAP: "the session folder is in its path map",
     REASON_MOUNT: "the session folder is on its disk",
+    REASON_ENVIRONMENT: "the session folder is one of its sessions",
     REASON_DEFAULT: "no folder rule matched, so the default was used",
 }
 
@@ -106,6 +123,9 @@ def describe_state(status: dict[str, Any]) -> str:
 
     if status.get("kind") == KIND_LOCAL:
         return "ready"
+
+    if status.get("kind") == KIND_ENVIRONMENT:
+        return "ready (Docker is answering)"
 
     return f"connected ({status.get('latency_ms', 0)} ms)"
 
@@ -269,6 +289,16 @@ def describe_target(spec: TargetSpec) -> str:
             "user Hermes runs as"
         )
 
+    if spec.kind == KIND_ENVIRONMENT:
+        network = "no network" if not spec.network else "network access"
+
+        return (
+            f"`{spec.name}`, a sandbox made for this session: a "
+            f"container from the image `{spec.image}` on the machine "
+            f"Hermes runs on, with {network}. Only the session's "
+            "folder is shared with it"
+        )
+
     return (
         f"`{spec.name}`, a remote machine reached over SSH "
         f"({spec.host}), as user `{spec.user}`"
@@ -378,12 +408,14 @@ def format_cli_status(
     ]
 
     width = max(len(row["name"]) for row in rows)
+    kind_width = max(len(row["kind"]) for row in rows)
 
     for row in rows:
         mark = "*" if row["name"] == status.get("default") else " "
         name = row["name"].ljust(width)
+        kind = row["kind"].ljust(max(kind_width, MIN_KIND_WIDTH))
 
-        lines.append(f" {mark} {name}  {row['kind']:<5}  {row['state']}")
+        lines.append(f" {mark} {name}  {kind}  {row['state']}")
 
     lines.append("")
     lines.append("* is the default target.")
@@ -410,6 +442,51 @@ def format_opened(spec: TargetSpec, target_folder: str, host: str) -> str:
         host,
         "Start a session in that folder to work there.",
     ])
+
+
+def format_environment_state(sessions: int, running: int, stopped: int) -> str:
+    """An environment's row in `hermes onsite status`, with Docker up."""
+
+    return (
+        f"up  sessions: {sessions}, sandboxes running: {running}, "
+        f"stopped: {stopped}"
+    )
+
+
+def format_session_opened(
+    spec: TargetSpec,
+    session_id: str,
+    start: str,
+) -> str:
+    """The output of `hermes onsite env new`."""
+
+    return "\n".join([
+        f"A new session of {spec.label} is here on this host:",
+        start,
+        "Start a session in that folder to work there. Its sandbox is "
+        "made by its first command.",
+        f"Remove it with `hermes onsite env rm {spec.name} {session_id}`.",
+    ])
+
+
+def format_sessions(spec: TargetSpec, rows: list[tuple[str, str]]) -> str:
+    """The output of `hermes onsite env list` for one environment.
+    Each row is a session's id and the folder it opens in."""
+
+    if not rows:
+        return f"{spec.label} has no sessions."
+
+    lines = [f"Sessions of {spec.label}:"]
+    lines += [f"  {session_id}  {start}" for session_id, start in rows]
+
+    return "\n".join(lines)
+
+
+def format_session_removed(spec: TargetSpec, session_id: str) -> str:
+    return (
+        f"Session {session_id} of {spec.label} is removed: its "
+        "sandbox and its folder."
+    )
 
 
 def format_mcp_refused(tool_name: str, owner: str, current: str) -> str:
