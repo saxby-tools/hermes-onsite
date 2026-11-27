@@ -599,8 +599,15 @@ def missing_sshfs(spec: TargetSpec) -> MountError:
 
 
 def build_sshfs_command(spec: TargetSpec, root: Path) -> list[str]:
+    # No `reconnect`. With it, sshfs keeps a dead mount in place and
+    # makes every read wait for a new login that cannot succeed: five
+    # to nine seconds each, measured against a frozen target. Hermes
+    # reads a session's folder from its main loop, so one sleeping
+    # laptop stopped the whole backend for every session. Without it,
+    # sshfs leaves when the keep-alive gives up, the folder is plain
+    # and empty again, and reads fail at once. `ensure` mounts it
+    # again when the target answers.
     options = [
-        "reconnect",
         "BatchMode=yes",
         f"ConnectTimeout={spec.connect_timeout}",
         f"ServerAliveInterval={SFTP_ALIVE_INTERVAL}",

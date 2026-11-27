@@ -294,7 +294,8 @@ def test_sshfs_carries_the_targets_own_ssh_settings():
 
     options = command[-1].split(",")
 
-    assert "reconnect" in options
+    # A dead mount that stays in place stops Hermes' whole backend.
+    assert "reconnect" not in options
     assert "BatchMode=yes" in options
     assert "port=2222" in options
     assert "IdentityFile=/keys/id" in options
