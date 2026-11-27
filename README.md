@@ -209,6 +209,7 @@ For a profile that does not have onsite yet.
 | `hermes plugins list` says "provenance: drift" | Expected. Hermes says it of any plugin installed from a folder of a repository. |
 | The pane says a machine "cannot be mounted" because the place "is inside the Hermes home" | The server has no usual place for mounts. Hermes' Docker image is one such server. Open Settings, Plugins, Onsite, Machines, click Edit, and name a folder outside the Hermes home under "Folder on the server for its files". See [A target's files on the host](#a-targets-files-on-the-host). |
 | The file tree reads "Path is outside the managed read boundary" | Hermes runs in its Docker image and only lets the app read `/opt/data`. See "Hermes in Docker" under [A target's files on the host](#a-targets-files-on-the-host). |
+| The agent says "Write denied" and names `HERMES_WRITE_SAFE_ROOT` | Hermes runs in its Docker image, which only lets file tools write under `/opt/data`. See "Hermes in Docker" under [A target's files on the host](#a-targets-files-on-the-host). |
 | The chip reads `onsite: no answer` | The server did not reply in time. It may be busy or restarting. The chip asks again every five seconds. Hover over it for the reason. |
 
 #### Copy the desktop UI by hand
@@ -495,8 +496,9 @@ is the field "Folder on the server for its files" on the Machines
 page. If an older version of onsite left a mount inside the Hermes
 home, the same check takes it down.
 
-**Hermes in Docker.** Hermes' own image needs four things before a
-target's files show in the desktop app. They were worked out on a
+**Hermes in Docker.** Hermes' own image needs five things before a
+target's files show in the desktop app and can be edited. They were
+worked out on a
 test rig built from `nousresearch/hermes-agent:v0.23.2`, not on
 anybody's real server.
 
@@ -518,6 +520,12 @@ anybody's real server.
    managed read boundary". With it, the app reads the mounts and
    nothing else, so a session on the server itself has no file tree.
    The setting is Hermes' own, and Hermes' docs do not list it.
+5. **A wider write guard.** The image sets
+   `HERMES_WRITE_SAFE_ROOT=/opt/data`, and Hermes' file tools then
+   refuse to write anywhere else, on a target too. The agent is told
+   "Write denied". Commands in the terminal are not held back. Add
+   the folders you work in on the target, named as they are there,
+   after a colon: `HERMES_WRITE_SAFE_ROOT=/opt/data:/home/you`.
 
 **Where a new session starts.** In the folder a login on the target
 lands in, which is your home folder there. The plugin asks the
