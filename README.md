@@ -33,6 +33,8 @@ not happened. See [What is tested](#what-is-tested).
 
 Site: <https://saxby-tools.github.io/hermes-onsite/>
 
+<!-- onsite:shots /-->
+
 ## How it compares to the big coding apps
 
 | What the big coding apps do | Hermes on a server, alone | With onsite |
