@@ -74,6 +74,16 @@ OPEN_USAGE = (
     "laptop:~/work."
 )
 
+DIAL_IN_USAGE = (
+    "Name the account on that computer and how it reaches this "
+    "server: `hermes onsite dial-in laptop --user you --server "
+    "you@server.example`. Add --apply to write it."
+)
+
+# The file an SSH server reads the keys an account accepts from. It
+# is only ever named to a person. The plugin never opens it.
+KEYS_FILE = "authorized_keys"
+
 SWITCH_HINT = (
     "Switch with /onsite <target>. Go back to the rules with /onsite auto."
 )
@@ -269,6 +279,12 @@ def describe_target(spec: TargetSpec) -> str:
             "user Hermes runs as"
         )
 
+    if spec.dial_in:
+        return (
+            f"`{spec.name}`, a remote machine that dials in to the "
+            f"Hermes server over SSH, as user `{spec.user}`"
+        )
+
     return (
         f"`{spec.name}`, a remote machine reached over SSH "
         f"({spec.host}), as user `{spec.user}`"
@@ -410,6 +426,104 @@ def format_opened(spec: TargetSpec, target_folder: str, host: str) -> str:
         host,
         "Start a session in that folder to work there.",
     ])
+
+
+def indent(text: str) -> list[str]:
+    return [f"   {line}".rstrip() for line in text.splitlines()]
+
+
+def format_dial_in_dry(
+    mode: str,
+    name: str,
+    settings_yaml: str,
+    picked: bool,
+) -> str:
+    """The output of `hermes onsite dial-in` without `--apply`.
+
+    `picked` says the port shown was drawn in this run. It is drawn
+    again when the settings are written, so the command that names it
+    is not shown yet.
+    """
+
+    lines = [
+        f"{mode} `{name}` would dial in to this server. Its settings:",
+        "",
+        *indent(settings_yaml),
+        "",
+        f"{mode} nothing was written. Add --apply to write it and to "
+        "see the command",
+        f"{mode} to run on `{name}`.",
+    ]
+
+    if picked:
+        lines.append(f"{mode} Its port is picked again then.")
+
+    return "\n".join(lines)
+
+
+def format_dial_in(
+    name: str,
+    info: dict[str, Any],
+    state: str,
+    keys: list[str],
+) -> str:
+    """The output of `hermes onsite dial-in` for a saved computer."""
+
+    lines = [
+        f"`{name}` dials in to this server on port {info['port']}.",
+        f"State: {state}",
+        "",
+        f"1. On `{name}`, run this and leave it running. It logs in to",
+        "   this server, so that computer's key must be accepted here:",
+        "",
+        f"   {info['command']}",
+        "",
+        "2. See that it arrived. On this server:",
+        "",
+        "   hermes onsite status",
+        "",
+        "To keep the link up across restarts of that computer, see:",
+        "",
+        f"   hermes onsite dial-in {name} --keep linux",
+        f"   hermes onsite dial-in {name} --keep macos",
+        "",
+        "Optional. So that computer's key can hold the link and do",
+        "nothing else on this server, put this in front of its line",
+        f"in your account's `{KEYS_FILE}` file here, then a space:",
+        "",
+        f"   {info['key_options']}",
+    ]
+
+    if keys:
+        lines += [
+            "",
+            f"The host key filed for `{name}`. On that computer,",
+            "`ssh-keygen -lf /etc/ssh/ssh_host_ed25519_key.pub` should",
+            "print the ED25519 line:",
+            "",
+        ]
+        lines += [f"   {key}" for key in keys]
+
+    return "\n".join(lines)
+
+
+def format_dial_in_keep(name: str, keep: dict[str, Any]) -> str:
+    """The output of `hermes onsite dial-in NAME --keep SYSTEM`."""
+
+    lines = [
+        f"On `{name}`, save this as {keep['path']}:",
+        "",
+        *indent(keep["text"]),
+        "",
+        "Then turn it on, there:",
+        "",
+    ]
+
+    lines += [f"   {command}" for command in keep["start"]]
+    lines += ["", keep["note"], "", "To turn it off again:", ""]
+    lines += [f"   {command}" for command in keep["stop"]]
+
+    return "\n".join(lines)
 
 
 def format_mcp_refused(tool_name: str, owner: str, current: str) -> str:
