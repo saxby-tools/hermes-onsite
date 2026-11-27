@@ -5,6 +5,7 @@ from __future__ import annotations
 import pytest
 
 from onsite import config
+from onsite import environments
 from onsite import health
 
 
@@ -136,6 +137,29 @@ def test_the_local_target_is_always_up():
     local = config.TargetSpec(name="mac", kind=config.KIND_LOCAL)
 
     assert health.probe_target(local).ok is True
+
+
+def test_an_environment_is_up_when_docker_answers(monkeypatch):
+    sandbox = config.TargetSpec(
+        name="web",
+        kind=config.KIND_ENVIRONMENT,
+        image="debian:stable-slim",
+    )
+
+    monkeypatch.setattr(environments, "probe", lambda: (True, "", 4))
+
+    assert health.probe_target(sandbox) == health.ProbeResult(True, "", 4)
+
+    monkeypatch.setattr(
+        environments,
+        "probe",
+        lambda: (False, "Docker is not answering", 9),
+    )
+
+    down = health.probe_target(sandbox)
+
+    assert down.ok is False
+    assert down.detail == "Docker is not answering"
 
 
 def test_the_probe_never_reuses_a_shared_connection():
