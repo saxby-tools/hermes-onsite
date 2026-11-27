@@ -1319,6 +1319,43 @@ move did not hold everywhere.
   `inside_hermes`. Do not, unless Hermes stops deleting a profile
   by walking its folder.
 
+### 64. "New session" names the profile, and why the tree hung
+
+- **What was wrong.** Entry 62 left a file tree that loaded forever
+  on any profile but the default. With a test copy of Hermes Desktop
+  0.23.2 against a container backend, the cause was read off the
+  running app. While the app opens a session on a named profile,
+  with its session list on that profile alone, it switches its
+  active profile to `default` and back within 10 milliseconds. Each
+  switch empties the file tree. The tree fills again only when the
+  folder or the connection changes, and neither does for a second
+  session in the same folder.
+- **Whose fault.** The app's. Every way a plugin can open a session
+  does it in that view: the plain call, the call after a wait, a
+  jump to the session's address. The app does not do it while its
+  list shows every profile.
+- **What was built.** The open call names the profile. On a named
+  profile it also keeps the "All profiles" view, which turns that
+  view on. On the default profile the view is passed as it stands,
+  so nothing changes there. The SDK has no call that reads the view,
+  so it is read from where the app stores it.
+- **The cost.** On a named profile, a click on "New session" widens
+  the session list to every profile. Clicking the profile again
+  narrows it and lands on a new chat. That was judged better than a
+  tree that never loads. The README says so under Limits.
+- **Checked.** Five clicks out of five in each of the four
+  combinations of profile and view, in the real app. Before the
+  change, a named profile with the narrow list failed from the
+  second click on, every time.
+- **A wrong turn.** The first try at this change looked as if it
+  did nothing. The test app was reading the plugin through a link,
+  and it does not reload a file that changes behind a link.
+- **Not checked.** Hermes Desktop 0.23.4, which the owner runs. A
+  host that mounts with macOS' own mounter. A connection whose first
+  profile is not `default`.
+- **Reverse.** Make `openingIn` return `{ expectHistory: false }`.
+  Worth doing when the app stops making the switch.
+
 ## Open decisions from the brief
 
 | # | Decision | What the build did |
