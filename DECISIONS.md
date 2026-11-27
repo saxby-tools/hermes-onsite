@@ -1206,6 +1206,38 @@ with a mount in the real app.
 - **Reverse.** Remove `fileUnderProjects` from the desktop file.
   A project it made stays until it is deleted in the app.
 
+### 62. The desktop half says each step in the app's console
+
+- **Why.** On Nov. 26 the file tree stayed on Loading after "New
+  session" and there was nothing to read. The plugin swallowed some
+  refusals on purpose and wrote nothing anywhere. The owner asked
+  for logging he could follow in the app's inspector.
+- **What was built.** Every line starts with `[onsite]`. A step
+  somebody asked for is written at `info`: what was asked, how long
+  it took, how it ended. A failure is written at `warn`. The
+  five-second poll is written at `debug`, which the inspector hides
+  until Verbose is ticked, and one `info` line is written when the
+  answer changes. After a session opens, what the app says it is
+  showing is written at once, after one second and after three.
+- **No switch.** A setting to turn logging on is one more thing to
+  explain to a person who is already stuck. The console costs
+  nothing when nobody has it open.
+- **A second click.** "New session" now ignores a click that lands
+  while the first is still starting. Two sessions had been made in
+  one second on Nov. 26.
+- **Seen in the real app.** A test copy of Hermes Desktop 0.23.2
+  was pointed at a Hermes 0.23.2 backend in a container, with a
+  second container as the target. The lines came out in order and
+  the steps took under 0.1 seconds together.
+- **What the lines showed.** On the default profile the tree fills
+  every time. On any other profile, the first "New session" after
+  switching to it fills the tree, and each later one in the same
+  folder leaves it on Loading. The backend answers the folder
+  request both times. The same session opened from the app's own
+  list fills the tree. Not fixed, and the cause is not known yet.
+- **Reverse.** Remove the Logging section and its callers from the
+  desktop file.
+
 ## Open decisions from the brief
 
 | # | Decision | What the build did |
