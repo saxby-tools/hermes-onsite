@@ -5,6 +5,7 @@ from __future__ import annotations
 import pytest
 
 from onsite import api
+from onsite import environments
 from onsite import health
 from onsite import mounts
 from onsite import runtime
@@ -304,3 +305,132 @@ def test_proposals_are_found_by_any_session_id(tmp_path):
 def test_no_session_means_no_proposals(tmp_path):
     assert api.proposals_payload(build(tmp_path), {})["items"] == []
     assert api.proposals_payload(build(tmp_path), None)["items"] == []
+
+
+# ---- environments ----------------------------------------------------
+
+
+def build_sandboxed(tmp_path, monkeypatch, docker_up=True):
+    """A runtime with one environment. Docker is stood in for: no
+    test may ask the real one whether it is up."""
+
+    detail = "" if docker_up else "Docker is not answering"
+
+    monkeypatch.setattr(
+        environments,
+        "probe",
+        lambda: (docker_up, detail, 3),
+    )
+
+    settings = {
+        "default": "mac",
+        "targets": {
+            "web": {
+                "kind": "environment",
+                "image": "debian:stable-slim",
+                "workspace": str(tmp_path / "sessions"),
+            },
+            "mac": {"kind": "local"},
+        },
+    }
+
+    session = runtime.SessionReader(cwd=lambda: "", session_id=lambda: "")
+
+    return runtime.Runtime(
+        load_settings=lambda: settings,
+        data_dir=tmp_path / "hermes" / "plugin-data" / "onsite",
+        session=session,
+        build_environment=lambda *args: object(),
+    )
+
+
+def test_an_environment_is_a_row_like_a_machine(tmp_path, monkeypatch):
+    built = build_sandboxed(tmp_path, monkeypatch)
+    rows = api.describe_targets(built)
+    web = rows[0]
+
+    assert web["name"] == "web"
+    assert web["kind"] == "environment"
+    assert web["label"] == "web (sandbox, debian:stable-slim)"
+    assert web["connected"] is True
+    assert web["mount_error"] == ""
+
+
+def test_an_environment_is_down_when_docker_is(tmp_path, monkeypatch):
+    built = build_sandboxed(tmp_path, monkeypatch, docker_up=False)
+    web = api.describe_targets(built)[0]
+
+    assert web["connected"] is False
+    assert web["detail"] == "Docker is not answering"
+
+
+def test_opening_an_environment_makes_a_session_folder(
+    tmp_path,
+    monkeypatch,
+):
+    built = build_sandboxed(tmp_path, monkeypatch)
+    answer = api.open_payload(built, {"target": "web"})
+
+    assert answer["ok"] is True
+    assert answer["target"] == "web"
+    assert answer["cwd"] == str(tmp_path / "sessions" / answer["session"])
+    assert answer["path"] == answer["cwd"]
+    assert (tmp_path / "sessions" / answer["session"]).is_dir()
+
+
+def test_each_opening_is_a_session_of_its_own(tmp_path, monkeypatch):
+    built = build_sandboxed(tmp_path, monkeypatch)
+    first = api.open_payload(built, {"target": "web"})
+    second = api.open_payload(built, {"target": "web"})
+
+    assert first["cwd"] != second["cwd"]
+
+
+def test_the_caller_names_the_environment_and_nothing_more(
+    tmp_path,
+    monkeypatch,
+):
+    # A repository or a folder sent by the app is not read: what is
+    # cloned, and where, comes from the settings on the server.
+    built = build_sandboxed(tmp_path, monkeypatch)
+    answer = api.open_payload(built, {
+        "target": "web",
+        "repository": "https://host.example/other.git",
+        "path": "/etc",
+    })
+
+    assert answer["ok"] is True
+    assert answer["cwd"].startswith(str(tmp_path / "sessions"))
+    assert not (tmp_path / "sessions" / answer["session"] / "other").exists()
+
+
+def test_an_environment_that_cannot_open_says_why(tmp_path, monkeypatch):
+    built = build_sandboxed(tmp_path, monkeypatch)
+
+    def refuse(spec, data_dir):
+        raise environments.SandboxError("the disk is full")
+
+    monkeypatch.setattr(environments, "open_session", refuse)
+
+    answer = api.open_payload(built, {"target": "web"})
+
+    assert answer == {
+        "ok": False,
+        "api_version": api.API_VERSION,
+        "error": "the disk is full",
+    }
+
+
+def test_status_in_a_session_folder_names_the_environment(
+    tmp_path,
+    monkeypatch,
+):
+    built = build_sandboxed(tmp_path, monkeypatch)
+    opened = api.open_payload(built, {"target": "web"})
+    payload = api.status_payload(built, {"cwd": opened["cwd"]})
+
+    assert payload["target"] == "web"
+    assert payload["kind"] == "environment"
+    assert payload["reason"] == "environment"
+    assert payload["cwd"] == opened["cwd"]
+    assert payload["mount_error"] == ""
