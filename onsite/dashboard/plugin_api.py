@@ -118,6 +118,13 @@ def test_target(body: Any = Body(default=None)) -> dict:
     return load_api(package).test_target_payload(runtime, body)
 
 
+@router.post("/dial-in")
+def dial_in(body: Any = Body(default=None)) -> dict:
+    package, runtime = find_runtime()
+
+    return load_api(package).dial_in_payload(runtime, body)
+
+
 @router.post("/open")
 def open_folder(body: Any = Body(default=None)) -> dict:
     package, runtime = find_runtime()
