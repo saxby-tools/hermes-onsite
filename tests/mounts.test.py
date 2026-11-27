@@ -368,6 +368,103 @@ def test_a_linux_mount_that_is_up_is_left_alone(tmp_path, monkeypatch):
     assert ran == []
 
 
+def linux_steps(monkeypatch):
+    """Stand in for the programs a Linux mount runs, and list them."""
+
+    steps = []
+
+    class Done:
+        returncode = 0
+        stdout = ""
+        stderr = ""
+
+    def run(command, **kwargs):
+        steps.append(command[0])
+
+        return Done()
+
+    monkeypatch.setattr(mounts.shutil, "which", lambda name: f"/usr/bin/{name}")
+    monkeypatch.setattr(mounts.subprocess, "run", run)
+
+    return steps
+
+
+def test_a_linux_mount_whose_sshfs_died_is_made_again(tmp_path, monkeypatch):
+    root = tmp_path / "m" / "root"
+    steps = linux_steps(monkeypatch)
+
+    mounts.write_state(
+        mounts.state_file(data_dir(tmp_path), "laptop"),
+        {"link": remote.build_sftp_arguments(SPEC), "home": "/home/dev"},
+    )
+    monkeypatch.setattr(mounts, "mount_points", lambda system: {str(root)})
+    monkeypatch.setattr(mounts, "is_dead", lambda place: True)
+    monkeypatch.setattr(mounts, "ask_home", lambda spec: "/home/dev")
+
+    mounts.ensure(SPEC, root, data_dir(tmp_path), system="Linux")
+
+    assert steps == ["fusermount3", "sshfs"]
+
+
+def test_only_a_mount_with_nothing_behind_it_counts_as_dead(
+    tmp_path,
+    monkeypatch,
+):
+    answers = []
+
+    def stat(path):
+        raise OSError(answers[0], "refused")
+
+    assert mounts.is_dead(tmp_path) is False
+    assert mounts.is_dead(tmp_path / "not-there") is False
+
+    monkeypatch.setattr(mounts.os, "stat", stat)
+
+    answers.append(mounts.errno.ENOTCONN)
+
+    assert mounts.is_dead(tmp_path) is True
+
+    answers[0] = mounts.errno.EIO
+
+    assert mounts.is_dead(tmp_path) is False
+
+
+def test_a_linux_mount_with_no_start_folder_asks_for_it_again(
+    tmp_path,
+    monkeypatch,
+):
+    root = tmp_path / "root"
+    state = mounts.state_file(data_dir(tmp_path), "laptop")
+
+    mounts.write_state(
+        state,
+        {"link": remote.build_sftp_arguments(SPEC), "home": ""},
+    )
+    monkeypatch.setattr(mounts, "mount_points", lambda system: {str(root)})
+    monkeypatch.setattr(mounts, "ask_home", lambda spec: "/home/dev")
+
+    found = mounts.ensure(SPEC, root, data_dir(tmp_path), system="Linux")
+
+    assert found == mounts.Mounted(root, "/home/dev")
+    assert mounts.read_state(state)["home"] == "/home/dev"
+
+
+def test_taking_a_linux_mount_down_forgets_what_it_was_for(
+    tmp_path,
+    monkeypatch,
+):
+    root = tmp_path / "root"
+    state = mounts.state_file(data_dir(tmp_path), "laptop")
+    steps = linux_steps(monkeypatch)
+
+    mounts.write_state(state, {"link": ["any"], "home": "/home/dev"})
+
+    mounts.stop(SPEC, root, data_dir(tmp_path), system="Linux")
+
+    assert steps == ["fusermount3"]
+    assert not state.exists()
+
+
 def test_what_sshfs_says_is_what_the_person_is_told(tmp_path, monkeypatch):
     class Done:
         returncode = 1

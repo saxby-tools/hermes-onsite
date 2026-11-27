@@ -22,6 +22,7 @@ This module imports nothing from Hermes.
 
 from __future__ import annotations
 
+import errno
 import fcntl
 import json
 import os
@@ -36,6 +37,7 @@ import time
 from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
+from pathlib import PurePosixPath
 
 from . import sftp
 from .config import DEFAULT_SSH_PORT
@@ -215,6 +217,22 @@ def is_inside(place: Path, folder: Path) -> bool:
     return outer in real.parents
 
 
+def under_mount(folder: str, spec: TargetSpec) -> bool:
+    """Whether a folder on the host is on a target's mount.
+
+    Told from the two paths alone. The folder itself is never asked:
+    it may be on a mount whose target sleeps, and that can hang.
+    """
+
+    if not folder or not spec.mount:
+        return False
+
+    place = PurePosixPath(folder)
+    top = PurePosixPath(spec.mount)
+
+    return place == top or top in place.parents
+
+
 def state_file(data_dir: Path, name: str) -> Path:
     return data_dir / STATE_DIR / f"{name}.json"
 
@@ -329,6 +347,12 @@ def mount_points(system: str) -> set[str]:
         return set()
 
     return parse_mac_mounts(done.stdout)
+
+
+def host_system() -> str:
+    """The name of the system this host runs, as `platform` has it."""
+
+    return platform.system()
 
 
 def is_mounted(root: Path, system: str) -> bool:
@@ -605,8 +629,9 @@ def build_sshfs_command(spec: TargetSpec, root: Path) -> list[str]:
     # reads a session's folder from its main loop, so one sleeping
     # laptop stopped the whole backend for every session. Without it,
     # sshfs leaves when the keep-alive gives up, the folder is plain
-    # and empty again, and reads fail at once. `ensure` mounts it
-    # again when the target answers.
+    # and empty again, and reads fail at once. Nothing here mounts it
+    # again. The chip's check does while the app is in view, and the
+    # hook that runs before a tool call does for every other client.
     options = [
         "BatchMode=yes",
         f"ConnectTimeout={spec.connect_timeout}",
@@ -674,17 +699,55 @@ def ask_home(spec: TargetSpec) -> str:
         client.close()
 
 
+def is_dead(root: Path) -> bool:
+    """Whether a listed mount has nothing serving it any more.
+
+    sshfs that was killed, or could not run its unmount on the way
+    out, leaves the mount in the system's list. Every read of it
+    then fails at once with this one error. It would otherwise be
+    taken for a healthy mount for ever.
+    """
+
+    try:
+        os.stat(root)
+    except OSError as error:
+        return error.errno == errno.ENOTCONN
+
+    return False
+
+
+def known_home(spec: TargetSpec, state: Path, found: dict) -> str:
+    """The login folder kept with a mount, asked for again if the
+    first try got no answer. A target that has just woken can fail
+    that one question, and a mount would then have no start folder
+    for as long as it stayed up."""
+
+    home = str(found.get("home") or "")
+
+    if home:
+        return home
+
+    home = ask_home(spec)
+
+    if home:
+        write_state(state, {**found, "home": home})
+
+    return home
+
+
 def ensure_linux(spec: TargetSpec, root: Path, state: Path) -> Mounted:
     found = read_state(state)
     mounted = is_mounted(root, SYSTEM_LINUX)
+    usable = mounted and serves(found, spec) and not is_dead(root)
 
-    if mounted and serves(found, spec):
-        return Mounted(root, str(found.get("home") or ""))
+    if usable:
+        return Mounted(root, known_home(spec, state, found))
 
     if shutil.which(SSHFS) is None:
         raise missing_sshfs(spec)
 
-    # Mounted for this target as it was set up before.
+    # Mounted for this target as it was set up before, or left
+    # behind by an sshfs that died.
     if mounted:
         unmount_linux(root)
 
@@ -726,6 +789,8 @@ def take_down(root: Path, state: Path, system: str) -> None:
 
     if system == SYSTEM_LINUX:
         unmount_linux(root)
+        state.unlink(missing_ok=True)
+
         return
 
     stop_helper(read_state(state))
