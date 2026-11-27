@@ -205,6 +205,7 @@ For a profile that does not have onsite yet.
 | `hermes onsite` is not a command | The plugin is installed but off. Run `hermes plugins enable onsite`. |
 | `/onsite` is unknown in a new chat | Restart the Hermes gateway. A running gateway should pick the plugin up without one. |
 | Hermes warns about a custom, unreviewed source | Expected until onsite is in the Hermes catalog. |
+| Something in the app does nothing, or the file tree stays on Loading | Press F12 in the app to open its inspector. If nothing opens, F12 is turned off in Settings, Advanced. In the Console tab, type `[onsite]` in the filter box and click again. Each step is written there with how long it took and how it ended. |
 | `hermes plugins list` says "provenance: drift" | Expected. Hermes says it of any plugin installed from a folder of a repository. |
 
 #### Copy the desktop UI by hand
