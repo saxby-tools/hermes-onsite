@@ -575,8 +575,9 @@ def setup_cli(parser) -> None:
         action="append",
         default=[],
         metavar="NAME=/HOST/FOLDER",
-        help="where on this host NAME's disk is mounted. Default: a "
-        "folder in the plugin's own data.",
+        help="where on this host NAME's disk is mounted. Default: "
+        "~/.local/share/onsite/mount. It must be outside the Hermes "
+        "home.",
     )
     init.add_argument(
         "--start",
