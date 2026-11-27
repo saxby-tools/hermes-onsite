@@ -932,7 +932,7 @@ Read these before trusting it with real work.
 | 3 | `/onsite`, `/run`, `hermes onsite status` and `init`, CLI and TUI | 31 | Pass |
 | 4 | Routes for status, machines and a mounted disk; desktop plugin logic | 17 | Pass |
 | Share | A target's screen through screen sharing, with no Hermes session: link, pixels, typing, a drag, each button | 8 | Pass |
-| Screen | A target's screen through a Hermes session and its approval prompt: look, deny, approve | 8 | Last passed on Nov. 23, before screen sharing was added. Not run since: see below |
+| Screen | A target's screen through a Hermes session and its approval prompt: look, deny, approve | 10 | Pass, by Hermes' driver and again by screen sharing |
 | 5 | A person at the real clients | 0 | Not run |
 
 Phases 1 to 4 pass twice: against a container on the host, 86
@@ -942,17 +942,11 @@ two screen phases run on a container with its own desktop. The output
 of each run is in [rig/results/](rig/results/). The laptop's files
 start with `real-`.
 
-The screen phase goes through the Hermes gateway. It passed with
-Hermes' driver before the plugin moved into its own folder. The
-gateway on the build machine has run since before that move and holds
-an old copy of the screen backend, so the phase cannot pass there
-until that gateway is restarted, which this build does not do. In
-its place, both routes were run inside a fresh Hermes process against
-the same desktop, through Hermes' own tool code: a capture, a click,
-a typed line and a key each landed. The screen phase has never run
-over screen sharing. It has ten checks now. The two added since its
-last pass look for the screen-sharing and route lines of
-`hermes onsite screen`.
+The screen phase goes through the Hermes gateway. On Nov. 27 it
+passed twice on the rig's own desktop: with Hermes' driver, and for
+the first time over screen sharing. Each run has ten checks. A
+gateway that loaded an older copy of the plugin holds an older
+screen backend until it is restarted, and the phase fails there.
 
 One real-model command has also run from the host's copy of a shared
 folder and landed on the laptop, as the laptop's user.
@@ -967,23 +961,25 @@ Not yet tested by anyone:
 
 - A laptop that really sleeps or drops off the network. The rig
   fakes both by cutting a relay in front of the laptop's SSH port.
-- A person approving a real command in the TUI, the desktop app and
-  an editor.
-- The run card, the "New session" button and the Machines page
-  inside the real Hermes Desktop app, and the app's own folder
-  picker and file tree on a mounted disk. The chip and the pane have been
-  seen there, on a gateway that serves several profiles, with the
-  laptop shown as connected.
+- A person approving a command a real model asked for, in the TUI,
+  the desktop app and an editor. The prompt has been answered both
+  ways in the real desktop app, for a command a scripted model
+  asked for.
+- The app's own folder picker on a mounted disk. The run card, the
+  "New session" button, the Machines page and the app's file tree
+  have been used inside the real Hermes Desktop app, on a test rig
+  with a Linux server in Hermes' own Docker image. Nothing has been
+  tried on Hermes Desktop 0.23.4 by this build.
 - A macOS machine as an SSH target, and `caffeinate`.
-- `hermes plugins install` into a profile that a live gateway
-  serves, and the desktop app's "Install from Git". The command
-  itself has run into an empty Hermes home, where set-up then
-  worked.
+- `hermes plugins install` into a profile on a real server, and the
+  desktop app's "Install from Git" with the address for both parts.
+  The command has run into an empty Hermes home and into a fresh
+  profile on Hermes' Docker image, and the app has installed the
+  desktop part from its own address.
 - Screen control on macOS, on Wayland, or on any desktop a
   person is using. It has run only against the rig's own X11
   desktop.
-- Screen sharing against any server but `x11vnc`, on a Mac, or
-  through a Hermes session's approval prompt.
+- Screen sharing against any server but `x11vnc`, or on a Mac.
 - An MCP server on a target, beyond one test server run by hand on
   the laptop.
 
