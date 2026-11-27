@@ -29,6 +29,11 @@ const PNPM_DIR = path.join(HERMES_SRC, 'node_modules', '.pnpm')
 
 const COPIED_RESET_MS = 1600
 
+// What the plugin starts each of its console lines with, and the
+// console levels it writes them at.
+const LOG_TAG = '[onsite]'
+const LOG_LEVELS = ['info', 'debug', 'warn']
+
 const ALLOWED_IMPORTS = ['@hermes/plugin-sdk', 'react', 'react/jsx-runtime']
 const IMPORT_RE = /(from\s*)(['"])([^'"]+)\2/g
 
@@ -92,6 +97,30 @@ function installDom(require) {
   })
 
   return dom
+}
+
+// Keeps the plugin's console lines out of the test report and hands
+// them to the test instead. Any other line is written as before.
+function catchLogs() {
+  const logs = []
+
+  for (const level of LOG_LEVELS) {
+    const write = console[level].wrappedByOnsiteTests ?? console[level]
+
+    console[level] = (...parts) => {
+      if (parts[0] !== LOG_TAG) {
+        write.apply(console, parts)
+
+        return
+      }
+
+      logs.push([level, ...parts.slice(1)])
+    }
+
+    console[level].wrappedByOnsiteTests = write
+  }
+
+  return logs
 }
 
 function atom(initial) {
@@ -248,6 +277,7 @@ async function setup() {
 
   installDom(require)
 
+  const logs = catchLogs()
   const React = require('react')
   const { createRoot } = require('react-dom/client')
   const { host, calls } = createHost()
@@ -297,7 +327,8 @@ async function setup() {
   await settle(() => plugin.register(ctx))
 
   return {
-    backend, calls, choose, click, ctx, host, made, mount, plugin, settle
+    React, backend, calls, choose, click, ctx, host, logs, made, mount,
+    plugin, settle
   }
 }
 
@@ -732,6 +763,135 @@ test('a project Hermes refuses does not stop the session', { skip: SKIP }, async
 
   assert.equal(calls.opened.length, 1)
   assert.equal(box.querySelector('[role="alert"]'), null)
+})
+
+// The steps the plugin wrote at one console level, with the time each
+// took replaced, because that differs from run to run.
+function stepsAt(logs, level) {
+  return logs
+    .filter(([at]) => at === level)
+    .map(([, step]) => step.replace(/\d+ ms/, 'N ms'))
+}
+
+test('New session writes each step to the console, in order', { skip: SKIP }, async () => {
+  const { box, click, logs } = await openPaneMachines()
+  const before = logs.length
+
+  await click(box.querySelector('[data-onsite-new-session="laptop"]'))
+
+  const steps = stepsAt(logs.slice(before), 'info')
+  const flow = steps.filter(step => !step.includes('after opening'))
+
+  assert.deepEqual(flow, [
+    'New session: clicked',
+    'the app shows, before the click',
+    'host /open: asking',
+    'host /open: answered in N ms',
+    'hermes projects.create: asking',
+    'hermes projects.create: answered in N ms',
+    'hermes session.create: asking',
+    'hermes session.create: answered in N ms',
+    'hermes session.title: asking',
+    'hermes session.title: answered in N ms',
+    'app openSession: asking',
+    'app openSession: answered in N ms',
+    'New session: finished'
+  ])
+})
+
+test('after a session opens, the console says what the app shows', { skip: SKIP }, async () => {
+  const { box, click, logs, settle } = await openPaneMachines()
+
+  await click(box.querySelector('[data-onsite-new-session="laptop"]'))
+  await settle()
+
+  const shown = logs.find(([, step]) => step === 'the app shows, 0 ms after opening')
+
+  assert.ok(shown, 'a line right after the session opened')
+  assert.deepEqual(shown[2], {
+    cwd: '/Users/dev/Development/app',
+    session_ids: ['stored-1', 'runtime-1'],
+    profile: '',
+    focused_profile: ''
+  })
+})
+
+test('a refusal from Hermes is written to the console as a warning', { skip: SKIP }, async () => {
+  const { box, click, host, logs } = await openPaneMachines()
+  const answer = host.request
+
+  host.request = async (method, params) => {
+    if (method.startsWith('projects.')) {
+      throw new Error("folder already belongs to project 'mine'")
+    }
+
+    return answer(method, params)
+  }
+
+  await click(box.querySelector('[data-onsite-new-session="laptop"]'))
+
+  const warnings = logs.filter(([at]) => at === 'warn')
+
+  assert.equal(warnings.length, 1)
+  assert.match(warnings[0][1], /^hermes projects\.create: failed after \d+ ms$/)
+  assert.equal(warnings[0][2], "folder already belongs to project 'mine'")
+})
+
+test('a second click while a session is starting does not start another', { skip: SKIP }, async () => {
+  const { React, box, calls, logs, settle } = await openPaneMachines()
+  const button = box.querySelector('[data-onsite-new-session="laptop"]')
+
+  // Both clicks land before React draws the button greyed out.
+  await React.act(async () => {
+    button.dispatchEvent(new window.MouseEvent('click', { bubbles: true }))
+    button.dispatchEvent(new window.MouseEvent('click', { bubbles: true }))
+  })
+  await settle()
+
+  const created = sessionCalls(calls).filter(([method]) => method === 'session.create')
+
+  assert.equal(created.length, 1)
+  assert.ok(stepsAt(logs, 'info').includes('New session: already starting, click ignored'))
+})
+
+test('the poll writes at the level the inspector hides', { skip: SKIP }, async () => {
+  const { logs } = await setup()
+  const loud = stepsAt(logs, 'info').filter(step => step.startsWith('host /'))
+  const quiet = stepsAt(logs, 'debug')
+
+  assert.deepEqual(loud, [])
+  assert.ok(quiet.includes('host /status: asking'))
+  assert.ok(quiet.includes('host /proposals: answered in N ms'))
+})
+
+test('the console says when a session moves, not on every poll', { skip: SKIP }, async () => {
+  const { backend, logs, made, settle } = await setup()
+  const changes = () => logs.filter(([, step]) => step === 'status changed')
+
+  assert.equal(changes().length, 1)
+
+  await settle(made.intervals[0])
+  await settle(made.intervals[0])
+
+  assert.equal(changes().length, 1)
+
+  backend.status = DOWN
+  await settle(made.intervals[0])
+
+  assert.equal(changes().length, 2)
+  assert.equal(changes()[1][2].connected, false)
+})
+
+test('loading the plugin says which calls this app has', { skip: SKIP }, async () => {
+  const { logs } = await setup()
+  const loaded = logs.find(([, step]) => step === 'loaded')
+
+  assert.deepEqual(loaded[2], {
+    can_ask_hermes: true,
+    can_open_sessions: true,
+    has_settings_pages: true,
+    has_events: true
+  })
 })
 
 test('a second session on a machine gets a title that is free', { skip: SKIP }, async () => {
