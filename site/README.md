@@ -196,10 +196,16 @@ row. A mistake in the list stops the build and names the entry.
 `npm test` reads the repo's own list too.
 
 Every card is the same height and as wide as its own picture, so
-wide and tall pictures sit side by side. With the script off it is a
-plain row that scrolls, and each picture is a link to its file. The
-script adds the two step buttons and opens a picture larger in a
-`<dialog>`, which Escape closes.
+wide and tall pictures sit side by side. The first picture starts in
+line with the page's column and the row runs on to the window's own
+edges, as the "On this page" bar does. So a picture is cut off by
+the window and by nothing else. For that, each section of the front
+page and each other page is a container, which is how the row learns
+the window's width.
+
+With the script off it is a plain row that scrolls, and each picture
+is a link to its file. The script adds the two step buttons and
+opens a picture larger in a `<dialog>`, which Escape closes.
 
 The plugin catalog does not read this list. Its entry names its own
 `screenshots`, up to six, as addresses pinned to a commit. The same
