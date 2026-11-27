@@ -25,11 +25,15 @@ BACKEND_NAME = "onsite"
 KIND_LOCAL = "local"
 KIND_SSH = "ssh"
 
+# A sandbox the server makes for one session: a container with the
+# session's folder shared into it. Not released. See `environments`.
+KIND_ENVIRONMENT = "environment"
+
 # What the app and the CLI call the target that is the computer
 # Hermes runs on. Never "this machine": the app is often open on a
 # different computer, where those words point at the wrong one.
 LOCAL_LABEL = "Hermes server"
-VALID_KINDS = (KIND_LOCAL, KIND_SSH)
+VALID_KINDS = (KIND_LOCAL, KIND_SSH, KIND_ENVIRONMENT)
 
 PATH_MODE_INTERACTIVE = "interactive"
 PATH_MODE_NONE = "none"
@@ -66,6 +70,40 @@ LOOPBACK_HOSTS = ("127.0.0.1", "::1", "localhost")
 HOST_KEY_ALIAS_PREFIX = "onsite-"
 TARGET_NAME_RE = re.compile(r"^[a-z][a-z0-9-]{0,31}$")
 
+# An image name is handed to the container program as one word. It
+# may not start with a hyphen, or it would be read as an option.
+IMAGE_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._/:@-]*$")
+
+# Where a repository may be cloned from: an https or ssh address, the
+# short `user@host:path` form, or a full path on the server. Plain
+# http is left out, since a password would cross it in the clear.
+REPOSITORY_RES = (
+    re.compile(r"^https://[^\s]+$"),
+    re.compile(r"^ssh://[^\s]+$"),
+    re.compile(r"^[A-Za-z0-9._-]+@[A-Za-z0-9.-]+:[^\s]+$"),
+    re.compile(r"^/[^\s]*$"),
+)
+
+ENV_NAME_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
+
+# Whether an environment's sandbox can reach the network when the
+# settings do not say. Off, until the owner decides otherwise.
+DEFAULT_NETWORK = False
+
+# Settings that only mean something for an environment.
+ENVIRONMENT_KEYS = (
+    "image",
+    "repository",
+    "setup",
+    "network",
+    "env",
+    "workspace",
+)
+
+# Settings that send a folder to a machine. An environment only runs
+# a session opened in one of its own folders.
+FOLDER_RULE_KEYS = ("prefixes", "path_map")
+
 SETTINGS_PATH = f"plugins.entries.{PLUGIN_ID}.settings"
 FIX_HINT = (
     f"Run `hermes onsite init`, or edit `{SETTINGS_PATH}` in config.yaml."
@@ -87,6 +125,7 @@ KNOWN_TARGET_KEYS = frozenset({
     "start",
     "screen",
     "screen_port",
+    *ENVIRONMENT_KEYS,
 })
 
 
@@ -123,6 +162,12 @@ class TargetSpec:
     start: str = ""
     screen: str = SCREEN_AUTO
     screen_port: int = DEFAULT_SCREEN_PORT
+    image: str = ""
+    repository: str = ""
+    setup: str = ""
+    network: bool = DEFAULT_NETWORK
+    env: tuple[tuple[str, str], ...] = ()
+    workspace: str = ""
 
     @property
     def host_key_alias(self) -> str:
@@ -147,6 +192,9 @@ class TargetSpec:
     def label(self) -> str:
         if self.kind == KIND_LOCAL:
             return f"{self.name} ({LOCAL_LABEL})"
+
+        if self.kind == KIND_ENVIRONMENT:
+            return f"{self.name} (sandbox, {self.image})"
 
         return f"{self.name} ({self.user}@{self.host})"
 
@@ -416,6 +464,162 @@ def read_flag(
     return raw
 
 
+def check_kind_keys(
+    name: str,
+    kind: str,
+    raw: Mapping,
+    problems: list[str],
+) -> None:
+    """Say so when a setting is on a kind of target it means nothing
+    for. Left alone, it would look as if it were doing something."""
+
+    if kind != KIND_ENVIRONMENT:
+        for key in ENVIRONMENT_KEYS:
+            if raw.get(key) is not None:
+                problems.append(
+                    f"`{name}.{key}` is only for an environment"
+                )
+
+        return
+
+    for key in FOLDER_RULE_KEYS:
+        if raw.get(key) is not None:
+            problems.append(f"`{name}.{key}` is not for an environment")
+
+
+def read_image(
+    name: str,
+    kind: str,
+    raw: Any,
+    problems: list[str],
+) -> str:
+    """The container image an environment's sandbox is made from."""
+
+    if kind != KIND_ENVIRONMENT:
+        return ""
+
+    if not isinstance(raw, str) or not raw.strip():
+        problems.append(f"`{name}.image` is required for an environment")
+        return ""
+
+    image = raw.strip()
+
+    if IMAGE_RE.match(image) is None:
+        problems.append(f"`{name}.image` is not an image name")
+        return ""
+
+    return image
+
+
+def read_repository(
+    name: str,
+    kind: str,
+    raw: Any,
+    problems: list[str],
+) -> str:
+    """Where a new session's code is cloned from. Left out, a session
+    starts in an empty folder."""
+
+    if kind != KIND_ENVIRONMENT or raw is None:
+        return ""
+
+    if not isinstance(raw, str):
+        problems.append(f"`{name}.repository` must be text")
+        return ""
+
+    repository = raw.strip()
+
+    if not any(rule.match(repository) for rule in REPOSITORY_RES):
+        problems.append(
+            f"`{name}.repository` must be an https or ssh address, or "
+            "a full path on the server"
+        )
+        return ""
+
+    return repository
+
+
+def read_env(
+    name: str,
+    kind: str,
+    raw: Any,
+    problems: list[str],
+) -> tuple[tuple[str, str], ...]:
+    """Plain variables set in the sandbox. Not a place for a secret:
+    every command the agent runs there can read them."""
+
+    if kind != KIND_ENVIRONMENT or raw is None:
+        return ()
+
+    if not isinstance(raw, Mapping):
+        problems.append(f"`{name}.env` must map a name to a value")
+        return ()
+
+    pairs = []
+
+    for key, value in raw.items():
+        if not isinstance(key, str) or ENV_NAME_RE.match(key) is None:
+            problems.append(f"`{name}.env` name {key!r} is not usable")
+            continue
+
+        if isinstance(value, bool) or not isinstance(value, (str, int)):
+            problems.append(f"`{name}.env.{key}` must be text or a number")
+            continue
+
+        pairs.append((key, str(value)))
+
+    return tuple(pairs)
+
+
+def read_workspace(
+    name: str,
+    kind: str,
+    raw: Any,
+    problems: list[str],
+) -> str:
+    """The folder on the server that holds an environment's sessions."""
+
+    if kind != KIND_ENVIRONMENT or raw is None:
+        return ""
+
+    if not is_absolute(raw):
+        problems.append(f"`{name}.workspace` must be an absolute path")
+        return ""
+
+    workspace = normalize_path(raw)
+
+    # Every folder on the server would then count as a session's.
+    if workspace == "/":
+        problems.append(f"`{name}.workspace` cannot be the root folder")
+        return ""
+
+    return workspace
+
+
+def read_network(
+    name: str,
+    kind: str,
+    raw: Any,
+    problems: list[str],
+) -> bool:
+    if kind != KIND_ENVIRONMENT:
+        return DEFAULT_NETWORK
+
+    return read_flag(name, "network", raw, DEFAULT_NETWORK, problems)
+
+
+def read_setup(
+    name: str,
+    kind: str,
+    raw: Any,
+    problems: list[str],
+) -> str:
+    if kind != KIND_ENVIRONMENT:
+        return ""
+
+    return read_text(name, "setup", raw, problems)
+
+
 def read_target(name: str, raw: Any, problems: list[str]) -> TargetSpec | None:
     if not isinstance(raw, Mapping):
         problems.append(f"target `{name}` must be a block of settings")
@@ -431,6 +635,8 @@ def read_target(name: str, raw: Any, problems: list[str]) -> TargetSpec | None:
         choices = ", ".join(VALID_KINDS)
         problems.append(f"`{name}.kind` must be one of: {choices}")
         return None
+
+    check_kind_keys(name, kind, raw, problems)
 
     host = read_text(name, "host", raw.get("host"), problems)
     user = read_text(name, "user", raw.get("user"), problems)
@@ -479,6 +685,22 @@ def read_target(name: str, raw: Any, problems: list[str]) -> TargetSpec | None:
             key="screen_port",
             default=DEFAULT_SCREEN_PORT,
         ),
+        image=read_image(name, kind, raw.get("image"), problems),
+        repository=read_repository(
+            name,
+            kind,
+            raw.get("repository"),
+            problems,
+        ),
+        setup=read_setup(name, kind, raw.get("setup"), problems),
+        network=read_network(name, kind, raw.get("network"), problems),
+        env=read_env(name, kind, raw.get("env"), problems),
+        workspace=read_workspace(
+            name,
+            kind,
+            raw.get("workspace"),
+            problems,
+        ),
     )
 
 
@@ -507,6 +729,13 @@ def read_targets(raw: Any, problems: list[str]) -> dict[str, TargetSpec]:
     return targets
 
 
+def is_environment(spec: TargetSpec | None) -> bool:
+    if spec is None:
+        return False
+
+    return spec.kind == KIND_ENVIRONMENT
+
+
 def parse_config(raw: Any) -> OnsiteConfig:
     """Return a validated config, or raise ConfigError listing it all."""
 
@@ -524,13 +753,43 @@ def parse_config(raw: Any) -> OnsiteConfig:
     if isinstance(default, str) and targets and default not in targets:
         problems.append(f"`default` names `{default}`, which is not a target")
 
+    if isinstance(default, str) and is_environment(targets.get(default)):
+        problems.append(
+            f"`default` names `{default}`, an environment. A session "
+            "only runs in one when it is opened in one of its folders"
+        )
+
     if problems:
         raise ConfigError(problems)
 
     return OnsiteConfig(default=default, targets=targets)
 
 
+def environment_to_settings(spec: TargetSpec) -> dict:
+    block: dict[str, Any] = {"kind": spec.kind, "image": spec.image}
+
+    if spec.repository:
+        block["repository"] = spec.repository
+
+    if spec.setup:
+        block["setup"] = spec.setup
+
+    if spec.network != DEFAULT_NETWORK:
+        block["network"] = spec.network
+
+    if spec.env:
+        block["env"] = dict(spec.env)
+
+    if spec.workspace:
+        block["workspace"] = spec.workspace
+
+    return block
+
+
 def target_to_settings(spec: TargetSpec) -> dict:
+    if spec.kind == KIND_ENVIRONMENT:
+        return environment_to_settings(spec)
+
     block: dict[str, Any] = {"kind": spec.kind}
 
     if spec.kind == KIND_SSH:
