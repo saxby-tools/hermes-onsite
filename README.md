@@ -18,8 +18,9 @@ Hermes that lives somewhere else.
   the computer in use.
 - **No program to run on your computer.** The server logs in to it
   over SSH, as you. Your computer needs its SSH server on and the
-  server's key accepted. The server has to be able to reach it,
-  directly or over a VPN.
+  server's key accepted. The server reaches it directly or over a
+  VPN. A computer it cannot reach connects to the server by itself,
+  with one `ssh` command.
 
 It is a Hermes plugin. Hermes itself is not patched.
 
@@ -141,7 +142,9 @@ In the examples the host's target is named `mac` and the other is
   yes once. If it asks for a password, `ssh-copy-id
   you@laptop.example` on the host is the usual fix, after
   `ssh-keygen` if the host has no key yet. The host must be able to
-  reach the machine: on the same network, or over a VPN.
+  reach the machine: on the same network, or over a VPN. A machine it
+  cannot reach can dial in. See
+  [A computer the server cannot reach](#a-computer-the-server-cannot-reach).
 - On a Linux server, the `sshfs` program, to show a target's files
   on the server. A macOS server needs nothing. See
   [A target's files on the host](#a-targets-files-on-the-host).
@@ -282,7 +285,9 @@ hermes plugins enable onsite
 ## Set up
 
 Five steps, all on the host. Step 1 can also be done in Hermes
-Desktop: Settings, Plugins, Onsite, then Machines.
+Desktop: Settings, Plugins, Onsite, then Machines. If the host cannot
+reach your computer at all, step 1 is different: see
+[A computer the server cannot reach](#a-computer-the-server-cannot-reach).
 
 **1. Name your targets.** This is a dry run that prints the
 settings:
@@ -407,6 +412,7 @@ plugins:
 | `start` | ssh | The folder on the target a new session opens in. A full path. Default: the folder a login there lands in, your home folder. |
 | `screen` | ssh | How its screen is reached: `auto` (default), `driver` or `sharing`. See [Screen control](#screen-control-on-a-target). |
 | `screen_port` | ssh | The port its screen sharing listens on. Default 5900. |
+| `dial_in` | ssh | Set for a computer that dials in: the server, as that computer logs in to it, such as `you@server.example`. Such a target has `host: 127.0.0.1` and a `port` of its own, both written by the plugin. See [A computer the server cannot reach](#a-computer-the-server-cannot-reach). |
 
 **`path_map`** is for when the two machines name one folder
 differently. A host that mounts your laptop's `~/Development` at
@@ -437,6 +443,178 @@ login is refused a blocking lock and gets a delay lock, which holds
 sleep off for five seconds by default (`InhibitDelayMaxSec` in
 `logind.conf`). That covers a short write. A long one can still be
 cut by a closing lid.
+
+### A computer the server cannot reach
+
+Some computers cannot be reached from the server. A laptop behind a
+home router is one, when there is no VPN. Such a computer can connect
+to the server by itself. onsite calls that dialing in.
+
+The computer opens one SSH connection to the server and keeps it
+open. Through it the server reaches the computer's own SSH server, at
+a port on the server's own loopback address, `127.0.0.1`. From there
+on it is a target like any other. Commands, file tools, the mount,
+MCP servers and screen sharing work the same way.
+
+Three things have to be true first.
+
+- **The computer runs an SSH server,** as any target does. It only
+  has to answer on the computer itself. On a Mac that is System
+  Settings, General, Sharing, Remote Login.
+- **The computer can log in to the server** over SSH with a key.
+  Check it on the computer. This must return with no question:
+
+  ```bash
+  ssh you@server.example true
+  ```
+
+- **The computer accepts the server's key,** as any target does. The
+  server still logs in to the computer, through the link. The server
+  cannot copy its key over, so fetch it from the computer. This adds
+  the server's public key to the keys your account there accepts. If
+  the server's key file has another name, use that name:
+
+  ```bash
+  ssh you@server.example cat .ssh/id_ed25519.pub >> ~/.ssh/authorized_keys
+  ```
+
+**Add it in the desktop app.** Open Settings, Plugins, Onsite, then
+Machines, and click "Add a machine". Under "Where it is" pick
+"Another machine, which connects to the server by itself". Fill in
+your account on that computer, and the server as that computer logs
+in to it, such as `you@server.example`. Click Save. The page shows
+one command. Run it in a terminal on that computer and leave it
+running. The page reads "Connected" by itself a few seconds later.
+The [guide](docs/guide.md) shows it.
+
+**Or add it from a terminal on the server.** This is a dry run. Add
+`--apply` to write it:
+
+```bash
+hermes onsite dial-in laptop --user you --server you@server.example
+```
+
+With `--apply` it picks a free port, saves the target and prints the
+command to run on the computer. `hermes onsite dial-in laptop` prints
+it again later. For a first set-up, `hermes onsite init` takes
+`--dial-in laptop=you --server you@server.example` in place of
+`--ssh`.
+
+**The command.** It looks like this. Each computer gets a port of
+its own, here 24817:
+
+```bash
+ssh -N -o ExitOnForwardFailure=yes -o ConnectTimeout=10 -o ServerAliveInterval=15 -o ServerAliveCountMax=3 -o ControlPath=none -R 127.0.0.1:24817:127.0.0.1:22 you@server.example
+```
+
+The first time, it asks whether to trust the server's key. Say yes
+once. The `22` in front of the server's address is the computer's
+own SSH port. Change it if that computer's SSH server listens on
+another. The plugin does not run the command and installs nothing on
+the computer.
+
+**Keep it running.** The link lasts as long as the command runs. To
+start it with the computer and start it again when it drops, the
+plugin prints a file to save there and the lines that turn it on.
+In the app that is step 2 under the command. On the server:
+
+```bash
+hermes onsite dial-in laptop --keep linux
+```
+
+```bash
+hermes onsite dial-in laptop --keep macos
+```
+
+On Linux the file is a `systemd` user service,
+`~/.config/systemd/user/onsite-dial-in.service`. On a Mac it is a
+launch agent,
+`~/Library/LaunchAgents/io.github.saxby-tools.onsite.dial-in.plist`.
+Run the command by hand once first. A service cannot answer a
+question, so the key it uses must have no passphrase, or be in a key
+agent the service can reach.
+
+**Limit the computer's key.** That key only has to hold the link.
+The plugin prints a line that takes everything else away from it.
+Put the line in front of that key's own line in
+`~/.ssh/authorized_keys` on the server, then a space:
+
+```text
+restrict,port-forwarding,permitlisten="127.0.0.1:24817",permitopen="127.0.0.1:24817",command="exit 1"
+```
+
+With it, that key cannot run a command on the server and cannot
+open any other port. The plugin never reads or edits that file.
+
+**Let the server notice a dead link.** A laptop that closes its lid
+or moves to another network leaves its link dead without a word. The
+server's SSH server goes on holding the port until it notices, and
+the laptop cannot dial in again until then. Add two lines to
+`/etc/ssh/sshd_config` on the server and restart its SSH server:
+
+```text
+ClientAliveInterval 15
+ClientAliveCountMax 3
+```
+
+The server then lets go of a dead link in about 45 seconds. In a
+test between containers, a laptop left the network for a minute and
+came back at a new address. With those lines it was connected again
+6 seconds after it came back. Without them it took 16 minutes, and
+only because the server kept asking for it the whole time. A Linux
+server that nothing asks waits for its system's own keepalive, which
+is two hours unless somebody changed it. A laptop that comes back at
+the same address, as after a short sleep, was connected again within
+8 seconds either way.
+
+**How the port is kept safe.** The port is on the server's loopback
+address, so nothing off the server can reach it. Any account on the
+server can. Such an account can connect to the port, where the
+computer's SSH server still asks for the server's key. It can also
+listen on the port while the computer is away. So the first time a
+computer connects, the plugin files its host key under a name of its
+own, `onsite-<name>`. After that it talks only to what shows that
+key. A stand-in gets no login and no command. The first connection
+is taken on trust, as SSH always does. To check it, hold the key the
+app shows under the steps, or `hermes onsite dial-in laptop` prints,
+against the computer's own:
+
+```bash
+ssh-keygen -lf /etc/ssh/ssh_host_ed25519_key.pub
+```
+
+**What the state says.** The chip, the pane and `hermes onsite
+status` say why a computer that dials in is not there.
+
+| The state says | It means | Do this |
+| --- | --- | --- |
+| "it has not connected to this server, or its link dropped" | Nothing is listening on its port. The command is not running on the computer, or cannot reach the server. | Run the command on the computer, or look at what it printed there. |
+| "its link is up but it does not answer" | The computer is asleep or off the network, and the link has not timed out yet. | Wake it. Work picks up by itself. |
+| "port 24817 answers, but not as an SSH server" | The link is up and the computer's own SSH server is off, or another program on the server has the port. | Turn the computer's SSH server on. On a Mac: System Settings, General, Sharing, Remote Login. If it is on, look at what the command printed on the computer. |
+| "its link to this server dropped while it was in use" | The link went away under a command. The command is reported with "no exit status". | Check on the computer whether the command ran. The link comes back if something keeps it running. |
+| "it is connected but does not accept this server's key" | The server's public key is not among the keys your account on the computer accepts. | Add it, as under the three things above. |
+| "something else answers on port 24817, or `laptop` has a new host key" | What answers there does not show the key the computer first showed. Nothing was sent to it. Another program on the server has the port, or the computer has a new host key. | If the computer was set up afresh, run `ssh-keygen -R onsite-laptop` on the server and connect again. If not, find what listens on that port on the server. |
+
+Trouble on the computer's side shows in the terminal the command
+runs in.
+
+| The command says | What to do |
+| --- | --- |
+| "remote port forwarding failed for listen port 24817" | The server still holds the port for a link that died, or another program there has it. Wait, and see "Let the server notice a dead link" above. To move to another port, run `hermes onsite dial-in laptop --port 24900 --apply` on the server and use the new command. |
+| "Permission denied (publickey)" | The server does not accept the computer's key. Add the computer's public key to `~/.ssh/authorized_keys` on the server. |
+| "Connection closed" or "Connection reset", after a few refused tries | The server's SSH server turns away an address that failed to log in several times, for a while. Fix the key and wait a minute. |
+
+<!-- onsite:notice {"kind": "untested"} -->
+
+Dialing in has been walked in containers only: a stand-in computer
+whose SSH server the server cannot reach, which opened the link
+itself with the printed command. The service file has run under a
+real `systemd` there. No real laptop behind a real router has dialed
+in. The launch agent for a Mac has been checked for its form and
+never loaded. Nobody has yet used the Connect steps in the real
+desktop app.
+
+<!-- /onsite:notice -->
 
 ### A target's files on the host
 
@@ -727,6 +905,7 @@ password. Neither has been tried on a Mac. See
 | Run a command the agent proposed | `/run <number>` | Run and Copy buttons, in a pane and in the transcript. |
 | Open a folder on a machine | `hermes onsite open laptop:~/work`, then start `hermes` in the folder it prints | "New session" beside the machine in the pane. The app's own folder picker then opens on its files. |
 | Add or change a machine | Edit `config.yaml`. `hermes onsite init` is for the first set-up: it rewrites the whole list | Settings, Plugins, Onsite, then Machines. |
+| Add a machine the server cannot reach | `hermes onsite dial-in laptop --user you --server you@server.example --apply`, then run the command it prints on that machine | Machines, "Add a machine", then "Another machine, which connects to the server by itself". |
 | Test a machine | `hermes onsite status` | "Test connection" in the machine's form. |
 
 The agent has a tool, `propose_command`. It saves a command with a
@@ -743,6 +922,12 @@ the terminal tool, so the approval prompt still applies.
 - A link lost while a command is running is reported as "no exit
   status". The command may have run. It is never retried, because a
   retry could repeat a write.
+- A computer that dials in is reached at a port on the host itself,
+  so what `ssh` says of it, such as "Connection refused", would
+  mislead. The error says what it means: the computer has not
+  connected or its link dropped, its link is up but it does not
+  answer, or something else has its port. When the computer dials in
+  again, work resumes with nothing done on the host.
 
 The agent is told the same thing in plain words, and told not to work
 around it.
@@ -778,6 +963,10 @@ with `._`.
 With screen control on, it starts Hermes' screen driver there, or
 connects to the screen sharing the target already runs. Either can
 see the screen and send clicks and keys.
+
+For a computer that dials in, a person runs one `ssh` command there,
+and may save one service file. The plugin prints both and puts
+neither there.
 
 It installs nothing on a target. It does not copy Hermes'
 credentials, skills or cache there, which Hermes' own SSH backend
@@ -836,6 +1025,17 @@ The macOS file server is reachable from the host itself and from
 nowhere else. It sends no telemetry and calls no other service.
 It does not update itself.
 
+A computer that dials in connects to the host's own SSH server,
+which then listens on a port on `127.0.0.1` for as long as that
+connection lasts. The plugin opens no port for it and starts no
+listener. It reaches the computer at that port, with the same `ssh`
+program. Any account on the host can reach that port. To pick a free
+port for a new computer, it tries once to connect to a candidate on
+`127.0.0.1`. To show a computer's host key, it asks `ssh-keygen`
+for the key filed under `onsite-<name>`. While the Connect steps
+for such a computer are on screen in the desktop app, it logs in to
+that computer every three seconds, to say when it has arrived.
+
 **Inside Hermes.** It registers a terminal backend, one tool
 (`propose_command`), two hooks, two slash commands, one CLI command
 and one section of the system prompt. The section tells the agent
@@ -845,7 +1045,7 @@ never approves anything. The other runs before each turn. After
 `/onsite` moves a session, it adds one note to your next message
 that tells the agent which machine its tools now run on. `/run` puts
 a message into the chat for the agent. In the TUI and the desktop
-app that needs `allow_gateway_injection: true`. It serves seven
+app that needs `allow_gateway_injection: true`. It serves eight
 routes to the desktop app under `/api/plugins/onsite/`. Two of them
 write the plugin's own settings and one mounts a target's disk. The
 desktop half adds a status chip, a pane, a run card and two settings
@@ -896,6 +1096,28 @@ Read these before trusting it with real work.
 - **A sleeping target stops the work.** Reads through its mount fail
   in a few seconds and tool calls say the target is down. That is
   meant. Nothing moves to another machine.
+- **Dial-in trusts the first computer to connect.** The host key is
+  filed the first time anything answers on a computer's port. An
+  account on the server that got there first would be taken for the
+  computer, and would be sent the session's commands and files. The
+  computer's own command fails then, with "remote port forwarding
+  failed", which is the sign. Check the key on file against the
+  computer's, as
+  [A computer the server cannot reach](#a-computer-the-server-cannot-reach)
+  says.
+- **A dead dial-in link can hold its port.** A server whose SSH
+  server sends no keepalive holds the port of a link that died
+  without a word, and the computer cannot dial in again until it
+  lets go. The two lines that fix it are in the same section.
+- **Dial-in counts on the server's SSH server to listen on loopback
+  alone.** That is what it does unless `GatewayPorts` was turned on
+  in its settings. With `GatewayPorts yes`, the port is open to the
+  network the server is on. The computer's SSH server still asks
+  for a key there.
+- **Dial-in forgets nothing by itself.** A computer's host key stays
+  on file under `onsite-<name>` after the computer is removed. A new
+  computer given the same name is refused until the old key is
+  cleared with `ssh-keygen -R onsite-<name>` on the server.
 - **Linux and macOS servers only.** The plugin refuses to load on a
   Windows server. On a Linux server the mount has run in a container
   and nowhere else.
@@ -934,6 +1156,7 @@ Read these before trusting it with real work.
 | 4 | Routes for status, machines and a mounted disk; desktop plugin logic | 17 | Pass |
 | Share | A target's screen through screen sharing, with no Hermes session: link, pixels, typing, a drag, each button | 8 | Pass |
 | Screen | A target's screen through a Hermes session and its approval prompt: look, deny, approve | 10 | Pass, by Hermes' driver and again by screen sharing |
+| Dial-in | A computer the server cannot reach, walked from that computer's side: the printed command, a session, the mount, a cut link, a frozen computer, a taken port, a second computer, the service file | 51 | Pass, in containers |
 | 5 | A person at the real clients | 0 | Not run |
 
 Phases 1 to 4 pass twice: against a container on the host, 86
@@ -948,6 +1171,14 @@ passed twice on the rig's own desktop: with Hermes' driver, and for
 the first time over screen sharing. Each run has ten checks. A
 gateway that loaded an older copy of the plugin holds an older
 screen backend until it is restarted, and the phase fails there.
+
+The dial-in walk has its own script and its own two containers. The
+stand-in computer's SSH server answers on its own loopback address
+only, so the server cannot log in to it, and the computer opens the
+link itself with the command the plugin prints. A third container
+with a real `systemd` runs the printed service file. The server is
+Hermes' own Docker image, so this is the Linux mount. Its output is
+in [rig/results/dial-walk.txt](rig/results/dial-walk.txt).
 
 One real-model command has also run from the host's copy of a shared
 folder and landed on the laptop, as the laptop's user.
@@ -983,6 +1214,9 @@ Not yet tested by anyone:
 - Screen sharing against any server but `x11vnc`, or on a Mac.
 - An MCP server on a target, beyond one test server run by hand on
   the laptop.
+- A real computer behind a real router that dials in, a server on
+  macOS for one, the launch agent that keeps the link up on a Mac,
+  and the Connect steps in the real desktop app.
 
 <!-- /onsite:notice -->
 
@@ -1043,6 +1277,16 @@ python3 rig/run.py --apply --desk --phase share
 It swaps the test profile's `config.yaml` for the run and puts it
 back at the end. It never restarts the Hermes gateway.
 
+The dial-in walk needs Docker alone. It builds a server from
+Hermes' own image and a stand-in computer the server cannot reach,
+and removes them at the end. It is a dry run unless `--apply` is
+given. `--keep` leaves the containers up, and `--no-service` skips
+the step that needs a container with `systemd` in it:
+
+```bash
+python3 rig/dial/walk.py --apply
+```
+
 ## Layout
 
 ```text
@@ -1065,6 +1309,8 @@ onsite/              the plugin: all that an install puts on a host
   nfsd.py            a small NFS server for a macOS host
   mounts.py          mount a target's disk on the host
   mountd.py          the helper process that serves one mount
+  dialin.py          a computer that dials in: its port, its one
+                     command, and what a dead link means
   mcptools.py        MCP servers that run on a target
   screen.py          find a target's desktop, and pick a route to it
   screenbackend.py   Hermes' screen driver, run on a target
@@ -1089,6 +1335,7 @@ onsite/              the plugin: all that an install puts on a host
   desktop/plugin.js  chip, pane, run card, new session, Machines
 tests/               unit tests
 rig/                 the end-to-end rig and its saved results
+  dial/              the dial-in walk and its containers
 docs/                the design page, brand files, QA journeys, drafts
 site/                the site's build: Eleventy, layouts, styles
 ```
