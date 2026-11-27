@@ -411,6 +411,20 @@ test('the chip says so when the host has no plugin', { skip: SKIP }, async () =>
   assert.match(chip.getAttribute('title'), /no onsite plugin enabled/)
 })
 
+test('a server that does not answer is not called "not set up"', { skip: SKIP }, async () => {
+  const { backend, made, mount, settle } = await setup()
+  const box = await mount(made.contributions.chip.render())
+
+  backend.fail = 'timed out after 8000 ms'
+  await settle(made.intervals[0])
+
+  const chip = box.querySelector('[data-onsite-chip]')
+
+  assert.match(chip.textContent, /no answer/)
+  assert.doesNotMatch(chip.textContent, /not set up/)
+  assert.match(chip.title, /did not answer onsite: timed out/)
+})
+
 test('the chip names the profile that has no plugin', { skip: SKIP }, async () => {
   const { backend, host, made, mount, settle } = await setup()
   const box = await mount(made.contributions.chip.render())
@@ -609,6 +623,24 @@ test('the run card runs in the chat it was drawn in', { skip: SKIP }, async () =
   assert.deepEqual(calls.submit, [['chat-7', '/run 1']])
 })
 
+test('a run card whose command was sent stays sent after a reload', { skip: SKIP }, async () => {
+  const { backend, calls, click, made, mount, settle } = await setup()
+
+  backend.proposals = [{ ...PROPOSAL, status: 'sent' }]
+  await settle(made.intervals[0])
+
+  const render = made.contributions['run-card'].data.render
+  const box = await mount(render({ attrs: { n: '1' }, sessionId: 'chat-7', streaming: false }))
+  const button = box.querySelector('[data-action="run"]')
+
+  assert.equal(button.textContent, 'Sent')
+  assert.equal(button.disabled, true)
+
+  await click(button)
+
+  assert.deepEqual(calls.submit, [])
+})
+
 test('the run card works on an app that sends no session id', { skip: SKIP }, async () => {
   const { calls, click, made, mount } = await setup()
   const render = made.contributions['run-card'].data.render
@@ -727,6 +759,7 @@ test('New session opens the machine where a login lands, on its mount', { skip: 
   assert.deepEqual(asked.map(([, options]) => options.body), [{ target: 'laptop' }])
   assert.deepEqual(sessionCalls(calls), [
     ['session.create', { cwd: `${MOUNT}/home/dev`, cwd_explicit: true }],
+    ['session.list', { title: 'dev on laptop' }],
     ['session.title', { session_id: 'runtime-new', title: 'dev on laptop' }]
   ])
   assert.deepEqual(calls.opened, [['stored-new', { expectHistory: false }]])
@@ -822,7 +855,7 @@ test('a refusal from Hermes is written to the console as a warning', { skip: SKI
 
   host.request = async (method, params) => {
     if (method.startsWith('projects.')) {
-      throw new Error("folder already belongs to project 'mine'")
+      throw new Error('projects are turned off')
     }
 
     return answer(method, params)
@@ -834,7 +867,28 @@ test('a refusal from Hermes is written to the console as a warning', { skip: SKI
 
   assert.equal(warnings.length, 1)
   assert.match(warnings[0][1], /^hermes projects\.create: failed after \d+ ms$/)
-  assert.equal(warnings[0][2], "folder already belongs to project 'mine'")
+  assert.equal(warnings[0][2], 'projects are turned off')
+})
+
+test('a folder that already has a project is not written as a fault', { skip: SKIP }, async () => {
+  const { box, calls, click, host, logs } = await openPaneMachines()
+  const answer = host.request
+
+  host.request = async (method, params) => {
+    if (method.startsWith('projects.')) {
+      throw new Error("folder already belongs to project 'mine'")
+    }
+
+    return answer(method, params)
+  }
+
+  await click(box.querySelector('[data-onsite-new-session="laptop"]'))
+
+  const said = 'hermes projects.create: the folder already has a project'
+
+  assert.equal(logs.filter(([at]) => at === 'warn').length, 0)
+  assert.ok(stepsAt(logs, 'info').includes(said))
+  assert.equal(calls.opened.length, 1)
 })
 
 test('a second click while a session is starting does not start another', { skip: SKIP }, async () => {
@@ -916,6 +970,58 @@ test('a second session on a machine gets a title that is free', { skip: SKIP }, 
   assert.equal(titles[titles.length - 1][1].title, 'dev on laptop 3')
   assert.deepEqual(calls.opened, [['stored-new', { expectHistory: false }]])
   assert.equal(box.querySelector('[role="alert"]'), null)
+})
+
+test('the number for a new session is looked up, not tried in turn', { skip: SKIP }, async () => {
+  const { box, calls, click, host } = await openPaneMachines()
+  const taken = new Set(['dev on laptop'])
+  const answer = host.request
+
+  for (let number = 2; number <= 20; number += 1) {
+    taken.add(`dev on laptop ${number}`)
+  }
+
+  host.request = async (method, params) => {
+    const made = await answer(method, params)
+
+    if (method === 'session.list') {
+      return { sessions: taken.has(params.title) ? [{ id: 'old' }] : [] }
+    }
+
+    return made
+  }
+
+  await click(box.querySelector('[data-onsite-new-session="laptop"]'))
+
+  const titles = calls.rpc.filter(([method]) => method === 'session.title')
+  const lookups = calls.rpc.filter(([method]) => method === 'session.list')
+
+  assert.deepEqual(titles.map(([, params]) => params.title), ['dev on laptop 21'])
+  assert.ok(lookups.length <= 10, `${lookups.length} lookups`)
+  assert.equal(box.querySelector('[role="alert"]'), null)
+})
+
+test('a Hermes that cannot look titles up is tried from the first', { skip: SKIP }, async () => {
+  const { box, calls, click, host, logs } = await openPaneMachines()
+  const answer = host.request
+
+  host.request = async (method, params) => {
+    const made = await answer(method, params)
+
+    if (method === 'session.list') {
+      throw new Error('unknown method')
+    }
+
+    return made
+  }
+
+  await click(box.querySelector('[data-onsite-new-session="laptop"]'))
+
+  const titles = calls.rpc.filter(([method]) => method === 'session.title')
+
+  assert.deepEqual(titles.map(([, params]) => params.title), ['dev on laptop'])
+  assert.equal(calls.opened.length, 1)
+  assert.ok(stepsAt(logs, 'warn').includes('could not look for a free title'))
 })
 
 test('a title refused for another reason is said, not retried', { skip: SKIP }, async () => {
@@ -1192,6 +1298,31 @@ test('saving keeps the settings the form does not show', { skip: SKIP }, async (
     prefixes: ['/home/dev/'],
     path_map: { '/Users/dev/Development': '/home/dev/Development' }
   })
+})
+
+test('a machine can be given a folder for its files', { skip: SKIP }, async () => {
+  const { box, choose, click, made } = await openMachines()
+
+  await click(box.querySelector('[data-onsite-edit="laptop"]'))
+
+  const field = box.querySelector('[data-onsite-field="mount"]')
+
+  assert.equal(field.value, '')
+
+  await choose(field, '/mnt/onsite/laptop')
+  await click(box.querySelector('[data-onsite-save]'))
+
+  const [, options] = made.requests.find(([route]) => route === '/targets/save')
+
+  assert.equal(options.body.target.mount, '/mnt/onsite/laptop')
+})
+
+test('the machine Hermes runs on has no folder for its files', { skip: SKIP }, async () => {
+  const { box, click } = await openMachines()
+
+  await click(box.querySelector('[data-onsite-edit="mac"]'))
+
+  assert.equal(box.querySelector('[data-onsite-field="mount"]'), null)
 })
 
 test('a machine can be set to use its own screen sharing', { skip: SKIP }, async () => {

@@ -40,6 +40,10 @@ const ID = 'onsite'
 // this one says which part it is.
 const NAME = 'onsite-desktop'
 const DIRECTIVE = 'onsite-run'
+
+// The host's word for a proposed command it has handed to the agent.
+// The same as STATUS_SENT in proposals.py.
+const PROPOSAL_SENT = 'sent'
 const PANE_ID = 'pane'
 
 const POLL_MS = 5000
@@ -49,8 +53,12 @@ const COPIED_MS = 1500
 // Hermes refuses a title that another session already has. A second
 // session on the same machine gets a number after its title. The
 // refusal has no code of its own, so it is known by its words.
-const TITLE_TRIES = 50
+const TITLE_TRIES = 5
+const TITLE_SEARCH_LIMIT = 65536
 const TITLE_TAKEN = /already in use/i
+
+// Hermes' words when a folder is filed under Projects a second time.
+const PROJECT_EXISTS = /already belongs to project/i
 
 // Where the app keeps its "show every profile's sessions" switch.
 // The plugin SDK has no call that reads it.
@@ -101,6 +109,13 @@ const SCREEN_ROUTES = [
 // The host's settings for a screen. A machine Hermes runs on keeps
 // Hermes' own, so these are dropped for it.
 const SCREEN_KEYS = ['screen', 'screen_port']
+
+// The host's error for a mount it refuses says to set this. A server
+// in Hermes' own container image has no usual place at all, so the
+// form must offer it.
+const MOUNT_LABEL =
+  'Folder on the server for its files (leave empty for the usual place)'
+const MOUNT_EXAMPLE = '/mnt/onsite/laptop'
 
 const INPUT_CLASS =
   'w-full rounded border border-(--ui-border) bg-transparent px-2 py-1 ' +
@@ -378,14 +393,23 @@ function describeMissingPlugin() {
   )
 }
 
-function describeError(error) {
-  const text = String(error?.message ?? error ?? 'unknown error')
+function errorText(error) {
+  return String(error?.message ?? error ?? 'unknown error')
+}
 
-  if (text.includes(NOT_FOUND)) {
+// The host answered, and has no onsite to ask. Anything else that
+// goes wrong with a request is no answer at all: a server that is
+// busy or restarting must not read as a plugin that is not set up.
+function isMissingPlugin(error) {
+  return errorText(error).includes(NOT_FOUND)
+}
+
+function describeError(error) {
+  if (isMissingPlugin(error)) {
     return describeMissingPlugin()
   }
 
-  return text
+  return errorText(error)
 }
 
 async function post(path, extra = {}) {
@@ -460,7 +484,11 @@ async function refresh() {
 
     setStatus(keepRows(answer))
   } catch (error) {
-    setStatus({ ok: false, error: describeError(error) })
+    setStatus({
+      ok: false,
+      silent: !isMissingPlugin(error),
+      error: describeError(error)
+    })
   }
 
   try {
@@ -567,6 +595,10 @@ function stateText(status) {
     return 'checking…'
   }
 
+  if (status.silent) {
+    return 'no answer'
+  }
+
   if (!status.ok) {
     return 'not set up'
   }
@@ -621,12 +653,16 @@ function CopyButton({ text }) {
   })
 }
 
-function RunButton({ number, sessionId, off }) {
-  const [sent, setSent] = useState(false)
+// `wasSent` is what the host remembers. The click alone is forgotten
+// when the app reloads, and the card then offered Run a second time
+// for a command that had already been handed over.
+function RunButton({ number, sessionId, off, wasSent }) {
+  const [clicked, setClicked] = useState(false)
+  const sent = clicked || wasSent
 
   const onClick = () => {
     if (runProposal(number, sessionId)) {
-      setSent(true)
+      setClicked(true)
     }
   }
 
@@ -646,8 +682,9 @@ function runIsOff(status) {
   return status?.run_allowed === false
 }
 
-function CommandBlock({ number, command, why, sessionId }) {
+function CommandBlock({ number, command, why, sessionId, status }) {
   const off = runIsOff(useStore(statusStore))
+  const wasSent = status === PROPOSAL_SENT
 
   return jsxs('div', {
     className: 'flex flex-col gap-1 rounded border border-(--ui-border) p-2',
@@ -660,7 +697,7 @@ function CommandBlock({ number, command, why, sessionId }) {
           jsxs('span', {
             className: 'flex gap-1',
             children: [
-              jsx(RunButton, { number, sessionId, off }),
+              jsx(RunButton, { number, sessionId, off, wasSent }),
               command ? jsx(CopyButton, { text: command }) : null
             ]
           })
@@ -690,6 +727,10 @@ function chipLabel(status) {
     return 'onsite'
   }
 
+  if (status.silent) {
+    return 'onsite: no answer'
+  }
+
   if (!status.ok) {
     return 'onsite: not set up'
   }
@@ -700,6 +741,10 @@ function chipLabel(status) {
 function chipTip(status) {
   if (!status) {
     return 'onsite: checking where this session runs'
+  }
+
+  if (status.silent) {
+    return `The Hermes server did not answer onsite: ${status.error}`
   }
 
   if (!status.ok) {
@@ -875,16 +920,29 @@ async function fileUnderProjects(name, cwd) {
     scope.profile = profile
   }
 
+  const asked = { ...scope, name, folders: [cwd], primary_path: cwd }
+  const started = Date.now()
+
+  logStep('hermes projects.create: asking', asked)
+
   try {
-    await ask('projects.create', {
-      ...scope,
-      name,
-      folders: [cwd],
-      primary_path: cwd
-    })
-  } catch {
-    // See above: the session opens without a project. The refusal is
-    // already in the console.
+    const answer = await sdk.host.request('projects.create', asked)
+    const took = Date.now() - started
+
+    logStep(`hermes projects.create: answered in ${took} ms`, answer)
+  } catch (error) {
+    // See above: the session opens without a project.
+    if (PROJECT_EXISTS.test(errorText(error))) {
+      // Every click after the first gets this. It is not a fault, so
+      // it is not written as one.
+      logStep('hermes projects.create: the folder already has a project')
+
+      return
+    }
+
+    const took = Date.now() - started
+
+    logProblem(`hermes projects.create: failed after ${took} ms`, error)
   }
 }
 
@@ -896,13 +954,79 @@ function numberedTitle(title, attempt) {
   return `${title} ${attempt}`
 }
 
+// Whether a saved session has this exact title. One question that
+// changes nothing. Said at the quiet level: a search asks several.
+async function titleTaken(title, profile) {
+  const request = { title }
+
+  if (profile !== '') {
+    request.profile = profile
+  }
+
+  const found = await logged(LOG_QUIET, 'hermes session.list', request, () =>
+    sdk.host.request('session.list', request)
+  )
+
+  return (found?.sessions ?? []).length > 0
+}
+
+// The first number no session of this name has yet.
+//
+// Sessions are numbered as they are made, so the numbers in use run
+// from 1 with no gap. Doubling finds a free one in a few questions,
+// and halving the gap finds the first. Trying each title in turn cost
+// one refused call for every old session, on a link that may be slow.
+async function freeNumber(title, profile) {
+  let taken = 0
+  let free = 1
+
+  while (await titleTaken(numberedTitle(title, free), profile)) {
+    taken = free
+    free *= 2
+
+    if (free > TITLE_SEARCH_LIMIT) {
+      throw new Error(`too many sessions are named ${title}`)
+    }
+  }
+
+  while (free - taken > 1) {
+    const middle = Math.floor((taken + free) / 2)
+    const used = await titleTaken(numberedTitle(title, middle), profile)
+
+    if (used) {
+      taken = middle
+    }
+
+    if (!used) {
+      free = middle
+    }
+  }
+
+  return free
+}
+
+// Where the numbering starts. A Hermes that cannot be asked about
+// titles is tried from the first one, as before.
+async function firstNumber(title, profile) {
+  try {
+    return await freeNumber(title, profile)
+  } catch (error) {
+    logProblem('could not look for a free title', error)
+
+    return 1
+  }
+}
+
 // Gives a new session the first title that is free: "you on laptop",
 // then "you on laptop 2", and so on. Without a title the session has
-// no saved row, and the app cannot open it.
-async function titleSession(sessionId, title) {
+// no saved row, and the app cannot open it. The number is looked up
+// first. The tries after it are for a title somebody else took in
+// between.
+async function titleSession(sessionId, title, profile) {
+  const first = await firstNumber(title, profile)
   let refusal = null
 
-  for (let attempt = 1; attempt <= TITLE_TRIES; attempt += 1) {
+  for (let attempt = first; attempt < first + TITLE_TRIES; attempt += 1) {
     try {
       await ask('session.title', {
         session_id: sessionId,
@@ -984,7 +1108,7 @@ async function openSessionAt(cwd, title) {
 
   const made = await ask('session.create', request)
 
-  await titleSession(made.session_id, title)
+  await titleSession(made.session_id, title, profile)
 
   const how = openingIn(profile)
 
@@ -1168,11 +1292,17 @@ function RunCard({ attrs, sessionId, streaming }) {
 
   const found = proposals.find(item => item.number === number)
 
-  return jsx(CommandBlock, {
-    command: found?.command ?? '',
-    number,
-    sessionId: sessionId === undefined ? null : sessionId,
-    why: found?.why ?? ''
+  // The transcript sets no space around a directive, and the card
+  // sat tight against the line above it.
+  return jsx('div', {
+    className: 'my-2',
+    children: jsx(CommandBlock, {
+      command: found?.command ?? '',
+      number,
+      sessionId: sessionId === undefined ? null : sessionId,
+      status: found?.status ?? '',
+      why: found?.why ?? ''
+    })
   })
 }
 
@@ -1321,6 +1451,15 @@ function MachineForm({ form, note, busy, onChange, onSave, onTest, onCancel }) {
             name: 'key',
             value: form.key,
             placeholder: '',
+            onChange
+          })
+        : null,
+      overSsh
+        ? jsx(Field, {
+            label: MOUNT_LABEL,
+            name: 'mount',
+            value: form.mount,
+            placeholder: MOUNT_EXAMPLE,
             onChange
           })
         : null,
